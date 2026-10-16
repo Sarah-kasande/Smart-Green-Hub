@@ -1,3 +1,6 @@
 node_modules/
-.env
 certs/
+# All local environment files stay on this machine. Only the example is committed.
+.env
+.env.*
+!.env.example

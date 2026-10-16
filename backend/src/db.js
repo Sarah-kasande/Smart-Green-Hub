@@ -1,29 +1,9 @@
-const fs = require('fs');
+require('./config/env');
 const { Sequelize } = require('sequelize');
+const { buildDbConfig } = require('./config/database');
 
-function loadCa() {
-  const raw = process.env.DB_CA_CERT || process.env.DB_CA_PATH;
-  if (!raw) return undefined;
-  const value = raw.trim();
-  if (value.includes('BEGIN CERTIFICATE')) return value.replace(/\\n/g, '\n');
-  return fs.readFileSync(value, 'utf8');
-}
+const config = buildDbConfig();
 
-const ca = loadCa();
-
-const sequelize = new Sequelize(
-  process.env.DB_NAME,
-  process.env.DB_USER,
-  process.env.DB_PASSWORD,
-  {
-    host: process.env.DB_HOST,
-    port: Number(process.env.DB_PORT),
-    dialect: 'mysql',
-    logging: false,
-    dialectOptions: {
-      ssl: ca ? { ca, rejectUnauthorized: true } : { rejectUnauthorized: true },
-    },
-  }
-);
+const sequelize = new Sequelize(config.database, config.username, config.password, config);
 
 module.exports = sequelize;

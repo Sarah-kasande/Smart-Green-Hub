@@ -1,1 +1,40 @@
 @import "tailwindcss";
+
+/* Design tokens from CLAUDE.md / design/. Use them as Tailwind classes,
+   e.g. bg-ink, text-leaf, bg-leaf-light, bg-risk-high. */
+@theme {
+  --color-ink: #1B3350;
+  --color-ink-soft: #4A5D75;
+  --color-leaf: #2E7D32;
+  --color-leaf-dark: #1F5E23;
+  --color-leaf-light: #E4F2DC;
+  --color-teal: #1F8A7A;
+  --color-teal-light: #DDF1EE;
+  --color-canvas: #F5F6F8;
+  --color-info: #EBF3FA;
+  --color-line: #E2E6EC;
+
+  /* Risk levels: always shown with an icon AND the word Low / Medium / High */
+  --color-risk-low: #E4F2DC;
+  --color-risk-low-text: #1F5E23;
+  --color-risk-medium: #FEF2D4;
+  --color-risk-medium-text: #7A5300;
+  --color-risk-high: #FBE8E6;
+  --color-risk-high-text: #A12A1F;
+
+  --font-sans: "Inter", "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-canvas text-ink antialiased;
+  }
+  /* A clear keyboard focus ring everywhere (NFR04) */
+  :focus-visible {
+    outline: 3px solid var(--color-teal);
+    outline-offset: 2px;
+  }
+}
