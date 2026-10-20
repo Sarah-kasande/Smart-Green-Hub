@@ -1,17 +1,15 @@
 // AuthService (Figure 7): registration, email confirmation, login and password reset.
+// Email confirmation and password reset use 6-digit one-time codes (see otpService.js).
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { Op } = require('sequelize');
-const { sequelize, User, Nursery, Institution, AuthToken } = require('../models');
+const { sequelize, User, Nursery, Institution } = require('../models');
 const HttpError = require('../utils/httpError');
-const { generateToken, hashToken } = require('../utils/tokens');
 const audit = require('./auditService');
-const { sendEmail } = require('./emailService');
-const { render, appUrl } = require('./emailTemplates');
+const otp = require('./otpService');
+const { sendNow } = require('./notificationService');
+const { render } = require('./emailTemplates');
 
 const BCRYPT_ROUNDS = 10;
-const VERIFY_EMAIL_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
-const RESET_PASSWORD_TTL_MS = 10 * 60 * 1000; // 10 minutes (FR17)
 const SESSION_DAYS = 7;
 
 // A real bcrypt hash of a random value. Used when the email does not exist, so a failed
@@ -50,46 +48,9 @@ function verifySession(token) {
   return jwt.verify(token, jwtSecret());
 }
 
-// Creates a single-use link token. Any older unused token for the same purpose is cancelled,
-// so only the newest link works. Returns the raw token (only the hash is stored).
-async function createLinkToken(userId, purpose, ttlMs, transaction) {
-  const now = new Date();
-  await AuthToken.update(
-    { used_at: now },
-    { where: { user_id: userId, purpose, used_at: null }, transaction }
-  );
-  const token = generateToken();
-  await AuthToken.create(
-    { user_id: userId, purpose, token_hash: hashToken(token), expires_at: new Date(now.getTime() + ttlMs) },
-    { transaction }
-  );
-  return token;
-}
-
-// Marks a link token as used and returns its user id. The update only succeeds while used_at
-// is still NULL, so two clicks at the same moment cannot both use the same link.
-async function consumeLinkToken(token, purpose, transaction) {
-  const row = await AuthToken.findOne({
-    where: { token_hash: hashToken(token), purpose, used_at: null, expires_at: { [Op.gt]: new Date() } },
-    transaction,
-  });
-  if (!row) throw new HttpError(400, 'INVALID_OR_EXPIRED_LINK', 'This link is invalid or has expired');
-  const [updated] = await AuthToken.update(
-    { used_at: new Date() },
-    { where: { id: row.id, used_at: null }, transaction }
-  );
-  if (updated !== 1) throw new HttpError(400, 'INVALID_OR_EXPIRED_LINK', 'This link is invalid or has expired');
-  return row.user_id;
-}
-
-async function sendVerificationEmail(user, token) {
-  const link = `${appUrl()}/verify-email?token=${token}`;
-  const { subject, text } = render('verifyEmail', user.preferred_language, { name: user.full_name, link });
-  await sendEmail({ to: user.email, subject, text });
-}
-
 // Registers a nursery operator (with a nursery profile) or a receiving institution
 // (with an institution profile). Both start as "pending" until an administrator approves them.
+// Returns the user and what happened to the confirmation email ('sent' | 'failed' | 'skipped').
 async function register(data) {
   const email = normaliseEmail(data.email);
   const existing = await User.findOne({ where: { email }, paranoid: false });
@@ -98,7 +59,6 @@ async function register(data) {
   const passwordHash = await bcrypt.hash(data.password, BCRYPT_ROUNDS);
 
   let user;
-  let token;
   await sequelize.transaction(async (transaction) => {
     user = await User.create(
       {
@@ -143,30 +103,31 @@ async function register(data) {
     }
 
     await audit.log({ actorId: user.id, action: 'user.registered', entityType: 'user', entityId: user.id }, { transaction });
-    token = await createLinkToken(user.id, 'verify_email', VERIFY_EMAIL_TTL_MS, transaction);
   });
 
-  // Sent after the transaction is saved, so an email is never sent for an account that was rolled back.
-  await sendVerificationEmail(user, token);
-  return toSafeUser(user);
+  // The code is created and emailed after the account is saved, so a code is never sent for an
+  // account that was rolled back.
+  const sent = await otp.issueAndSend(user, 'verify_email');
+  return { user: toSafeUser(user), emailStatus: sent.status };
 }
 
-async function verifyEmail(token) {
+// Confirms the email with the 6-digit code (FR02).
+async function verifyEmail(emailInput, code) {
+  const user = await User.findOne({ where: { email: normaliseEmail(emailInput) } });
+  if (user?.email_verified_at) throw new HttpError(409, 'ALREADY_VERIFIED', 'This email is already confirmed');
+  await otp.verifyCode(user, 'verify_email', code);
   await sequelize.transaction(async (transaction) => {
-    const userId = await consumeLinkToken(token, 'verify_email', transaction);
-    await User.update({ email_verified_at: new Date() }, { where: { id: userId, email_verified_at: null }, transaction });
-    await audit.log({ actorId: userId, action: 'user.email_verified', entityType: 'user', entityId: userId }, { transaction });
+    await user.update({ email_verified_at: new Date() }, { transaction });
+    await audit.log({ actorId: user.id, action: 'user.email_verified', entityType: 'user', entityId: user.id }, { transaction });
   });
 }
 
-// Always finishes quietly, whether or not the email exists (no account enumeration).
+// "Send the code again". Always answers the same way, whether or not the email exists or the
+// account asked too often (no account enumeration); the screen counts down 60 seconds anyway.
 async function resendVerification(emailInput) {
   const user = await User.findOne({ where: { email: normaliseEmail(emailInput) } });
   if (!user || user.email_verified_at) return;
-  const token = await sequelize.transaction((transaction) =>
-    createLinkToken(user.id, 'verify_email', VERIFY_EMAIL_TTL_MS, transaction)
-  );
-  await sendVerificationEmail(user, token);
+  await otp.issueAndSend(user, 'verify_email');
 }
 
 async function login(emailInput, password) {
@@ -180,38 +141,34 @@ async function login(emailInput, password) {
   return { user: toSafeUser(user), sessionToken: signSession(user) };
 }
 
-// Always finishes quietly (neutral response, FR17).
+// Sends a reset code. Always finishes quietly (neutral response, FR17).
 async function forgotPassword(emailInput) {
   const user = await User.findOne({ where: { email: normaliseEmail(emailInput) } });
   if (!user || user.status !== 'active') return;
-  const token = await sequelize.transaction((transaction) =>
-    createLinkToken(user.id, 'reset_password', RESET_PASSWORD_TTL_MS, transaction)
-  );
-  const link = `${appUrl()}/reset-password?token=${token}`;
-  const { subject, text } = render('resetPassword', user.preferred_language, { name: user.full_name, link });
-  await sendEmail({ to: user.email, subject, text });
+  await otp.issueAndSend(user, 'reset_password');
 }
 
-// Sets the new password and increases token_version, which signs the user out everywhere (FR17).
-async function resetPassword(token, newPassword) {
+// Checks the reset code, sets the new password and increases token_version, which signs the user
+// out everywhere (FR17). A confirmation email is sent through the outbox.
+async function resetPassword(emailInput, code, newPassword) {
+  const user = await User.findOne({ where: { email: normaliseEmail(emailInput) } });
+  await otp.verifyCode(user, 'reset_password', code);
   const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
-  let user;
   await sequelize.transaction(async (transaction) => {
-    const userId = await consumeLinkToken(token, 'reset_password', transaction);
-    user = await User.findByPk(userId, { transaction });
-    await user.update(
+    await User.update(
       { password_hash: passwordHash, token_version: user.token_version + 1 },
-      { transaction }
+      { where: { id: user.id }, transaction }
     );
-    await audit.log({ actorId: userId, action: 'user.password_reset', entityType: 'user', entityId: userId }, { transaction });
+    await audit.log({ actorId: user.id, action: 'user.password_reset', entityType: 'user', entityId: user.id }, { transaction });
   });
-  const { subject, text } = render('passwordChanged', user.preferred_language, { name: user.full_name });
-  await sendEmail({ to: user.email, subject, text });
+  const message = render('passwordChanged', user.preferred_language, { name: user.full_name });
+  await sendNow({ user, type: 'password_changed', eventKey: `password_changed:${user.id}:${Date.now()}`, message });
 }
 
 module.exports = {
   BCRYPT_ROUNDS,
   SESSION_DAYS,
+  normaliseEmail,
   toSafeUser,
   signSession,
   verifySession,

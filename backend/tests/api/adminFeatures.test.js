@@ -100,8 +100,8 @@ describe('notifications (FR14)', () => {
     await row.reload();
     expect(row.status).toBe('failed');
     expect(row.last_error).toMatch(/template/);
-    const failed = await admin.get('/api/admin/notifications/failed');
-    expect(failed.body.notifications.map((n) => n.id)).toContain(row.id);
-    expect((await admin.post(`/api/admin/notifications/${row.id}/retry`)).status).toBe(200);
+    const failed = await admin.get('/api/admin/emails');
+    expect(failed.body.items.map((n) => n.id)).toContain(row.id);
+    expect((await admin.post(`/api/admin/emails/${row.id}/retry`)).status).toBe(200);
   });
 });

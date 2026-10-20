@@ -1,38 +1,84 @@
-// NotificationService (Figure 7, FR14): a persistent outbox.
+// NotificationService (Figure 7, FR14): the outbox for EVERY email (docs/DEVIATIONS.md W20).
 //
-// notify() writes ONE row per event and recipient. The unique event_key (e.g. "alert:12:user:4")
-// means the same event can never be queued twice for the same person.
-// The row is the in-app notification. dispatchPending() then sends the email for each row and
-// records the result: "sent", or "failed" with the error and the number of attempts. Failed rows
-// are retried (up to MAX_ATTEMPTS) by the scheduled job and stay visible to the administrator.
+// Each email is one row with a truthful status:
+//   queued   waiting to be sent
+//   sent     Brevo accepted it
+//   failed   Brevo refused it or could not be reached; last_error holds Brevo's exact answer
+//   skipped  not sent on purpose: development/tests without BREVO_API_KEY (printed to the console)
+//
+// Two kinds of rows:
+//   notifications (alerts, requests, ...): notify() queues a row, dispatchPending() renders the
+//     email from the stored details and sends it; failed ones are retried up to MAX_ATTEMPTS times.
+//     These rows are also the in-app notifications (in_app = true).
+//   one-time codes (verify_code, reset_code) and the password-changed email: sendNow() records the
+//     row and sends at once. The code itself is never stored, so a failed code email cannot be resent
+//     as it was: "Retry" issues a NEW code instead (adminService.retryEmail). in_app = false.
+// The unique event_key (e.g. "alert:12") means the same event is never queued twice for a person.
 const { Op } = require('sequelize');
 const { Notification, User } = require('../models');
 const { isTest } = require('../config/env');
-const { sendEmail } = require('./emailService');
+const { sendEmail, maskEmail } = require('./emailService');
 const { renderNotification } = require('./emailTemplates');
 
 const MAX_ATTEMPTS = 5;
+// Emails whose content (a one-time code) is not stored: never re-rendered from the outbox
+const CODE_TYPES = ['verify_code', 'reset_code'];
 
+// Sends the email of one outbox row and saves the result on the row.
+async function deliver(row, recipient, message) {
+  let result;
+  try {
+    result = await sendEmail({ to: recipient, ...message });
+  } catch (error) {
+    result = { status: 'failed', error: error.message };
+  }
+  await row.update({
+    status: result.status,
+    attempts: row.attempts + 1,
+    sent_at: result.status === 'sent' ? new Date() : row.sent_at,
+    last_error: result.error ? String(result.error).slice(0, 500) : null,
+    recipient_email: recipient,
+  });
+  return result;
+}
+
+// Queues a notification (in-app + email). Sent by dispatchPending().
 async function notify({ userId, type, eventKey, payload }, { transaction } = {}) {
   const [row] = await Notification.findOrCreate({
     where: { event_key: eventKey },
-    defaults: { user_id: userId, type, payload_json: payload, status: 'pending' },
+    defaults: { user_id: userId, type, payload_json: payload, status: 'queued', in_app: true },
     transaction,
   });
   return row;
 }
 
-// Sends the emails of waiting notifications. Called right after an action and every few minutes.
+// Records an email in the outbox and sends it immediately (codes, password changed).
+// `payload` must never contain the code: only harmless details are stored.
+async function sendNow({ user, type, eventKey, message, payload = {} }) {
+  const row = await Notification.create({
+    user_id: user.id,
+    event_key: eventKey,
+    type,
+    payload_json: payload,
+    status: 'queued',
+    in_app: false,
+    recipient_email: user.email,
+  });
+  const result = await deliver(row, user.email, message);
+  return { row, result };
+}
+
+// Sends queued notification emails and retries failed ones. Runs after actions and every 5 minutes.
 let running = false;
 async function dispatchPending({ limit = 50 } = {}) {
-  if (running) return { sent: 0, failed: 0 };
+  if (running) return { sent: 0, failed: 0, skipped: 0 };
   running = true;
-  let sent = 0;
-  let failed = 0;
+  const counts = { sent: 0, failed: 0, skipped: 0 };
   try {
     const rows = await Notification.findAll({
       where: {
-        [Op.or]: [{ status: 'pending' }, { status: 'failed', attempts: { [Op.lt]: MAX_ATTEMPTS } }],
+        type: { [Op.notIn]: CODE_TYPES },
+        [Op.or]: [{ status: 'queued' }, { status: 'failed', attempts: { [Op.lt]: MAX_ATTEMPTS } }],
       },
       include: [{ model: User, as: 'user' }],
       order: [['id', 'ASC']],
@@ -42,28 +88,16 @@ async function dispatchPending({ limit = 50 } = {}) {
       const message = row.user ? renderNotification(row.type, row.user.preferred_language, row.payload_json || {}) : null;
       if (!message) {
         await row.update({ status: 'failed', attempts: MAX_ATTEMPTS, last_error: 'No recipient or no email template' });
-        failed++;
+        counts.failed++;
         continue;
       }
-      let result;
-      try {
-        result = await sendEmail({ to: row.user.email, ...message });
-      } catch (error) {
-        result = { delivered: false, error: error.message };
-      }
-      // In development and tests the email is printed or captured instead of sent: that counts as done.
-      if (result.delivered || result.printed || result.captured) {
-        await row.update({ status: 'sent', sent_at: new Date(), attempts: row.attempts + 1, last_error: null });
-        sent++;
-      } else {
-        await row.update({ status: 'failed', attempts: row.attempts + 1, last_error: (result.error || 'Email provider refused or is not configured').slice(0, 500) });
-        failed++;
-      }
+      const result = await deliver(row, row.user.email, message);
+      counts[result.status]++;
     }
   } finally {
     running = false;
   }
-  return { sent, failed };
+  return counts;
 }
 
 // Fire-and-forget dispatch after a request finished (not in tests, where tests call it directly).
@@ -72,9 +106,11 @@ function dispatchSoon() {
   setImmediate(() => dispatchPending().catch((e) => console.error('Notification dispatch failed:', e.message)));
 }
 
+// ---- In-app notifications (only rows with in_app = true) ----
+
 async function listForUser(userId, { limit = 50 } = {}) {
-  const items = await Notification.findAll({ where: { user_id: userId }, order: [['id', 'DESC']], limit });
-  const unread = await Notification.count({ where: { user_id: userId, read_at: null } });
+  const items = await Notification.findAll({ where: { user_id: userId, in_app: true }, order: [['id', 'DESC']], limit });
+  const unread = await Notification.count({ where: { user_id: userId, in_app: true, read_at: null } });
   return { items: items.map(toJson), unread };
 }
 
@@ -83,9 +119,51 @@ function toJson(n) {
 }
 
 async function markRead(userId, id) {
-  const where = { user_id: userId, read_at: null };
+  const where = { user_id: userId, in_app: true, read_at: null };
   if (id) where.id = id;
   await Notification.update({ read_at: new Date() }, { where });
 }
 
-module.exports = { MAX_ATTEMPTS, notify, dispatchPending, dispatchSoon, listForUser, markRead };
+// ---- Email report for the administrator ----
+
+// Counts by status and the emails that were NOT delivered (failed and skipped), newest first.
+async function emailReport({ limit = 200 } = {}) {
+  const counts = { queued: 0, sent: 0, failed: 0, skipped: 0 };
+  const grouped = await Notification.findAll({
+    attributes: ['status', [Notification.sequelize.fn('COUNT', Notification.sequelize.col('id')), 'n']],
+    group: ['status'],
+    raw: true,
+  });
+  grouped.forEach((g) => (counts[g.status] = Number(g.n)));
+
+  const rows = await Notification.findAll({
+    where: { status: { [Op.in]: ['failed', 'skipped'] } },
+    include: [{ model: User, as: 'user', attributes: ['email'] }],
+    order: [['updated_at', 'DESC']],
+    limit,
+  });
+  const items = rows.map((r) => ({
+    id: r.id,
+    time: r.updated_at,
+    type: r.type,
+    status: r.status,
+    recipient: maskEmail(r.recipient_email || r.user?.email),
+    attempts: r.attempts,
+    error: r.last_error,
+    retry_issues_new_code: CODE_TYPES.includes(r.type),
+  }));
+  return { counts, items };
+}
+
+module.exports = {
+  MAX_ATTEMPTS,
+  CODE_TYPES,
+  notify,
+  sendNow,
+  deliver,
+  dispatchPending,
+  dispatchSoon,
+  listForUser,
+  markRead,
+  emailReport,
+};

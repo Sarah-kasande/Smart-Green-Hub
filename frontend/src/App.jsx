@@ -9,7 +9,6 @@ import RequireRole from './auth/RequireRole'
 const Landing = lazy(() => import('./pages/public/Landing'))
 const Login = lazy(() => import('./pages/auth/Login'))
 const Register = lazy(() => import('./pages/auth/Register'))
-const CheckEmail = lazy(() => import('./pages/auth/CheckEmail'))
 const VerifyEmail = lazy(() => import('./pages/auth/VerifyEmail'))
 const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword'))
 const ResetPassword = lazy(() => import('./pages/auth/ResetPassword'))
@@ -46,7 +45,6 @@ export default function App() {
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/check-email" element={<CheckEmail />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />

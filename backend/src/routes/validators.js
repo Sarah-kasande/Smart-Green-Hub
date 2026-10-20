@@ -29,6 +29,8 @@ const phone = (field, when) =>
 const district = (field, when) => start(field, when).isIn(KIGALI_DISTRICTS).withMessage('invalid_choice');
 const orgType = (field, when) => start(field, when).isIn(ORG_TYPES).withMessage('invalid_choice');
 const language = (field) => body(field).optional().isIn(LANGUAGES).withMessage('invalid_choice');
-const token = (field = 'token') => body(field).isString().withMessage('required').matches(/^[a-f0-9]{64}$/).withMessage('invalid_link');
+// One-time code: exactly 6 digits (spaces typed or pasted by the user are removed first)
+const code = (field = 'code') =>
+  body(field).customSanitizer((v) => String(v ?? '').replace(/\s/g, '')).matches(/^[0-9]{6}$/).withMessage('invalid_code');
 
-module.exports = { password, email, requiredText, optionalText, phone, district, orgType, language, token };
+module.exports = { password, email, requiredText, optionalText, phone, district, orgType, language, code };

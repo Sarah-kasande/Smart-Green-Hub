@@ -12,8 +12,9 @@ All tests use local test databases and fake accounts; none touch the production 
 | Unit tests: risk rules, planting formula, file signatures, tokens, test guard | Jest | 49 / 49 passed |
 | API tests: auth, roles, verification, uploads, batches, sales, expenses, sync, alerts, planting, Surplus Board, hand-over, impact, admin, notifications | Jest + Supertest | 93 / 93 passed |
 | Frontend-backend contract: every API call found in `frontend/src` exists in the backend; every admin page GET answers 200 | Jest + Supertest | 69 / 69 passed |
-| **Total backend** | | **211 / 211 passed** |
-| End-to-end tests in a real browser (390 px mobile and 1440 px desktop) | Playwright + Edge | **14 / 14 passed** |
+| One-time codes and email outbox: correct / wrong / expired code, 5-try lock, resend invalidates the old code, 60 s and daily limits, per-IP limits, sent / failed / skipped statuses with Brevo's exact error, admin report and retry | Jest + Supertest | included below |
+| **Total backend** | | **231 / 231 passed** |
+| End-to-end tests in a real browser (390 px mobile and 1440 px desktop) | Playwright + Edge | **18 / 18 passed** |
 | Accessibility, performance, best practices | Lighthouse 12 (mobile profile) | see section 4 |
 | Load test: 50 concurrent users | `backend/scripts/load-test.js` | p95 243 ms, 0 errors (local) |
 | Dependency audit | `npm audit --omit=dev` | frontend 0; backend 2 moderate (explained in section 5) |
@@ -54,6 +55,10 @@ database and its own app on port 5174).
 | 12 | Every administrator page opens without an error and without an endless spinner | Passed |
 | 13 | A request answered by an older API (unknown route) shows a clear message; "Try again" recovers | Passed |
 | 14 | A dropped connection ends with "Cannot reach the server" and "Try again", not an endless spinner | Passed |
+| 15 | Registration code: 60 s resend countdown, wrong code ("4 tries left"), pasted "123 456" accepted, confirmed | Passed |
+| 16 | Signing in before confirming leads to the code screen | Passed |
+| 17 | Password reset with a code; the new password works | Passed |
+| 18 | The code screen in dark mode | Passed |
 
 ## 4. Lighthouse (mobile profile, production build)
 
@@ -96,7 +101,21 @@ Vercel's); daily database backups and a restore exercise before the pilot (NFR05
 The same script can be run against the live API (`node scripts/load-test.js https://smart-green-hub.onrender.com 50 10`);
 Render free-plan cold starts (up to about 50 s) are reported separately, as NFR01 requires.
 
-## 7. Incident: admin pages "Not found" and "Loading..." (October 2026)
+## 7. Incident: registration emails never arrived (October 2026)
+
+**Cause.** (1) `backend/.env.local` contained an empty `BREVO_API_KEY=` line that hid the real key in
+`backend/.env` (the loader never overwrote an existing variable, even an empty one), so the API printed
+emails to the console and never called Brevo; printed emails were also counted as "sent". (2) A real
+call showed that Brevo refuses the account's API key for transactional email (HTTP 403
+`permission_denied`: "api key is not authorized for resource transactional.email"). (3) `MAIL_FROM` was
+written `name, address`, which the API passed to Brevo as the sender address.
+
+**Fixes.** Empty lines in `.env.local` no longer hide `.env` values; every email goes through the outbox
+with a truthful status and Brevo's exact error; the admin page shows failed and skipped emails; health
+and startup report whether email is configured; `MAIL_FROM` is read in several forms; registration and
+reset use one-time codes (docs/DEVIATIONS.md W20-W23).
+
+## 8. Incident: admin pages "Not found" and "Loading..." (October 2026)
 
 **Cause.** The new frontend (Phase 2-7 pages) was talking to an API that still ran the Phase 1 code.
 The live Render service had not been redeployed after the push (Vercel had), and the same happens
@@ -119,7 +138,7 @@ see a warning when the app and the API versions differ.
 **New tests.** The frontend-backend contract test (it fails when a page calls a route the API does
 not have; verified by temporarily renaming a route, which made 2 tests fail) and browser tests 12-14.
 
-## 8. Known limitations
+## 9. Known limitations
 
 See `docs/DEVIATIONS.md`, in particular F2 (same sales rate for two batches of one species),
 W10 (web push not implemented), W16 (nightly job needs the API awake on the free plan) and the DEMO species values.

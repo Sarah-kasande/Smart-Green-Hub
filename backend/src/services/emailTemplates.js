@@ -3,26 +3,66 @@
 
 const appUrl = () => (process.env.APP_URL || 'http://localhost:5173').replace(/\/$/, '');
 
+// HTML version of a code email: the 6-digit code large and spaced, easy to read and copy.
+// (Texts are fixed or come from our own templates; the user's name is escaped.)
+function codeHtml({ greeting, intro, code, validity, ignore }) {
+  const esc = (v) => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return `<div style="font-family:Segoe UI,Arial,sans-serif;color:#1B3350;max-width:480px">
+<p>${esc(greeting)}</p>
+<p>${esc(intro)}</p>
+<p style="font-size:34px;font-weight:700;letter-spacing:10px;background:#E4F2DC;color:#1F5E23;padding:14px 18px;border-radius:12px;display:inline-block;margin:8px 0">${esc(code)}</p>
+<p>${esc(validity)}</p>
+<p style="color:#4A5D75">${esc(ignore)}</p>
+<p style="color:#4A5D75">Smart Green Hub</p>
+</div>`;
+}
+
+function codeEmail(subject, parts) {
+  return {
+    subject,
+    text: `${parts.greeting}\n\n${parts.intro}\n\n    ${parts.code}\n\n${parts.validity}\n${parts.ignore}`,
+    html: codeHtml(parts),
+  };
+}
+
 const templates = {
-  verifyEmail: {
-    en: ({ name, link }) => ({
-      subject: 'Confirm your email - Smart Green Hub',
-      text: `Hello ${name},\n\nPlease confirm your email address by opening this link:\n${link}\n\nThe link works once and expires in 24 hours.\nIf you did not register, you can ignore this email.`,
-    }),
-    rw: ({ name, link }) => ({
-      subject: 'Emeza imeri yawe - Smart Green Hub',
-      text: `Muraho ${name},\n\nEmeza aderesi ya imeri yawe ufungura uyu murongo:\n${link}\n\nUmurongo ukora rimwe gusa kandi urangira nyuma y'amasaha 24.\nNiba utiyandikishije, wirengagize iyi imeri.`,
-    }),
+  // One-time code to confirm the email address (FR02, docs/DEVIATIONS.md W21)
+  verifyCode: {
+    en: ({ name, code, minutes }) =>
+      codeEmail(`${code} is your Smart Green Hub confirmation code`, {
+        greeting: `Hello ${name},`,
+        intro: 'Enter this code in Smart Green Hub to confirm your email address:',
+        code,
+        validity: `The code works once and is valid for ${minutes} minutes.`,
+        ignore: 'If you did not create an account, you can ignore this email.',
+      }),
+    rw: ({ name, code, minutes }) =>
+      codeEmail(`${code} ni kode yawe yo kwemeza - Smart Green Hub`, {
+        greeting: `Muraho ${name},`,
+        intro: 'Andika iyi kode muri Smart Green Hub kugira ngo wemeze imeri yawe:',
+        code,
+        validity: `Kode ikora rimwe gusa kandi imara iminota ${minutes}.`,
+        ignore: 'Niba utafunguye konti, wirengagize iyi imeri.',
+      }),
   },
-  resetPassword: {
-    en: ({ name, link }) => ({
-      subject: 'Reset your password - Smart Green Hub',
-      text: `Hello ${name},\n\nUse this link to choose a new password:\n${link}\n\nThe link works once and expires in 10 minutes.\nIf you did not ask for this, you can ignore this email; your password stays the same.`,
-    }),
-    rw: ({ name, link }) => ({
-      subject: "Hindura ijambo ry'ibanga - Smart Green Hub",
-      text: `Muraho ${name},\n\nKoresha uyu murongo uhitemo ijambo ry'ibanga rishya:\n${link}\n\nUmurongo ukora rimwe gusa kandi urangira nyuma y'iminota 10.\nNiba atari wowe wabisabye, wirengagize iyi imeri; ijambo ry'ibanga ryawe ntirihinduka.`,
-    }),
+  // One-time code to choose a new password (FR17)
+  resetCode: {
+    en: ({ name, code, minutes }) =>
+      codeEmail(`${code} is your Smart Green Hub password reset code`, {
+        greeting: `Hello ${name},`,
+        intro: 'Enter this code in Smart Green Hub to choose a new password:',
+        code,
+        validity: `The code works once and is valid for ${minutes} minutes.`,
+        ignore: 'If you did not ask to reset your password, ignore this email: your password stays the same.',
+      }),
+    rw: ({ name, code, minutes }) =>
+      codeEmail(`${code} ni kode yo guhindura ijambo ry'ibanga - Smart Green Hub`, {
+        greeting: `Muraho ${name},`,
+        intro: "Andika iyi kode muri Smart Green Hub kugira ngo uhitemo ijambo ry'ibanga rishya:",
+        code,
+        validity: `Kode ikora rimwe gusa kandi imara iminota ${minutes}.`,
+        ignore: "Niba atari wowe wabisabye, wirengagize iyi imeri: ijambo ry'ibanga ryawe ntirihinduka.",
+      }),
   },
   passwordChanged: {
     en: ({ name }) => ({

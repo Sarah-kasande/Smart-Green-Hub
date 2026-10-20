@@ -18,7 +18,6 @@ export default function Login() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
   const [fields, setFields] = useState({})
-  const [resent, setResent] = useState(false)
 
   if (user) return <Navigate to={homePathFor(user.role)} replace />
 
@@ -27,7 +26,6 @@ export default function Login() {
     setBusy(true)
     setError(null)
     setFields({})
-    setResent(false)
     try {
       const data = await login(email, password)
       // Go back to the page the user wanted, if it belongs to their role
@@ -42,9 +40,10 @@ export default function Login() {
     }
   }
 
+  // Email not confirmed yet: send a new code and go to the code screen
   async function resend() {
     await api.post('/auth/resend-verification', { email }).catch(() => {})
-    setResent(true)
+    navigate(`/verify-email?email=${encodeURIComponent(email.trim())}`, { state: { fresh: true } })
   }
 
   return (
@@ -53,14 +52,13 @@ export default function Login() {
         {error && error !== 'VALIDATION_FAILED' && (
           <Notice type="error">
             {error === 'EMAIL_NOT_VERIFIED' ? t('auth.notVerified') : t(`errors.${error}`)}
-            {error === 'EMAIL_NOT_VERIFIED' && !resent && (
+            {error === 'EMAIL_NOT_VERIFIED' && (
               <button type="button" onClick={resend} className="mt-2 block min-h-10 font-semibold underline">
-                {t('auth.resend')}
+                {t('code.getCode')}
               </button>
             )}
           </Notice>
         )}
-        {resent && <Notice type="success">{t('auth.resent')}</Notice>}
         <TextField label={t('auth.email')} type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} error={fields.email} required />
         <TextField
           label={t('auth.password')}

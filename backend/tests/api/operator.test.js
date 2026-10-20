@@ -223,9 +223,10 @@ describe('risk alerts (FR06, FR07)', () => {
     expect(await RiskAlert.count({ where: { batch_id: batch.id, status: 'open' } })).toBe(0);
   });
 
-  test('alert emails are delivered through the outbox', async () => {
+  test('alert emails go through the outbox (no Brevo key in tests: honestly "skipped")', async () => {
     const result = await dispatchPending();
-    expect(result.sent).toBeGreaterThanOrEqual(1);
+    expect(result.skipped).toBeGreaterThanOrEqual(1);
+    expect(result.sent).toBe(0);
     expect(h.sentEmails.some((m) => /surplus risk/.test(m.subject))).toBe(true);
   });
 });

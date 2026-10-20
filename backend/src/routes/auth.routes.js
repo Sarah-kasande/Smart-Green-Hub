@@ -2,7 +2,8 @@ const express = require('express');
 const { body } = require('express-validator');
 const validate = require('../middleware/validate');
 const { setSessionCookie, clearSessionCookie } = require('../middleware/auth');
-const { loginLimiter, emailLinkLimiter, registerLimiter } = require('../middleware/rateLimits');
+const { loginLimiter, emailLinkLimiter, registerLimiter, codeLimiter } = require('../middleware/rateLimits');
+const { RESEND_COOLDOWN_SECONDS } = require('../services/otpService');
 const authService = require('../services/authService');
 const verificationService = require('../services/verificationService');
 const v = require('./validators');
@@ -52,28 +53,32 @@ router.post(
   validate,
   async (req, res, next) => {
     try {
-      const user = await authService.register(req.body);
-      res.status(201).json({ user });
+      const { user, emailStatus } = await authService.register(req.body);
+      // email_status tells the person whether their code email left (sent), failed, or was only
+      // printed on the server (skipped, development). It concerns their own new account only.
+      res.status(201).json({ user, email_status: emailStatus, resend_after_seconds: RESEND_COOLDOWN_SECONDS });
     } catch (error) {
       next(error);
     }
   }
 );
 
-router.post('/verify-email', [v.token()], validate, async (req, res, next) => {
+// Confirm the email with the 6-digit code (FR02). Wrong tries are limited per code (5) and per IP.
+router.post('/verify-email', codeLimiter, [v.email(), v.code()], validate, async (req, res, next) => {
   try {
-    await authService.verifyEmail(req.body.token);
+    await authService.verifyEmail(req.body.email, req.body.code);
     res.json({ ok: true });
   } catch (error) {
     next(error);
   }
 });
 
-// Neutral answer whether or not the email exists.
+// 'Send the code again'. Neutral answer whether or not the email exists or the account asked too
+// often (at most one code per 60 s and 10 per day per account; also limited per IP).
 router.post('/resend-verification', emailLinkLimiter, [v.email()], validate, async (req, res, next) => {
   try {
     await authService.resendVerification(req.body.email);
-    res.json({ ok: true });
+    res.json({ ok: true, resend_after_seconds: RESEND_COOLDOWN_SECONDS });
   } catch (error) {
     next(error);
   }
@@ -104,15 +109,16 @@ router.post('/logout', (req, res) => {
 router.post('/forgot-password', emailLinkLimiter, [v.email()], validate, async (req, res, next) => {
   try {
     await authService.forgotPassword(req.body.email);
-    res.json({ ok: true });
+    res.json({ ok: true, resend_after_seconds: RESEND_COOLDOWN_SECONDS });
   } catch (error) {
     next(error);
   }
 });
 
-router.post('/reset-password', emailLinkLimiter, [v.token(), v.password()], validate, async (req, res, next) => {
+// Reset with the 6-digit code from the email (FR17)
+router.post('/reset-password', codeLimiter, [v.email(), v.code(), v.password()], validate, async (req, res, next) => {
   try {
-    await authService.resetPassword(req.body.token, req.body.password);
+    await authService.resetPassword(req.body.email, req.body.code, req.body.password);
     // This browser is signed out too; the user signs in again with the new password.
     clearSessionCookie(res);
     res.json({ ok: true });

@@ -87,7 +87,8 @@ Local development and tests use a **local MySQL 8.4** in Docker, never the produ
    - `backend/.env`: real settings (Aiven, `JWT_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, ...)
    - `backend/.env.local`: overrides for local development: `DB_HOST=127.0.0.1`, `DB_PORT=3307`,
      `DB_NAME=smart_green_hub_dev`, `DB_USER=sgh_local`, `DB_PASSWORD=sgh_local_pw`, `DB_SSL=false`,
-     `NODE_ENV=development`, `APP_URL=http://localhost:5173`, `CORS_ORIGIN=http://localhost:5173`, empty `BREVO_API_KEY`
+     `NODE_ENV=development`, `APP_URL=http://localhost:5173`, `CORS_ORIGIN=http://localhost:5173`.
+     Email settings come from `.env` (an empty line in `.env.local` never hides a value from `.env`).
    - `backend/.env.test`: used only by `npm test`: the same local values with `DB_NAME=smart_green_hub_test`,
      a test `JWT_SECRET` and fake `ADMIN_EMAIL` / `ADMIN_PASSWORD`. Tests stop if `DB_HOST` contains `aivencloud.com`.
    - `backend/.env.e2e`: used only by the Playwright tests: `PORT=5001`, `DB_NAME=smart_green_hub_e2e`,
@@ -108,14 +109,24 @@ Local development and tests use a **local MySQL 8.4** in Docker, never the produ
    npm run dev          # app on http://localhost:5173 (Vite forwards /api to the API)
    ```
 
-   Without `BREVO_API_KEY`, emails (confirmation and reset links, notifications) are printed in the API terminal.
+   The API log says at startup whether email is configured. Without `BREVO_API_KEY`, emails (6-digit codes,
+   notifications) are printed in the API terminal and marked "skipped". In development a code email that Brevo
+   refuses is also printed there, so you can still test; its status stays "failed".
+
+## Email and one-time codes
+
+- Registration and password reset send a **6-digit code** (valid 10 minutes, single use, 5 tries, a new code
+  replaces the old one, at most one per 60 s and 10 per day per account). Only an HMAC of the code is stored.
+- Every email goes through the outbox with a status `queued`, `sent`, `failed` or `skipped`.
+  **Admin → Email problems** shows the counts and every failed or skipped email with Brevo's exact error and a Retry button.
+- `/api/health` shows `email: configured` or `not configured` (no secret is ever shown).
 
 ## Tests
 
 | Command | What runs |
 |---------|-----------|
-| `cd backend && npm test` | 211 Jest unit, API and frontend-backend contract tests on `smart_green_hub_test` |
-| `cd frontend && npm run test:e2e` | 14 Playwright tests in Microsoft Edge (starts its own API and app) |
+| `cd backend && npm test` | 231 Jest unit, API, one-time-code, outbox and frontend-backend contract tests on `smart_green_hub_test` |
+| `cd frontend && npm run test:e2e` | 18 Playwright tests in Microsoft Edge (starts its own API and app) |
 | `cd frontend && npm run lint` | ESLint |
 | `cd backend && node scripts/load-test.js <url> 50 10` | 50-user load test (NFR01) |
 
@@ -133,7 +144,9 @@ Render (API):
 | `DB_CA_CERT` | Aiven CA certificate text |
 | `JWT_SECRET` | long random text |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD` | first administrator |
-| `BREVO_API_KEY`, `MAIL_FROM` | email (sender verified in Brevo) |
+| `BREVO_API_KEY` | Brevo API key that is allowed to send transactional email |
+| `MAIL_FROM` | `Smart Green Hub <address verified in Brevo>` |
+| `OTP_SECRET` | optional: secret for hashing codes (default: `JWT_SECRET`) |
 | `APP_URL` | `https://smart-green-hub.vercel.app` (no trailing slash) |
 | `CORS_ORIGIN` | `https://smart-green-hub.vercel.app` |
 | `TRUST_PROXY` | `2` (Vercel + Render in front of the API) |
@@ -156,6 +169,10 @@ Vercel (frontend): `VITE_API_URL` = `/api` (Production and Preview). The project
   banner when the versions differ; `/api/health` shows the API version.
 - **Database up to date?** `cd backend && npx sequelize-cli db:migrate:status` (every line should say `up`).
 - **Local database not reachable?** Start Docker Desktop, then `docker start sgh-mysql`.
+- **Nobody receives emails**: open Admin → Email problems. "Skipped" = no `BREVO_API_KEY` is loaded.
+  "Failed" shows Brevo's answer: `HTTP 401` = wrong key; `HTTP 403 permission_denied ... transactional.email`
+  = the key or account may not send transactional email (fix it in Brevo); `HTTP 400` about the sender =
+  `MAIL_FROM` is not a verified sender. Also check `/api/health` → `email`.
 
 ## Before the pilot
 

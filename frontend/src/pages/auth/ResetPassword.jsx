@@ -1,48 +1,66 @@
+// Step 2 of the password reset (FR17): the 6-digit code from the email and the new password.
+// A successful reset signs the account out on every device.
 import { useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import api, { errorCode, fieldErrors } from '../../api/client'
 import { useAuth } from '../../auth/AuthContext'
 import { useI18n } from '../../i18n/I18nProvider'
 import Button from '../../components/ui/Button'
-import { buttonClasses } from '../../components/ui/buttonStyles'
+import Icon from '../../components/ui/Icon'
 import Notice from '../../components/ui/Notice'
+import CodeInput from '../../components/ui/CodeInput'
+import ResendButton from '../../components/ui/ResendButton'
 import { TextField } from '../../components/ui/Fields'
+import { buttonClasses } from '../../components/ui/buttonStyles'
+import { codeErrorText } from '../../utils/codeErrors'
 import AuthCard from './AuthCard'
 
 export default function ResetPassword() {
   const { t } = useI18n()
   const { refresh } = useAuth()
   const [params] = useSearchParams()
-  const token = params.get('token') || ''
+  const location = useLocation()
+  const [email, setEmail] = useState(params.get('email') || '')
+  const [code, setCode] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [busy, setBusy] = useState(false)
   const [done, setDone] = useState(false)
+  const [codeError, setCodeError] = useState(null)
   const [error, setError] = useState(null)
   const [fields, setFields] = useState({})
+  const [resent, setResent] = useState(false)
 
   async function submit(event) {
     event.preventDefault()
     setError(null)
+    setCodeError(null)
     setFields({})
-    if (password !== confirm) {
-      setError('PASSWORDS_DIFFER')
-      return
-    }
+    if (code.length !== 6) return setCodeError(t('fieldErrors.invalid_code'))
+    if (password !== confirm) return setError(t('auth.passwordsDiffer'))
     setBusy(true)
     try {
-      await api.post('/auth/reset-password', { token, password })
+      await api.post('/auth/reset-password', { email, code, password })
       setDone(true)
       // Every session was ended on the server; update this screen too.
       await refresh().catch(() => {})
     } catch (err) {
-      const code = errorCode(err)
+      const apiCode = errorCode(err)
       const f = fieldErrors(err)
-      setError(code === 'VALIDATION_FAILED' && f.token ? 'INVALID_OR_EXPIRED_LINK' : code)
-      setFields(f)
+      if (apiCode === 'VALIDATION_FAILED' && !f.code) setFields(f)
+      else setCodeError(codeErrorText(t, err))
+      if (['TOO_MANY_ATTEMPTS', 'CODE_EXPIRED', 'CODE_INVALID'].includes(apiCode)) setCode('')
     } finally {
       setBusy(false)
     }
+  }
+
+  async function resend() {
+    const { data } = await api.post('/auth/forgot-password', { email })
+    setResent(true)
+    setCodeError(null)
+    setCode('')
+    return data.resend_after_seconds
   }
 
   if (done) {
@@ -58,17 +76,15 @@ export default function ResetPassword() {
 
   return (
     <AuthCard title={t('auth.resetTitle')}>
+      <div className="mb-5 flex gap-3">
+        <Icon name="mail" size={28} className="shrink-0 text-leaf-text" />
+        <p>{email ? t('code.resetSentTo', { email }) : t('code.enterEmail')}</p>
+      </div>
+      {resent && <Notice type="success" className="mb-4">{t('code.resent')}</Notice>}
       <form onSubmit={submit} className="space-y-4" noValidate>
-        {error && error !== 'VALIDATION_FAILED' && (
-          <Notice type="error">
-            {error === 'PASSWORDS_DIFFER' ? t('auth.passwordsDiffer') : t(`errors.${error}`)}
-            {error === 'INVALID_OR_EXPIRED_LINK' && (
-              <Link to="/forgot-password" className="mt-2 block font-semibold underline">
-                {t('auth.sendLink')}
-              </Link>
-            )}
-          </Notice>
-        )}
+        {error && <Notice type="error">{error}</Notice>}
+        {!params.get('email') && <TextField label={t('auth.email')} type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} />}
+        <CodeInput value={code} onChange={setCode} error={codeError} />
         <TextField
           label={t('auth.newPassword')}
           type="password"
@@ -80,10 +96,12 @@ export default function ResetPassword() {
           required
         />
         <TextField label={t('auth.confirmPassword')} type="password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required />
-        <Button type="submit" full icon="check" disabled={busy}>
+        <Button type="submit" full icon="check" disabled={busy || !email}>
           {busy ? t('common.saving') : t('auth.setPassword')}
         </Button>
       </form>
+      <div className="mt-4">{email && <ResendButton onResend={resend} initialSeconds={location.state?.fresh ? 60 : 0} />}</div>
+      <p className="mt-4 text-sm text-ink-soft">{t('code.spamHint')}</p>
     </AuthCard>
   )
 }

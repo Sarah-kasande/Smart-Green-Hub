@@ -12,6 +12,7 @@ const { issueCsrfCookie, verifyCsrf } = require('./middleware/csrf');
 const { loadUser } = require('./middleware/auth');
 const { notFound, errorHandler } = require('./middleware/errorHandler');
 const { apiLimiter } = require('./middleware/rateLimits');
+const { emailConfig } = require('./services/emailService');
 const routes = require('./routes');
 
 const app = express();
@@ -36,7 +37,13 @@ app.get('/api/health', async (req, res) => {
     await sequelize.authenticate();
     // version: the git commit Render deployed (RENDER_GIT_COMMIT), so the app can see whether
     // the API runs the same version as the frontend. 'local' on your computer.
-    res.json({ status: 'ok', database: 'connected', version: (process.env.RENDER_GIT_COMMIT || 'local').slice(0, 7) });
+    // email: 'configured' or 'not configured' (no key or no valid sender). Never shows a secret.
+    res.json({
+      status: 'ok',
+      database: 'connected',
+      email: emailConfig().configured ? 'configured' : 'not configured',
+      version: (process.env.RENDER_GIT_COMMIT || 'local').slice(0, 7),
+    });
   } catch (e) {
     res.status(500).json({ status: 'error', database: e.message });
   }

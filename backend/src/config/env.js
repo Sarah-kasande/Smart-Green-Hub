@@ -16,6 +16,11 @@ if (process.env.ENV_FILE) {
   dotenv.config({ path: path.join(backendRoot, '.env.test'), quiet: true });
 } else {
   dotenv.config({ path: path.join(backendRoot, '.env.local'), quiet: true });
+  // An EMPTY line in .env.local (e.g. 'BREVO_API_KEY=') must not hide the real value in .env:
+  // dotenv never overwrites a variable that exists, even an empty one, so empty ones are removed first.
+  for (const [name, value] of Object.entries(process.env)) {
+    if (value === '') delete process.env[name];
+  }
   dotenv.config({ path: path.join(backendRoot, '.env'), quiet: true });
 }
 

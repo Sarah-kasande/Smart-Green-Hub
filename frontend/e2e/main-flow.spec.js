@@ -2,7 +2,7 @@
 // register -> confirm email -> admin approves -> batch -> sale -> OFFLINE sale that syncs later ->
 // surplus listing -> institution requests -> approve -> two-sided hand-over -> impact (public).
 import { expect, test } from '@playwright/test'
-import { ADMIN, PASSWORD, approvedAccount, linkFromEmail, signIn, uniqueEmail, visibleText } from './helpers'
+import { ADMIN, PASSWORD, approvedAccount, codeFromEmail, signIn, uniqueEmail, visibleText } from './helpers'
 
 test.describe.configure({ mode: 'serial' })
 
@@ -27,9 +27,11 @@ test('1. a nursery registers and confirms its email', async () => {
   await operator.getByLabel('Sector').fill('Kanombe')
   await operator.getByRole('checkbox').check()
   await operator.getByRole('button', { name: 'Create account' }).click()
-  await expect(operator.getByRole('heading', { name: 'Check your email' })).toBeVisible()
-
-  await operator.goto(await linkFromEmail(operatorEmail))
+  // The 6-digit code screen
+  await expect(operator.getByRole('heading', { name: 'Enter your code' })).toBeVisible()
+  await expect(operator.getByLabel('6-digit code')).toHaveAttribute('inputmode', 'numeric')
+  await operator.getByLabel('6-digit code').fill(await codeFromEmail(operatorEmail))
+  await operator.getByRole('button', { name: 'Confirm', exact: true }).click()
   await expect(operator.getByRole('heading', { name: 'Email confirmed' })).toBeVisible()
 
   await signIn(operator, operatorEmail, PASSWORD)

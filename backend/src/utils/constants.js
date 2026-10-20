@@ -18,7 +18,8 @@ module.exports = {
   LISTING_STATUSES: ['active', 'reserved', 'fulfilled', 'expired', 'withdrawn'],
   REQUEST_STATUSES: ['pending', 'approved', 'fulfilled', 'declined', 'cancelled'],
   RECOMMENDATION_STATUSES: ['suggested', 'accepted', 'dismissed'],
-  NOTIFICATION_STATUSES: ['pending', 'sent', 'failed'],
+  // queued = waiting to be sent; skipped = printed to the console (development) instead of sent
+  NOTIFICATION_STATUSES: ['queued', 'sent', 'failed', 'skipped'],
   TOKEN_PURPOSES: ['verify_email', 'reset_password'],
   FILE_PURPOSES: ['verification_document', 'batch_photo'],
   // Upload rules (NFR03)

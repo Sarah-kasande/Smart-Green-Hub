@@ -1,5 +1,7 @@
+// Step 1 of the password reset (FR17): ask for a 6-digit code by email.
+// The answer is the same whether or not the email is registered, so the next screen is always shown.
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import api, { errorCode, fieldErrors } from '../../api/client'
 import { useI18n } from '../../i18n/I18nProvider'
 import Button from '../../components/ui/Button'
@@ -9,9 +11,9 @@ import AuthCard from './AuthCard'
 
 export default function ForgotPassword() {
   const { t } = useI18n()
+  const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [busy, setBusy] = useState(false)
-  const [sent, setSent] = useState(false)
   const [error, setError] = useState(null)
   const [fields, setFields] = useState({})
 
@@ -22,8 +24,7 @@ export default function ForgotPassword() {
     setFields({})
     try {
       await api.post('/auth/forgot-password', { email })
-      // The same message whether or not the email is registered (FR17)
-      setSent(true)
+      navigate(`/reset-password?email=${encodeURIComponent(email.trim())}`, { state: { fresh: true } })
     } catch (err) {
       setError(errorCode(err))
       setFields(fieldErrors(err))
@@ -33,18 +34,14 @@ export default function ForgotPassword() {
   }
 
   return (
-    <AuthCard title={t('auth.forgotTitle')} intro={sent ? null : t('auth.forgotIntro')}>
-      {sent ? (
-        <Notice type="success">{t('auth.forgotSent')}</Notice>
-      ) : (
-        <form onSubmit={submit} className="space-y-4" noValidate>
-          {error && error !== 'VALIDATION_FAILED' && <Notice type="error">{t(`errors.${error}`)}</Notice>}
-          <TextField label={t('auth.email')} type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} error={fields.email} required />
-          <Button type="submit" full icon="mail" disabled={busy}>
-            {busy ? t('common.loading') : t('auth.sendLink')}
-          </Button>
-        </form>
-      )}
+    <AuthCard title={t('auth.forgotTitle')} intro={t('code.forgotIntro')}>
+      <form onSubmit={submit} className="space-y-4" noValidate>
+        {error && error !== 'VALIDATION_FAILED' && <Notice type="error">{t(`errors.${error}`)}</Notice>}
+        <TextField label={t('auth.email')} type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} error={fields.email} required />
+        <Button type="submit" full icon="mail" disabled={busy}>
+          {busy ? t('common.loading') : t('code.sendCode')}
+        </Button>
+      </form>
       <Link to="/login" className="mt-6 block text-center font-semibold text-teal-text underline">
         {t('common.signIn')}
       </Link>

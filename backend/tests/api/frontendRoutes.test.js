@@ -32,7 +32,7 @@ describe('administrator pages', () => {
     ['Listings', '/api/admin/listings?status=active'],
     ['Impact', '/api/admin/impact'],
     ['Audit log', '/api/admin/audit'],
-    ['Email problems', '/api/admin/notifications/failed'],
+    ['Email problems', '/api/admin/emails'],
     ['Notification bell', '/api/notifications'],
   ])('%s: GET %s answers 200', async (_page, url) => {
     const res = await admin.get(url);

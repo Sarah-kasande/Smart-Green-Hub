@@ -8,7 +8,6 @@ const admin = require('../services/adminService');
 const risk = require('../services/riskService');
 const surplus = require('../services/surplusService');
 const impact = require('../services/impactService');
-const { dispatchPending } = require('../services/notificationService');
 const { SPECIES_CATEGORIES, LISTING_STATUSES } = require('../utils/constants');
 
 const router = express.Router();
@@ -141,11 +140,10 @@ router.post('/risk/run', handle(async (req, res) => {
 // ---- Impact (FR12: detailed for the administrator) ----
 router.get('/impact', handle(async (req, res) => res.json({ summary: await impact.summary(), records: await impact.records() })));
 
-// ---- Notification failures (FR14) ----
-router.get('/notifications/failed', handle(async (req, res) => res.json({ notifications: await admin.failedNotifications() })));
-router.post('/notifications/:id/retry', [param('id').isInt({ min: 1 }).toInt()], validate, handle(async (req, res) => {
-  await admin.retryNotification(req.user, req.params.id);
-  res.json({ result: await dispatchPending() });
+// ---- Email report (FR14): counts per status, failed and skipped emails, retry ----
+router.get('/emails', handle(async (req, res) => res.json(await admin.emailReport())));
+router.post('/emails/:id/retry', [param('id').isInt({ min: 1 }).toInt()], validate, handle(async (req, res) => {
+  res.json({ result: await admin.retryEmail(req.user, req.params.id) });
 }));
 
 module.exports = router;

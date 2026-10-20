@@ -8,19 +8,26 @@ export const ADMIN = { email: 'e2e-admin@example.test', password: 'E2eAdmin123' 
 export const PASSWORD = 'GreenTest123'
 export const uniqueEmail = (prefix) => `${prefix}-${Date.now()}@example.test`
 
-// The link (path + token) from the last email sent to this address
-export async function linkFromEmail(to, kind = 'verify-email') {
+function emailsTo(to) {
+  const lines = fs.existsSync(OUTBOX) ? fs.readFileSync(OUTBOX, 'utf8').trim().split('\n').filter(Boolean) : []
+  return lines.map((l) => JSON.parse(l)).filter((m) => m.to === to)
+}
+
+// The 6-digit code from the newest code email sent to this address (the code is in the subject).
+// `after` = how many code emails this address had before, to wait for a NEW one.
+export async function codeFromEmail(to, after = 0) {
   let found = null
   await expect
     .poll(() => {
-      const lines = fs.existsSync(OUTBOX) ? fs.readFileSync(OUTBOX, 'utf8').trim().split('\n').filter(Boolean) : []
-      const mail = lines.map((l) => JSON.parse(l)).reverse().find((m) => m.to === to && m.text.includes(`/${kind}?token=`))
-      found = mail ? mail.text.match(new RegExp(`/${kind}\\?token=[a-f0-9]{64}`))[0] : null
+      const codes = emailsTo(to).filter((m) => /\b\d{6}\b/.test(m.subject))
+      found = codes.length > after ? codes.at(-1).subject.match(/\b(\d{6})\b/)[1] : null
       return found
     })
     .toBeTruthy()
   return found
 }
+
+export const codeEmailCount = (to) => emailsTo(to).filter((m) => /\b\d{6}\b/.test(m.subject)).length
 
 export async function signIn(page, email, password) {
   await page.goto('/login')
@@ -42,8 +49,8 @@ export async function approvedAccount(browser, adminContext, data) {
   const context = await browser.newContext()
   const reg = await api(context, 'POST', '/auth/register', data)
   expect(reg.status).toBe(201)
-  const link = await linkFromEmail(data.email)
-  await api(context, 'POST', '/auth/verify-email', { token: link.split('token=')[1] })
+  const code = await codeFromEmail(data.email)
+  await api(context, 'POST', '/auth/verify-email', { email: data.email, code })
   await api(context, 'POST', '/auth/login', { email: data.email, password: data.password })
   const me = await api(context, 'GET', '/auth/me')
   const org = me.body.organisation

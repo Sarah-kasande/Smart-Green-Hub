@@ -8,7 +8,10 @@ module.exports = (sequelize, DataTypes, { common }) =>
       event_key: { type: DataTypes.STRING(190), allowNull: false, unique: true },
       type: { type: DataTypes.STRING(60), allowNull: false },
       payload_json: { type: DataTypes.JSON },
-      status: { type: DataTypes.ENUM(...NOTIFICATION_STATUSES), allowNull: false, defaultValue: 'pending' },
+      status: { type: DataTypes.ENUM(...NOTIFICATION_STATUSES), allowNull: false, defaultValue: 'queued' },
+      recipient_email: { type: DataTypes.STRING(190) },
+      // false for emails that are not shown in the in-app list (one-time codes)
+      in_app: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
       attempts: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
       sent_at: { type: DataTypes.DATE },
       read_at: { type: DataTypes.DATE },

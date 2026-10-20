@@ -27,11 +27,19 @@ async function newClient() {
   return { agent, csrf, get: (url) => agent.get(url), post: withCsrf('post'), put: withCsrf('put'), patch: withCsrf('patch') };
 }
 
-// Pulls the 64-character token out of the last email sent to an address.
-function lastTokenSentTo(email) {
-  const mail = [...sentEmails].reverse().find((m) => m.to === email);
-  const match = mail && mail.text.match(/token=([a-f0-9]{64})/);
-  return match ? match[1] : null;
+// The 6-digit code in the last code email sent to an address (the code is in the subject).
+function lastCodeSentTo(email) {
+  const mail = [...sentEmails].reverse().find((m) => m.to === email && /\b\d{6}\b/.test(m.subject));
+  return mail ? mail.subject.match(/\b(\d{6})\b/)[1] : null;
+}
+
+// Moves this account's last code 2 minutes into the past, so a test may ask for a new code
+// without waiting for the 60-second limit.
+async function skipCooldown(email) {
+  await sequelize.query(
+    'UPDATE auth_tokens t JOIN users u ON u.id = t.user_id SET t.created_at = DATE_SUB(t.created_at, INTERVAL 2 MINUTE) WHERE u.email = ?',
+    { replacements: [email] }
+  );
 }
 
 const TEST_PASSWORD = 'GreenTest123';
@@ -63,7 +71,7 @@ async function registerVerifiedUser(data) {
   const client = await newClient();
   const reg = await client.post('/api/auth/register').send(data);
   if (reg.status !== 201) throw new Error(`register failed: ${reg.status} ${JSON.stringify(reg.body)}`);
-  await client.post('/api/auth/verify-email').send({ token: lastTokenSentTo(data.email) });
+  await client.post('/api/auth/verify-email').send({ email: data.email, code: lastCodeSentTo(data.email) });
   const login = await client.post('/api/auth/login').send({ email: data.email, password: data.password });
   if (login.status !== 200) throw new Error(`login failed: ${login.status}`);
   return client;
@@ -110,7 +118,8 @@ module.exports = {
   sentEmails,
   resetDatabase,
   newClient,
-  lastTokenSentTo,
+  lastCodeSentTo,
+  skipCooldown,
   TEST_PASSWORD,
   operatorData,
   institutionData,

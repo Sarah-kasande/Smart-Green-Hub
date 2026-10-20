@@ -20,6 +20,8 @@ const audit = require('./auditService');
 const impact = require('./impactService');
 const { defaultRule } = require('./ruleService');
 const { listingJson, listingInclude } = require('./surplusService');
+const notifications = require('./notificationService');
+const otp = require('./otpService');
 
 // Counts rows grouped by one column, e.g. { pending: 2, approved: 5 }
 async function countBy(Model, field, where = {}) {
@@ -36,6 +38,7 @@ async function dashboard() {
     listings: await countBy(SurplusListing, 'status'),
     requests: await countBy(SurplusRequest, 'status'),
     failed_notifications: await Notification.count({ where: { status: 'failed' } }),
+    skipped_emails: await Notification.count({ where: { status: 'skipped' } }),
     impact: await impact.summary(),
   };
 }
@@ -161,22 +164,33 @@ async function listListings({ status } = {}) {
   return result;
 }
 
-// ---- Notification failures (FR14: failures visible for follow-up) ----
+// ---- Email report (FR14: every email has a status; failures visible for follow-up) ----
 
-async function failedNotifications() {
-  return Notification.findAll({
-    where: { status: 'failed' },
-    include: [{ model: User, as: 'user', attributes: ['id', 'full_name', 'email', 'role'] }],
-    order: [['updated_at', 'DESC']],
-    limit: 100,
-  });
+async function emailReport() {
+  return notifications.emailReport();
 }
 
-async function retryNotification(admin, id) {
-  const row = await Notification.findByPk(id);
+// Retry one failed or skipped email.
+//  - notification emails are sent again from the outbox
+//  - code emails (confirmation, password reset) cannot be resent as they were, because the code is
+//    never stored: a NEW code is issued and sent, which invalidates the old one
+async function retryEmail(admin, id) {
+  const row = await Notification.findByPk(id, { include: [{ model: User, as: 'user' }] });
   if (!row) throw new HttpError(404, 'NOT_FOUND', 'Not found');
-  await row.update({ status: 'pending', attempts: 0, last_error: null });
-  await audit.log({ actorId: admin.id, action: 'notification.retried', entityType: 'notification', entityId: id });
+  if (!['failed', 'skipped'].includes(row.status)) throw new HttpError(409, 'NOTHING_TO_RETRY', 'This email was already sent');
+  await audit.log({ actorId: admin.id, action: 'email.retried', entityType: 'notification', entityId: row.id });
+
+  if (notifications.CODE_TYPES.includes(row.type)) {
+    const purpose = row.payload_json?.purpose;
+    // The old row stays in the report as it was; the new code email gets its own row
+    const result = await otp.issueAndSend(row.user, purpose, { actorId: admin.id });
+    return { status: result.status, new_code: true, retry_after: result.retryAfter };
+  }
+
+  await row.update({ status: 'queued', attempts: 0, last_error: null });
+  await notifications.dispatchPending();
+  await row.reload();
+  return { status: row.status, new_code: false };
 }
 
 module.exports = {
@@ -189,6 +203,6 @@ module.exports = {
   restoreSpecies,
   auditLog,
   listListings,
-  failedNotifications,
-  retryNotification,
+  emailReport,
+  retryEmail,
 };

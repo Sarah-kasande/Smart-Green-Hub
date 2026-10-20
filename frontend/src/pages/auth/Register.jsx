@@ -72,8 +72,9 @@ export default function Register() {
       payload.institution = { org_name: form.name, org_type: form.org_type, district: form.district, sector: form.sector, contact_phone: form.contact_phone }
     }
     try {
-      await api.post('/auth/register', payload)
-      navigate('/check-email', { state: { email: form.email } })
+      const { data } = await api.post('/auth/register', payload)
+      // Next step: enter the 6-digit code from the email
+      navigate(`/verify-email?email=${encodeURIComponent(form.email.trim())}`, { state: { emailStatus: data.email_status, fresh: true } })
     } catch (err) {
       setError(errorCode(err))
       setFields(fieldErrors(err))
