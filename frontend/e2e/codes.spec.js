@@ -23,31 +23,49 @@ test('registration code: countdown, wrong code, pasted code, then confirmed', as
   // "Send the code again" waits 60 seconds
   await expect(page.getByRole('button', { name: /Send the code again in \d+ s/ })).toBeDisabled()
 
-  // A wrong code: clear message with the tries left
+  // The address is shown, the code field has the focus, a different email can be used
+  await expect(page.getByText(`We sent a 6-digit code to ${email}`)).toBeVisible()
   const field = page.getByLabel('6-digit code')
+  await expect(field).toBeFocused()
+  await expect(page.getByRole('link', { name: 'Use a different email' })).toBeVisible()
+
+  // A wrong code: clear message with the tries left
   await field.fill(code === '000000' ? '111111' : '000000')
-  await page.getByRole('button', { name: 'Confirm', exact: true }).click()
+  await page.getByRole('button', { name: 'Verify', exact: true }).click()
   await expect(page.getByText('The code is not correct. 4 tries left.')).toBeVisible()
 
-  // Pasting "123 456"-style text keeps only the digits
+  // Pasting "123 456"-style text keeps only the digits; the right code signs the person in
   await field.fill(`${code.slice(0, 3)} ${code.slice(3)}`)
   await expect(field).toHaveValue(code)
-  await page.getByRole('button', { name: 'Confirm', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Email confirmed' })).toBeVisible()
+  await page.getByRole('button', { name: 'Verify', exact: true }).click()
+
+  // Next screen: the home page with the confirmation and the next step
+  await expect(page).toHaveURL(/\/institution$/)
+  await expect(page.getByText('Your email is confirmed.')).toBeVisible()
+  await expect(page.getByText('Next step: an administrator checks your details.')).toBeVisible()
+  await expect(page.getByText('Waiting for approval').first()).toBeVisible()
 })
 
-test('sign-in before confirming leads to the code screen with a fresh code', async ({ page }) => {
+test('sign-in before confirming goes straight to the code screen', async ({ page }) => {
   const email = uniqueEmail('e2e-late')
   await registerThroughForm(page, email)
   const before = codeEmailCount(email)
+  await page.context().clearCookies()
   await signIn(page, email, PASSWORD)
-  await expect(page.getByRole('alert')).toContainText('6-digit code')
-  // The account just got a code, so the 60-second limit applies: the screen still opens
-  await page.getByRole('button', { name: 'Enter my confirmation code' }).click()
   await expect(page.getByRole('heading', { name: 'Enter your code' })).toBeVisible()
+  await expect(page.getByText('Your email address is not confirmed yet')).toBeVisible()
+  // Coming from sign-in, a new code can be requested straight away (the server still limits to one per 60 s)
+  await expect(page.getByRole('button', { name: 'Send the code again', exact: true })).toBeEnabled()
   await page.getByLabel('6-digit code').fill(await codeFromEmail(email, before - 1))
-  await page.getByRole('button', { name: 'Confirm', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Email confirmed' })).toBeVisible()
+  await page.getByRole('button', { name: 'Verify', exact: true }).click()
+  await expect(page.getByText('Your email is confirmed.')).toBeVisible()
+})
+
+test('"Use a different email" lets the person type another address', async ({ page }) => {
+  await page.goto('/verify-email?email=first%40example.test')
+  await page.getByRole('link', { name: 'Use a different email' }).click()
+  await expect(page.getByLabel('Email address')).toBeVisible()
+  await expect(page.getByLabel('6-digit code')).toBeVisible()
 })
 
 test('password reset with a code; the new password works', async ({ browser, page }) => {

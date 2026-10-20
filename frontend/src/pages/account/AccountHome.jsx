@@ -2,6 +2,7 @@
 // editable details and supporting documents. Phase 2 (operator) and Phase 4 (institution)
 // add the real dashboards above this.
 import { useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthContext'
 import { useI18n } from '../../i18n/I18nProvider'
 import Button from '../../components/ui/Button'
@@ -17,6 +18,8 @@ export default function AccountHome() {
   const { user, organisation, refresh } = useAuth()
   const [editing, setEditing] = useState(false)
   const [saved, setSaved] = useState(false)
+  // Arrived straight from the code screen: confirm and explain the next step
+  const justVerified = useLocation().state?.justVerified
 
   if (!organisation) return null
   const status = organisation.verification_status
@@ -38,6 +41,12 @@ export default function AccountHome() {
         </p>
       </div>
 
+      {justVerified && (
+        <Notice type="success">
+          <p className="font-semibold">{t('code.verifiedTitle')}</p>
+          <p>{status === 'approved' ? t('account.approvedText') : t('code.nextStep')}</p>
+        </Notice>
+      )}
       {saved && <Notice type="success">{t('account.detailsSaved')}</Notice>}
 
       <Card>

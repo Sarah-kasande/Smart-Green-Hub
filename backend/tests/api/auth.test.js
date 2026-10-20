@@ -86,10 +86,26 @@ describe('email confirmation and login', () => {
     const client = await h.newClient();
     const code = h.lastCodeSentTo('op1@example.test');
     const spaced = `${code.slice(0, 3)} ${code.slice(3)}`;
-    expect((await client.post('/api/auth/verify-email').send({ email: 'op1@example.test', code: spaced })).status).toBe(200);
+    const ok = await client.post('/api/auth/verify-email').send({ email: 'op1@example.test', code: spaced });
+    expect(ok.status).toBe(200);
+    // A correct code signs the person in (HttpOnly session cookie) and shows their next step
+    expect(ok.body).toMatchObject({ ok: true, signed_in: true, user: { email: 'op1@example.test' } });
+    expect(ok.headers['set-cookie'].find((c) => c.startsWith('sgh_session='))).toMatch(/HttpOnly/i);
+    const me = await client.get('/api/auth/me');
+    expect(me.body.organisation.verification_status).toBe('pending');
     const again = await client.post('/api/auth/verify-email').send({ email: 'op1@example.test', code });
     expect(again.status).toBe(409);
     expect(again.body.code).toBe('ALREADY_VERIFIED');
+  });
+
+  test('a wrong code does not sign anyone in', async () => {
+    const client = await h.newClient();
+    await client.post('/api/auth/register').send(h.institutionData('wrongcode@example.test'));
+    const code = h.lastCodeSentTo('wrongcode@example.test');
+    const res = await client.post('/api/auth/verify-email').send({ email: 'wrongcode@example.test', code: code === '000000' ? '111111' : '000000' });
+    expect(res.status).toBe(400);
+    expect(res.headers['set-cookie']?.find((c) => c.startsWith('sgh_session=') && !c.startsWith('sgh_session=;'))).toBeUndefined();
+    expect((await client.get('/api/auth/me')).body.user).toBeNull();
   });
 
   test('wrong password gives one neutral error', async () => {

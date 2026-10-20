@@ -66,8 +66,10 @@ router.post(
 // Confirm the email with the 6-digit code (FR02). Wrong tries are limited per code (5) and per IP.
 router.post('/verify-email', codeLimiter, [v.email(), v.code()], validate, async (req, res, next) => {
   try {
-    await authService.verifyEmail(req.body.email, req.body.code);
-    res.json({ ok: true });
+    const { user, sessionToken } = await authService.verifyEmail(req.body.email, req.body.code);
+    // Correct code: the person is signed in and goes straight to their next step
+    if (sessionToken) setSessionCookie(res, sessionToken);
+    res.json({ ok: true, user, signed_in: Boolean(sessionToken) });
   } catch (error) {
     next(error);
   }

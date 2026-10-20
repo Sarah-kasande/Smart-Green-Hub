@@ -55,12 +55,19 @@ export default function ResetPassword() {
     }
   }
 
+  // Returns the seconds to wait before the next "send again" (one code per 60 s per account)
   async function resend() {
-    const { data } = await api.post('/auth/forgot-password', { email })
-    setResent(true)
     setCodeError(null)
-    setCode('')
-    return data.resend_after_seconds
+    try {
+      const { data } = await api.post('/auth/forgot-password', { email })
+      setResent(true)
+      setCode('')
+      return data.resend_after_seconds
+    } catch (err) {
+      setResent(false)
+      setCodeError(t(`errors.${errorCode(err)}`))
+      return 60
+    }
   }
 
   if (done) {
@@ -78,7 +85,12 @@ export default function ResetPassword() {
     <AuthCard title={t('auth.resetTitle')}>
       <div className="mb-5 flex gap-3">
         <Icon name="mail" size={28} className="shrink-0 text-leaf-text" />
-        <p>{email ? t('code.resetSentTo', { email }) : t('code.enterEmail')}</p>
+        <div>
+          <p>{params.get('email') ? t('code.resetSentTo', { email: params.get('email') }) : t('code.enterEmail')}</p>
+          <Link to="/forgot-password" className="mt-1 inline-flex min-h-10 items-center font-semibold text-teal-text underline">
+            {t('code.differentEmail')}
+          </Link>
+        </div>
       </div>
       {resent && <Notice type="success" className="mb-4">{t('code.resent')}</Notice>}
       <form onSubmit={submit} className="space-y-4" noValidate>

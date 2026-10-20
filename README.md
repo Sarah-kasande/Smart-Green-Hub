@@ -117,6 +117,11 @@ Local development and tests use a **local MySQL 8.4** in Docker, never the produ
 
 - Registration and password reset send a **6-digit code** (valid 10 minutes, single use, 5 tries, a new code
   replaces the old one, at most one per 60 s and 10 per day per account). Only an HMAC of the code is stored.
+- Journey: Register → **Verify your email** (`/verify-email`, code field, "Send the code again" after 60 s,
+  "Use a different email") → signed in → home page with the next step (administrator approval).
+  Signing in before confirming opens the same screen. Password: Forgot password → email → code + new password.
+- After a deploy the app reloads itself once when the new version is ready. If a browser still shows an old
+  screen, reload the page (Ctrl+Shift+R).
 - Every email goes through the outbox with a status `queued`, `sent`, `failed` or `skipped`.
   **Admin → Email problems** shows the counts and every failed or skipped email with Brevo's exact error and a Retry button.
 - `/api/health` shows `email: configured` or `not configured` (no secret is ever shown).

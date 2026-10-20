@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
-import api, { errorCode, fieldErrors } from '../../api/client'
+import { errorCode, fieldErrors } from '../../api/client'
 import { homePathFor, useAuth } from '../../auth/AuthContext'
 import { useI18n } from '../../i18n/I18nProvider'
 import Button from '../../components/ui/Button'
@@ -33,6 +33,13 @@ export default function Login() {
       const home = homePathFor(data.user.role)
       navigate(from && from.startsWith(home) ? from : home, { replace: true })
     } catch (err) {
+      // Right password but the email is not confirmed yet: go to the code screen, where a new code
+      // can be requested. (This answer only comes after a correct password, so it reveals nothing
+      // to someone guessing accounts.)
+      if (errorCode(err) === 'EMAIL_NOT_VERIFIED') {
+        navigate(`/verify-email?email=${encodeURIComponent(email.trim())}`, { state: { fromLogin: true } })
+        return
+      }
       setError(errorCode(err))
       setFields(fieldErrors(err))
     } finally {
@@ -40,25 +47,11 @@ export default function Login() {
     }
   }
 
-  // Email not confirmed yet: send a new code and go to the code screen
-  async function resend() {
-    await api.post('/auth/resend-verification', { email }).catch(() => {})
-    navigate(`/verify-email?email=${encodeURIComponent(email.trim())}`, { state: { fresh: true } })
-  }
-
   return (
     <AuthCard title={t('auth.loginTitle')} intro={t('auth.loginIntro')}>
       <form onSubmit={submit} className="space-y-4" noValidate>
-        {error && error !== 'VALIDATION_FAILED' && (
-          <Notice type="error">
-            {error === 'EMAIL_NOT_VERIFIED' ? t('auth.notVerified') : t(`errors.${error}`)}
-            {error === 'EMAIL_NOT_VERIFIED' && (
-              <button type="button" onClick={resend} className="mt-2 block min-h-10 font-semibold underline">
-                {t('code.getCode')}
-              </button>
-            )}
-          </Notice>
-        )}
+        {location.state?.verified && !error && <Notice type="success">{t('code.verifiedSignIn')}</Notice>}
+        {error && error !== 'VALIDATION_FAILED' && <Notice type="error">{t(`errors.${error}`)}</Notice>}
         <TextField label={t('auth.email')} type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} error={fields.email} required />
         <TextField
           label={t('auth.password')}

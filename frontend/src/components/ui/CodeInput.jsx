@@ -18,6 +18,8 @@ export default function CodeInput({ value, onChange, error, label }) {
         onChange={(e) => onChange(e.target.value.replace(/\D/g, '').slice(0, 6))}
         inputMode="numeric"
         autoComplete="one-time-code"
+        // The cursor is in the code field as soon as the screen opens
+        autoFocus
         pattern="[0-9]*"
         // No maxLength: it would cut a pasted "123 456" to "123 45" BEFORE the space is removed.
         // onChange keeps the first 6 digits instead.

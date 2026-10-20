@@ -140,8 +140,6 @@ const rw = {
     noAccount: 'Nta konti ufite?',
     haveAccount: 'Usanzwe wariyandikishije?',
     notVerified: "Banza wemeze imeri yawe ukoresheje kode y'imibare 6 twakoherereje.",
-    resend: 'Ongera wohereze umurongo',
-    resent: 'Niba iyi imeri yanditswe kandi itaremezwa, umurongo mushya uri mu nzira.',
     registerTitle: 'Fungura konti',
     registerIntro: "Kwiyandikisha ni ubuntu. Umuyobozi agenzura buri pepiniyeri n'ikigo mbere y'uko gishyira ahagaragara cyangwa gisaba ibimera.",
     iAm: 'Ndiyandikisha nka',
@@ -164,16 +162,7 @@ const rw = {
     listConsent: 'Garagaza pepiniyeri yanjye (izina, aho iherereye na telefoni) ku rutonde rusange nyuma yo kwemezwa',
     choose: 'Hitamo…',
     createAccount: 'Fungura konti',
-    checkEmailTitle: 'Reba imeri yawe',
-    checkEmailText: 'Twohereje umurongo wo kwemeza kuri {email}. Ufungure kugira ngo konti yawe ikore. Umurongo umara amasaha 24.',
-    verifyingTitle: 'Turimo kwemeza imeri yawe…',
-    verifiedTitle: 'Imeri yemejwe',
-    verifiedText: 'Imeri yawe yemejwe. Ubu ushobora kwinjira.',
-    verifyFailedTitle: 'Uyu murongo ntukora',
     forgotTitle: "Wibagiwe ijambo ry'ibanga?",
-    forgotIntro: "Andika imeri yawe. Niba yanditswe, tuzakoherereza umurongo wo guhitamo ijambo ry'ibanga rishya. Umurongo umara iminota 10.",
-    sendLink: 'Ohereza umurongo',
-    forgotSent: 'Niba iyi imeri yanditswe, umurongo uri mu nzira. Reba imeri yawe.',
     resetTitle: "Hitamo ijambo ry'ibanga rishya",
     newPassword: "Ijambo ry'ibanga rishya",
     confirmPassword: "Subiramo ijambo ry'ibanga rishya",
@@ -629,6 +618,12 @@ const rw = {
   },
   // TODO(translation review): whole block
   code: {
+    verify: 'Emeza', // TODO: unsure
+    differentEmail: 'Koresha indi imeri', // TODO: unsure
+    fromLogin: "Imeri yawe ntiraremezwa. Andika kode y'imibare 6 iri muri imeri yawe, cyangwa usabe kode nshya.", // TODO: unsure
+    verifiedTitle: 'Imeri yawe yemejwe.', // TODO: unsure
+    nextStep: "Ibikurikiraho: umuyobozi agenzura amakuru yawe. Uzabona imeri konti yawe imaze kwemezwa; hagati aho ushobora kongeraho inyandiko zishyigikira hasi.", // TODO: unsure
+    verifiedSignIn: 'Imeri yawe yemejwe. Injira.', // TODO: unsure
     label: 'Kode y\'imibare 6',
     hint: 'Andika cyangwa ushyiremo kode iri muri imeri.',
     verifyTitle: 'Andika kode yawe',

@@ -111,7 +111,9 @@ async function register(data) {
   return { user: toSafeUser(user), emailStatus: sent.status };
 }
 
-// Confirms the email with the 6-digit code (FR02).
+// Confirms the email with the 6-digit code (FR02) and signs the person in: the code proves they
+// control the address they registered with a password a moment ago (docs/DEVIATIONS.md W24).
+// Returns { user, sessionToken } (no session for a suspended account).
 async function verifyEmail(emailInput, code) {
   const user = await User.findOne({ where: { email: normaliseEmail(emailInput) } });
   if (user?.email_verified_at) throw new HttpError(409, 'ALREADY_VERIFIED', 'This email is already confirmed');
@@ -120,6 +122,9 @@ async function verifyEmail(emailInput, code) {
     await user.update({ email_verified_at: new Date() }, { transaction });
     await audit.log({ actorId: user.id, action: 'user.email_verified', entityType: 'user', entityId: user.id }, { transaction });
   });
+  if (user.status !== 'active') return { user: toSafeUser(user), sessionToken: null };
+  await audit.log({ actorId: user.id, action: 'user.login', entityType: 'user', entityId: user.id, reason: 'after email confirmation' });
+  return { user: toSafeUser(user), sessionToken: signSession(user) };
 }
 
 // "Send the code again". Always answers the same way, whether or not the email exists or the

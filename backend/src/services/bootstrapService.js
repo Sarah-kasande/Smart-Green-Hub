@@ -24,7 +24,7 @@ async function ensureAdmin() {
     full_name: 'Administrator',
     email,
     password_hash: await bcrypt.hash(password, BCRYPT_ROUNDS),
-    // Provisioned by the system owner, so no confirmation link is needed.
+    // Provisioned by the system owner, so no email confirmation code is needed.
     email_verified_at: new Date(),
   });
   await audit.log({ actorId: null, action: 'admin.provisioned', entityType: 'user', entityId: admin.id });

@@ -31,10 +31,9 @@ test('1. a nursery registers and confirms its email', async () => {
   await expect(operator.getByRole('heading', { name: 'Enter your code' })).toBeVisible()
   await expect(operator.getByLabel('6-digit code')).toHaveAttribute('inputmode', 'numeric')
   await operator.getByLabel('6-digit code').fill(await codeFromEmail(operatorEmail))
-  await operator.getByRole('button', { name: 'Confirm', exact: true }).click()
-  await expect(operator.getByRole('heading', { name: 'Email confirmed' })).toBeVisible()
-
-  await signIn(operator, operatorEmail, PASSWORD)
+  await operator.getByRole('button', { name: 'Verify', exact: true }).click()
+  // A correct code signs the operator in and shows the next step
+  await expect(operator.getByText('Your email is confirmed.')).toBeVisible()
   await expect(visibleText(operator, 'Waiting for approval')).toBeVisible()
 })
 
