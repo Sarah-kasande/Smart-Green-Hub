@@ -6,7 +6,7 @@ import { useI18n } from '../../i18n/I18nProvider'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
 import Icon from '../../components/ui/Icon'
-import Notice from '../../components/ui/Notice'
+import ErrorState from '../../components/ui/ErrorState'
 import PageLoader from '../../components/ui/PageLoader'
 import { EmptyState, PageHeader } from '../../components/ui/Layout'
 import { formatDateTime } from '../../utils/format'
@@ -55,7 +55,7 @@ export default function Notifications() {
           )
         }
       />
-      {error && <Notice type="error">{t(`errors.${error}`)}</Notice>}
+      {error && <ErrorState code={error} onRetry={reload} />}
       {!data && !error && <PageLoader />}
       {data && data.items.length === 0 && <EmptyState icon="bell" title={t('notifications.empty')} />}
       {data && data.items.length > 0 && (

@@ -8,6 +8,7 @@ import { useI18n } from '../../i18n/I18nProvider'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
 import Notice from '../../components/ui/Notice'
+import ErrorState from '../../components/ui/ErrorState'
 import PageLoader from '../../components/ui/PageLoader'
 import { PageHeader, StatCard } from '../../components/ui/Layout'
 import { formatNumber } from '../../utils/format'
@@ -34,7 +35,7 @@ export default function AdminDashboard() {
     }
   }
 
-  if (error) return <Notice type="error">{t(`errors.${error}`)}</Notice>
+  if (error && !data) return <ErrorState code={error} onRetry={reload} />
   if (!data) return <PageLoader />
 
   return (

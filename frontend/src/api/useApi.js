@@ -1,6 +1,8 @@
 // Loads data from the API for a screen.
 //   const { data, error, loading, reload } = useApi('/operator/batches?stage=ready')
-// Pass null as the url to skip loading. reload() fetches again (e.g. after saving something).
+// Pass null as the url to skip loading. reload() fetches again (e.g. after saving something, or
+// from a "Try again" button). Every request ends with data or an error code, never "loading"
+// forever: the Axios client has a time limit (see client.js).
 import { useCallback, useEffect, useState } from 'react'
 import api, { errorCode } from './client'
 
@@ -20,7 +22,12 @@ export function useApi(url) {
     }
   }, [url, version])
 
-  const reload = useCallback(() => setVersion((v) => v + 1), [])
+  // Clears the old error so the page shows the spinner again while retrying
+  const reload = useCallback(() => {
+    setState((s) => ({ ...s, error: null, loading: true }))
+    setVersion((v) => v + 1)
+  }, [])
+
   return { ...state, reload }
 }
 

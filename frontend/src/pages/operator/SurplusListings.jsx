@@ -9,6 +9,7 @@ import { useBatches } from '../../offline/useOfflineData'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
 import Notice from '../../components/ui/Notice'
+import ErrorState from '../../components/ui/ErrorState'
 import PageLoader from '../../components/ui/PageLoader'
 import { StatusBadge } from '../../components/ui/Badges'
 import { EmptyState, Fact, PageHeader } from '../../components/ui/Layout'
@@ -191,7 +192,7 @@ export default function SurplusListings() {
           />
         </Card>
       )}
-      {error && <Notice type="error">{t(`errors.${error}`)}</Notice>}
+      {error && <ErrorState code={error} onRetry={reload} />}
       {!data && !error && <PageLoader />}
       {data && data.listings.length === 0 && !creating && <EmptyState icon="board" title={t('listings.empty')} text={t('listings.emptyText')} />}
       {data && data.listings.length > 0 && (

@@ -8,7 +8,7 @@ describe('health check', () => {
   test('still answers database: connected', async () => {
     const res = await (await h.newClient()).get('/api/health');
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ status: 'ok', database: 'connected' });
+    expect(res.body).toMatchObject({ status: 'ok', database: 'connected', version: 'local' });
   });
 });
 

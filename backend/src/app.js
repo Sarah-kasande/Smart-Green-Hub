@@ -34,7 +34,9 @@ app.use(cookieParser());
 app.get('/api/health', async (req, res) => {
   try {
     await sequelize.authenticate();
-    res.json({ status: 'ok', database: 'connected' });
+    // version: the git commit Render deployed (RENDER_GIT_COMMIT), so the app can see whether
+    // the API runs the same version as the frontend. 'local' on your computer.
+    res.json({ status: 'ok', database: 'connected', version: (process.env.RENDER_GIT_COMMIT || 'local').slice(0, 7) });
   } catch (e) {
     res.status(500).json({ status: 'error', database: e.message });
   }

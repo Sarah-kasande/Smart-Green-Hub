@@ -6,7 +6,7 @@ import { useI18n } from '../../i18n/I18nProvider'
 import { useApi } from '../../api/useApi'
 import Card from '../../components/ui/Card'
 import Icon from '../../components/ui/Icon'
-import Notice from '../../components/ui/Notice'
+import ErrorState from '../../components/ui/ErrorState'
 import PageLoader from '../../components/ui/PageLoader'
 import { RiskBadge, StatusBadge } from '../../components/ui/Badges'
 import { StatCard } from '../../components/ui/Layout'
@@ -23,9 +23,9 @@ const QUICK = [
 function Dashboard() {
   const { t } = useI18n()
   const { user, organisation } = useAuth()
-  const { data, error } = useApi('/operator/dashboard')
+  const { data, error, reload } = useApi('/operator/dashboard')
 
-  if (error) return <Notice type="error">{t(`errors.${error}`)}</Notice>
+  if (error && !data) return <ErrorState code={error} onRetry={reload} />
   if (!data) return <PageLoader />
   const net = data.month.profit
 

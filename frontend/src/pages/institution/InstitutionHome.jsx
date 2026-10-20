@@ -5,7 +5,7 @@ import { useApi } from '../../api/useApi'
 import { useI18n } from '../../i18n/I18nProvider'
 import Card from '../../components/ui/Card'
 import Icon from '../../components/ui/Icon'
-import Notice from '../../components/ui/Notice'
+import ErrorState from '../../components/ui/ErrorState'
 import PageLoader from '../../components/ui/PageLoader'
 import { StatCard } from '../../components/ui/Layout'
 import { buttonClasses } from '../../components/ui/buttonStyles'
@@ -15,8 +15,8 @@ import AccountHome from '../account/AccountHome'
 function Dashboard() {
   const { t } = useI18n()
   const { user, organisation } = useAuth()
-  const { data, error } = useApi('/institution/dashboard')
-  if (error) return <Notice type="error">{t(`errors.${error}`)}</Notice>
+  const { data, error, reload } = useApi('/institution/dashboard')
+  if (error && !data) return <ErrorState code={error} onRetry={reload} />
   if (!data) return <PageLoader />
 
   return (

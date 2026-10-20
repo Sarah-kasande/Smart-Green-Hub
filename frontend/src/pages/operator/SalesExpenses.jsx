@@ -11,6 +11,7 @@ import BarChart from '../../components/ui/BarChart'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
 import Notice from '../../components/ui/Notice'
+import ErrorState from '../../components/ui/ErrorState'
 import PageLoader from '../../components/ui/PageLoader'
 import { PageHeader, Segmented, StatCard } from '../../components/ui/Layout'
 import { SelectField, TextField } from '../../components/ui/Fields'
@@ -152,7 +153,13 @@ function History() {
     }
   }
 
-  if (sales.error === 'NETWORK_ERROR') return <Notice type="warning">{t('sync.needsInternet')}</Notice>
+  const failed = sales.error || expenses.error
+  const retry = () => {
+    sales.reload()
+    expenses.reload()
+  }
+  if (failed === 'NETWORK_ERROR') return <ErrorState code="NETWORK_ERROR" onRetry={retry} />
+  if (failed) return <ErrorState code={failed} onRetry={retry} />
   if (!sales.data || !expenses.data) return <PageLoader />
   return (
     <div className="grid gap-5 lg:grid-cols-2">
@@ -223,7 +230,7 @@ function periodRange(period) {
 function Profit() {
   const { t } = useI18n()
   const [period, setPeriod] = useState('month')
-  const { data, error } = useApi(`/operator/finance${qs(periodRange(period))}`)
+  const { data, error, reload } = useApi(`/operator/finance${qs(periodRange(period))}`)
 
   return (
     <div className="space-y-5">
@@ -233,7 +240,7 @@ function Profit() {
         onChange={setPeriod}
         options={['month', '3months', 'year', 'all'].map((p) => ({ value: p, label: t(`sales.periods.${p}`) }))}
       />
-      {error === 'NETWORK_ERROR' && <Notice type="warning">{t('sync.needsInternet')}</Notice>}
+      {error && <ErrorState code={error} onRetry={reload} />}
       {!data && !error && <PageLoader />}
       {data && (
         <>

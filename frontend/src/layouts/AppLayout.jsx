@@ -7,6 +7,7 @@ import Icon from '../components/ui/Icon'
 import Logo from '../components/ui/Logo'
 import LanguageSwitch from '../components/ui/LanguageSwitch'
 import SyncChip from '../components/ui/SyncChip'
+import VersionCheck from '../components/ui/VersionCheck'
 import { homePathFor, useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nProvider'
 import { useSync } from '../offline/SyncProvider'
@@ -123,6 +124,8 @@ export default function AppLayout() {
         </header>
 
         <main id="main" className="flex-1 px-4 pb-28 pt-4 lg:px-8 lg:pb-10 lg:pt-6">
+          {/* Administrators are warned when the app and the API run different versions */}
+          {user.role === 'admin' && <VersionCheck />}
           <Outlet />
         </main>
       </div>

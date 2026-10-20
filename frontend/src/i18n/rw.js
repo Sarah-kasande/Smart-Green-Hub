@@ -614,7 +614,9 @@ const rw = {
     TOO_MANY_REQUESTS: 'Wagerageje kenshi. Tegereza iminota mike wongere ugerageze.',
     NOT_AUTHENTICATED: 'Banza winjire.',
     FORBIDDEN: 'Nta burenganzira ufite kuri ibi.',
-    NOT_FOUND: 'Ntibibonetse.',
+    NOT_FOUND: 'Ntibibonetse. Bishobora kuba byakuweho.',
+    ROUTE_NOT_FOUND: 'Seriveri ntizi iki gisabwa. Birashoboka ko ikoresha verisiyo ishaje ya Smart Green Hub: ongera utangize cyangwa wohereze API, hanyuma wongere ugerageze.', // TODO: unsure
+    TIMEOUT: 'Seriveri yatinze gusubiza. Ishobora kuba irimo gukanguka; ongera ugerageze.', // TODO: unsure
     NOT_APPROVED: 'Konti yawe igomba kubanza kwemezwa n\'umuyobozi.',
     ALREADY_DECIDED: 'Iki cyamaze gufatirwa icyemezo.',
     FILE_TOO_LARGE: 'Inyandiko irengeje MB 10.',
@@ -652,6 +654,9 @@ const rw = {
     invalid_location: 'Ikimenyetso kigomba kuba mu Rwanda.',
     must_be_below_high: "Hagati igomba kuba munsi ya Hejuru.",
     must_be_below_far: 'Imipaka "hafi" igomba kuba munsi ya "kure".',
+  },
+  version: {
+    mismatch: "Porogaramu (verisiyo {app}) na seriveri (verisiyo {server}) ntibihuye. Amapaji amwe ashobora kunanirwa kugeza byombi byoherejwe kuva ku 'commit' imwe: ongera wohereze API kuri Render.", // TODO: unsure
   },
   notFound: { title: 'Ipaji ntibonetse', text: 'Ipaji ushaka ntibaho.', home: 'Jya ahabanza' },
 }

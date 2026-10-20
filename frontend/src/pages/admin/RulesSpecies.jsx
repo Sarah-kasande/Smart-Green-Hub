@@ -7,6 +7,7 @@ import { useI18n } from '../../i18n/I18nProvider'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
 import Notice from '../../components/ui/Notice'
+import ErrorState from '../../components/ui/ErrorState'
 import PageLoader from '../../components/ui/PageLoader'
 import { Pill } from '../../components/ui/Badges'
 import { PageHeader } from '../../components/ui/Layout'
@@ -167,9 +168,9 @@ export default function RulesSpecies() {
         <Card>
           <h2 className="mb-1 text-lg font-bold">{t('rules.thresholds')}</h2>
           <p className="mb-4 text-sm text-ink-soft">{t('rules.thresholdsHint')}</p>
-          {!rules.data ? (
-            <PageLoader />
-          ) : (
+          {rules.error && <ErrorState code={rules.error} onRetry={rules.reload} />}
+          {!rules.data && !rules.error && <PageLoader />}
+          {rules.data && (
             <RulesForm
               key={rules.data.rules.updated_at}
               rules={rules.data.rules}
@@ -203,7 +204,8 @@ export default function RulesSpecies() {
               onCancel={() => setEditing(null)}
             />
           )}
-          {!species.data && <PageLoader />}
+          {species.error && <ErrorState code={species.error} onRetry={species.reload} />}
+          {!species.data && !species.error && <PageLoader />}
           {species.data && (
             <ul className="mt-3 divide-y divide-line">
               {species.data.species.map((s) => (

@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom'
 import { qs, useApi } from '../../api/useApi'
 import { useI18n } from '../../i18n/I18nProvider'
 import Card from '../../components/ui/Card'
+import ErrorState from '../../components/ui/ErrorState'
 import PageLoader from '../../components/ui/PageLoader'
 import Icon from '../../components/ui/Icon'
 import { buttonClasses } from '../../components/ui/buttonStyles'
@@ -26,12 +27,12 @@ const PILLARS = [
 
 function ImpactStats() {
   const { t } = useI18n()
-  const { data } = useApi('/public/impact')
+  const { data, error, reload } = useApi('/public/impact')
   const stats = [
-    { label: t('impact.plants'), value: data ? formatNumber(data.plants_redirected) : '…', icon: 'sprout' },
-    { label: t('impact.handovers'), value: data ? formatNumber(data.handovers) : '…', icon: 'check' },
-    { label: t('impact.land'), value: data ? `${formatNumber(data.land_cleared_sqm, 1)} m²` : '…', icon: 'board' },
-    { label: t('impact.sites'), value: data ? formatNumber(data.planting_sites) : '…', icon: 'home' },
+    { label: t('impact.plants'), value: data ? formatNumber(data.plants_redirected) : error ? '—' : '…', icon: 'sprout' },
+    { label: t('impact.handovers'), value: data ? formatNumber(data.handovers) : error ? '—' : '…', icon: 'check' },
+    { label: t('impact.land'), value: data ? `${formatNumber(data.land_cleared_sqm, 1)} m²` : error ? '—' : '…', icon: 'board' },
+    { label: t('impact.sites'), value: data ? formatNumber(data.planting_sites) : error ? '—' : '…', icon: 'home' },
   ]
   return (
     <section className="mx-auto max-w-6xl px-4 py-8" aria-labelledby="impact-title">
@@ -53,6 +54,7 @@ function ImpactStats() {
           </li>
         ))}
       </ul>
+      {error && <ErrorState code={error} onRetry={reload} className="mt-3" />}
       {data && data.handovers === 0 && <p className="mt-3 text-sm text-ink-soft">{t('landing.impactEmpty')}</p>}
     </section>
   )
@@ -62,7 +64,7 @@ function Directory() {
   const { t } = useI18n()
   const [district, setDistrict] = useState('')
   const [view, setView] = useState('list')
-  const { data } = useApi(`/public/directory${qs({ district })}`)
+  const { data, error, reload } = useApi(`/public/directory${qs({ district })}`)
   const nurseries = data?.nurseries || []
 
   return (
@@ -86,6 +88,7 @@ function Directory() {
         />
       </div>
       <div className="mt-4">
+        {error && <ErrorState code={error} onRetry={reload} />}
         {data && nurseries.length === 0 && <Card className="text-ink-soft">{t('landing.directoryEmpty')}</Card>}
         {nurseries.length > 0 && view === 'list' && (
           <ul className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">

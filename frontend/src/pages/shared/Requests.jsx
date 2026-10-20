@@ -11,6 +11,7 @@ import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
 import Icon from '../../components/ui/Icon'
 import Notice from '../../components/ui/Notice'
+import ErrorState from '../../components/ui/ErrorState'
 import PageLoader from '../../components/ui/PageLoader'
 import { Pill, StatusBadge } from '../../components/ui/Badges'
 import { EmptyState, Fact, PageHeader, Segmented } from '../../components/ui/Layout'
@@ -182,7 +183,7 @@ export default function Requests() {
       <PageHeader title={t('requests.title')} intro={side === 'operator' ? t('requests.introOperator') : t('requests.introInstitution')} />
       {notice && <Notice type={notice.type}>{t(notice.text)}</Notice>}
       <Segmented label={t('requests.title')} value={status} onChange={setStatus} options={FILTERS.map((f) => ({ value: f, label: f === 'all' ? t('common.all') : t(`requestStatus.${f}`) }))} />
-      {error && <Notice type="error">{t(`errors.${error}`)}</Notice>}
+      {error && <ErrorState code={error} onRetry={reload} />}
       {!data && !error && <PageLoader />}
       {data && data.requests.length === 0 && <EmptyState icon="inbox" title={t('requests.empty')} />}
       {data && data.requests.length > 0 && (

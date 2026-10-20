@@ -2,7 +2,8 @@
 const HttpError = require('../utils/httpError');
 
 function notFound(req, res, next) {
-  next(new HttpError(404, 'NOT_FOUND', 'This API route does not exist'));
+  // ROUTE_NOT_FOUND (not NOT_FOUND) so the app can tell 'unknown address' apart from 'record not found'
+  next(new HttpError(404, 'ROUTE_NOT_FOUND', 'This API route does not exist'));
 }
 
 // Express recognises error handlers by their four arguments, so `next` must stay.

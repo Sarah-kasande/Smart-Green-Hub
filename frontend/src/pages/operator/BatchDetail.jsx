@@ -10,6 +10,7 @@ import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
 import Icon from '../../components/ui/Icon'
 import Notice from '../../components/ui/Notice'
+import ErrorState from '../../components/ui/ErrorState'
 import PageLoader from '../../components/ui/PageLoader'
 import { StatusBadge } from '../../components/ui/Badges'
 import { Fact, PageHeader } from '../../components/ui/Layout'
@@ -111,7 +112,7 @@ export default function BatchDetail() {
   const { data, error, reload } = useApi(`/operator/batches/${id}`)
   const [notice, setNotice] = useState(null)
 
-  if (error) return <Notice type="error">{t(`errors.${error}`)}</Notice>
+  if (error && !data) return <ErrorState code={error} onRetry={reload} />
   if (!data) return <PageLoader />
   const { batch, adjustments, sales } = data
 

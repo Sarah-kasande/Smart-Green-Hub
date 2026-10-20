@@ -4,7 +4,7 @@ import { qs, useApi } from '../../api/useApi'
 import { useI18n } from '../../i18n/I18nProvider'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
-import Notice from '../../components/ui/Notice'
+import ErrorState from '../../components/ui/ErrorState'
 import PageLoader from '../../components/ui/PageLoader'
 import { PageHeader } from '../../components/ui/Layout'
 import { SelectField, TextField } from '../../components/ui/Fields'
@@ -14,7 +14,7 @@ export default function AuditLog() {
   const { t } = useI18n()
   const [filters, setFilters] = useState({ entity_type: '', action: '', from: '', to: '' })
   const [page, setPage] = useState(1)
-  const { data, error } = useApi(`/admin/audit${qs({ ...filters, page })}`)
+  const { data, error, reload } = useApi(`/admin/audit${qs({ ...filters, page })}`)
   const set = (k) => (e) => {
     setFilters({ ...filters, [k]: e.target.value })
     setPage(1)
@@ -30,7 +30,7 @@ export default function AuditLog() {
         <TextField label={t('audit.from')} type="date" value={filters.from} onChange={set('from')} />
         <TextField label={t('audit.to')} type="date" value={filters.to} onChange={set('to')} />
       </div>
-      {error && <Notice type="error">{t(`errors.${error}`)}</Notice>}
+      {error && <ErrorState code={error} onRetry={reload} />}
       {!data && !error && <PageLoader />}
       {data && (
         <>

@@ -7,6 +7,7 @@ import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
 import Icon from '../../components/ui/Icon'
 import Notice from '../../components/ui/Notice'
+import ErrorState from '../../components/ui/ErrorState'
 import PageLoader from '../../components/ui/PageLoader'
 import VerificationBadge from '../../components/ui/VerificationBadge'
 import { TextArea } from '../../components/ui/Fields'
@@ -167,6 +168,12 @@ export default function VerificationQueue() {
     }
   }, [fetchQueue])
 
+  // 'Try again' after a failed load
+  function retry() {
+    setError(null)
+    load().catch((err) => setError(errorCode(err)))
+  }
+
   async function load() {
     const res = await fetchQueue()
     setData(res.data)
@@ -224,7 +231,7 @@ export default function VerificationQueue() {
       </div>
 
       {notice && <Notice type="success">{notice}</Notice>}
-      {error && <Notice type="error">{t(`errors.${error}`)}</Notice>}
+      {error && <ErrorState code={error} onRetry={retry} />}
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <div>

@@ -616,7 +616,9 @@ const en = {
     TOO_MANY_REQUESTS: 'Too many attempts. Please wait a few minutes and try again.',
     NOT_AUTHENTICATED: 'Please sign in.',
     FORBIDDEN: 'You do not have access to this.',
-    NOT_FOUND: 'Not found.',
+    NOT_FOUND: 'This item was not found. It may have been removed.',
+    ROUTE_NOT_FOUND: 'The server does not know this request. It is probably running an older version of Smart Green Hub: restart or redeploy the API, then try again.',
+    TIMEOUT: 'The server took too long to answer. It may be waking up; please try again.',
     NOT_APPROVED: 'Your account must be approved by the administrator first.',
     ALREADY_DECIDED: 'This was already decided.',
     FILE_TOO_LARGE: 'The file is larger than 10 MB.',
@@ -654,6 +656,9 @@ const en = {
     invalid_location: 'The pin must be in Rwanda.',
     must_be_below_high: 'Medium must be lower than High.',
     must_be_below_far: 'The near limit must be lower than the far limit.',
+  },
+  version: {
+    mismatch: 'The app (version {app}) and the server (version {server}) are different versions. Pages may fail until both are deployed from the same commit: redeploy the API on Render.',
   },
   notFound: { title: 'Page not found', text: 'The page you are looking for does not exist.', home: 'Go to the home page' },
 }

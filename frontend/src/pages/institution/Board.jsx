@@ -8,6 +8,7 @@ import { useI18n } from '../../i18n/I18nProvider'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
 import Notice from '../../components/ui/Notice'
+import ErrorState from '../../components/ui/ErrorState'
 import PageLoader from '../../components/ui/PageLoader'
 import { Pill } from '../../components/ui/Badges'
 import { EmptyState, PageHeader, Segmented } from '../../components/ui/Layout'
@@ -152,7 +153,7 @@ export default function Board() {
           />
         </div>
       </div>
-      {error && <Notice type="error">{t(`errors.${error}`)}</Notice>}
+      {error && <ErrorState code={error} onRetry={reload} />}
       {!data && !error && <PageLoader />}
       {data && data.listings.length === 0 && <EmptyState icon="board" title={t('board.empty')} text={t('board.emptyText')} />}
       {data && data.listings.length > 0 && view === 'map' && (

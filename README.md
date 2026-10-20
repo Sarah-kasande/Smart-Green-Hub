@@ -114,8 +114,8 @@ Local development and tests use a **local MySQL 8.4** in Docker, never the produ
 
 | Command | What runs |
 |---------|-----------|
-| `cd backend && npm test` | 142 Jest unit + Supertest API tests on `smart_green_hub_test` |
-| `cd frontend && npm run test:e2e` | 11 Playwright tests in Microsoft Edge (starts its own API and app) |
+| `cd backend && npm test` | 211 Jest unit, API and frontend-backend contract tests on `smart_green_hub_test` |
+| `cd frontend && npm run test:e2e` | 14 Playwright tests in Microsoft Edge (starts its own API and app) |
 | `cd frontend && npm run lint` | ESLint |
 | `cd backend && node scripts/load-test.js <url> 50 10` | 50-user load test (NFR01) |
 
@@ -147,6 +147,15 @@ Vercel (frontend): `VITE_API_URL` = `/api` (Production and Preview). The project
 - **Vercel**: builds `frontend/` on every push; `frontend/vercel.json` rewrites `/api/*` to Render and serves the app for every other path.
 - After changing a `VITE_` variable on Vercel, redeploy (Vite reads it at build time).
 - Free-plan note: Render sleeps when unused (first request up to about 50 s). The nightly risk check runs only if the API is awake at 02:00; operators can use **Check now**.
+
+## Troubleshooting
+
+- **Pages say "The server does not know this request" (older versions: "Not found.")**: the app and the API
+  run different versions. Locally: stop the API (Ctrl+C) and start it again with `npm run dev` in `backend`.
+  Live: redeploy the API on Render (*Manual Deploy → Deploy latest commit*). Administrators see a warning
+  banner when the versions differ; `/api/health` shows the API version.
+- **Database up to date?** `cd backend && npx sequelize-cli db:migrate:status` (every line should say `up`).
+- **Local database not reachable?** Start Docker Desktop, then `docker start sgh-mysql`.
 
 ## Before the pilot
 

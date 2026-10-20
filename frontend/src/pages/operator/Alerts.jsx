@@ -9,6 +9,7 @@ import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
 import Icon from '../../components/ui/Icon'
 import Notice from '../../components/ui/Notice'
+import ErrorState from '../../components/ui/ErrorState'
 import PageLoader from '../../components/ui/PageLoader'
 import { RiskBadge, StatusBadge } from '../../components/ui/Badges'
 import { Disclosure, EmptyState, Fact, PageHeader, Segmented } from '../../components/ui/Layout'
@@ -148,7 +149,7 @@ export default function Alerts() {
       />
       {notice && <Notice type={notice.type}>{t(notice.text, notice.values)}</Notice>}
       <Segmented label={t('alerts.title')} value={status} onChange={setStatus} options={FILTERS.map((f) => ({ value: f, label: f === 'all' ? t('common.all') : t(`alertStatus.${f}`) }))} />
-      {error && <Notice type="error">{t(`errors.${error}`)}</Notice>}
+      {error && <ErrorState code={error} onRetry={reload} />}
       {!data && !error && <PageLoader />}
       {data && data.alerts.length === 0 && <EmptyState icon="check" title={t('alerts.empty')} text={t('alerts.emptyText')} />}
       {data && data.alerts.length > 0 && (

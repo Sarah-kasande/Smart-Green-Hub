@@ -5,7 +5,7 @@ import { useApi } from '../../api/useApi'
 import { useI18n } from '../../i18n/I18nProvider'
 import BarChart from '../../components/ui/BarChart'
 import Card from '../../components/ui/Card'
-import Notice from '../../components/ui/Notice'
+import ErrorState from '../../components/ui/ErrorState'
 import PageLoader from '../../components/ui/PageLoader'
 import { EmptyState, PageHeader, StatCard } from '../../components/ui/Layout'
 import { formatDate, formatMonth, formatNumber } from '../../utils/format'
@@ -25,9 +25,9 @@ export function ImpactCards({ summary }) {
 export default function Impact() {
   const { t } = useI18n()
   const { user } = useAuth()
-  const { data, error } = useApi(`/${user.role}/impact`)
+  const { data, error, reload } = useApi(`/${user.role}/impact`)
 
-  if (error) return <Notice type="error">{t(`errors.${error}`)}</Notice>
+  if (error && !data) return <ErrorState code={error} onRetry={reload} />
   if (!data) return <PageLoader />
   const { summary, records } = data
   const showNursery = user.role !== 'operator'

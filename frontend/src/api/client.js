@@ -13,13 +13,23 @@ const api = axios.create({
   // every request. The server compares the two (see backend/src/middleware/csrf.js).
   xsrfCookieName: 'sgh_csrf',
   xsrfHeaderName: 'X-CSRF-Token',
+  // A request may take long while the free Render server wakes up (up to about 50 s),
+  // but it never waits forever: after 60 s it fails with TIMEOUT and the page offers "Try again".
+  timeout: 60_000,
 })
 
 // Returns the error code from an API error (e.g. "INVALID_CREDENTIALS"), or a fallback
 // code when the server could not be reached at all.
 export function errorCode(error) {
-  if (error?.response?.data?.code) return error.response.data.code
+  const data = error?.response?.data
+  // The API does not know this address at all: usually the API is running an older version
+  // than the app (for example not yet redeployed). Older APIs answered NOT_FOUND with this message.
+  if (data?.code === 'ROUTE_NOT_FOUND' || (data?.code === 'NOT_FOUND' && data?.message === 'This API route does not exist')) {
+    return 'ROUTE_NOT_FOUND'
+  }
+  if (data?.code) return data.code
   if (error?.response) return 'SERVER_ERROR'
+  if (error?.code === 'ECONNABORTED') return 'TIMEOUT'
   return 'NETWORK_ERROR'
 }
 

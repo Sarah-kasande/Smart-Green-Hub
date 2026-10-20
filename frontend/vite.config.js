@@ -7,6 +7,10 @@ import { VitePWA } from 'vite-plugin-pwa'
 export default defineConfig({
   // Blocks stray PostCSS config files outside the project (Tailwind v4 runs through its Vite plugin).
   css: { postcss: { plugins: [] } },
+  // The git commit Vercel builds (VERCEL_GIT_COMMIT_SHA), compared with the API's version in the app
+  define: {
+    'import.meta.env.VITE_APP_VERSION': JSON.stringify((process.env.VERCEL_GIT_COMMIT_SHA || 'local').slice(0, 7)),
+  },
   server: {
     // Local development: the browser calls /api on the Vite server, which forwards to the API.
     // Same idea as the Vercel rewrite in production, so the login cookie is always first-party.

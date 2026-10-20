@@ -7,6 +7,7 @@ import { useI18n } from '../../i18n/I18nProvider'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
 import Notice from '../../components/ui/Notice'
+import ErrorState from '../../components/ui/ErrorState'
 import PageLoader from '../../components/ui/PageLoader'
 import { StatusBadge } from '../../components/ui/Badges'
 import { EmptyState, PageHeader, Segmented } from '../../components/ui/Layout'
@@ -37,7 +38,7 @@ export default function AdminListings() {
       <PageHeader title={t('adminListings.title')} intro={t('adminListings.intro')} />
       {notice && <Notice type={notice.type}>{t(notice.text)}</Notice>}
       <Segmented label={t('adminListings.title')} value={status} onChange={setStatus} options={FILTERS.map((f) => ({ value: f, label: f === 'all' ? t('common.all') : t(`listingStatus.${f}`) }))} />
-      {error && <Notice type="error">{t(`errors.${error}`)}</Notice>}
+      {error && <ErrorState code={error} onRetry={reload} />}
       {!data && !error && <PageLoader />}
       {data && data.listings.length === 0 && <EmptyState icon="board" title={t('listings.empty')} />}
       {data && data.listings.length > 0 && (

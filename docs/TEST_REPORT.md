@@ -11,8 +11,9 @@ All tests use local test databases and fake accounts; none touch the production 
 |-----------|------|--------|
 | Unit tests: risk rules, planting formula, file signatures, tokens, test guard | Jest | 49 / 49 passed |
 | API tests: auth, roles, verification, uploads, batches, sales, expenses, sync, alerts, planting, Surplus Board, hand-over, impact, admin, notifications | Jest + Supertest | 93 / 93 passed |
-| **Total backend** | | **142 / 142 passed** (about 24 s) |
-| End-to-end tests in a real browser (390 px mobile and 1440 px desktop) | Playwright + Edge | **11 / 11 passed** (about 40 s) |
+| Frontend-backend contract: every API call found in `frontend/src` exists in the backend; every admin page GET answers 200 | Jest + Supertest | 69 / 69 passed |
+| **Total backend** | | **211 / 211 passed** |
+| End-to-end tests in a real browser (390 px mobile and 1440 px desktop) | Playwright + Edge | **14 / 14 passed** |
 | Accessibility, performance, best practices | Lighthouse 12 (mobile profile) | see section 4 |
 | Load test: 50 concurrent users | `backend/scripts/load-test.js` | p95 243 ms, 0 errors (local) |
 | Dependency audit | `npm audit --omit=dev` | frontend 0; backend 2 moderate (explained in section 5) |
@@ -50,6 +51,9 @@ database and its own app on port 5174).
 | 9 | Landing page in English and Kinyarwanda (`lang="rw"`), impact figures loaded, no horizontal scrolling at 390 px | Passed |
 | 10 | Protected pages redirect visitors to Sign in | Passed |
 | 11 | Wrong password shows a clear error message | Passed |
+| 12 | Every administrator page opens without an error and without an endless spinner | Passed |
+| 13 | A request answered by an older API (unknown route) shows a clear message; "Try again" recovers | Passed |
+| 14 | A dropped connection ends with "Cannot reach the server" and "Try again", not an endless spinner | Passed |
 
 ## 4. Lighthouse (mobile profile, production build)
 
@@ -92,7 +96,30 @@ Vercel's); daily database backups and a restore exercise before the pilot (NFR05
 The same script can be run against the live API (`node scripts/load-test.js https://smart-green-hub.onrender.com 50 10`);
 Render free-plan cold starts (up to about 50 s) are reported separately, as NFR01 requires.
 
-## 7. Known limitations
+## 7. Incident: admin pages "Not found" and "Loading..." (October 2026)
+
+**Cause.** The new frontend (Phase 2-7 pages) was talking to an API that still ran the Phase 1 code.
+The live Render service had not been redeployed after the push (Vercel had), and the same happens
+locally when an API started before the update keeps running. New routes such as
+`/api/admin/dashboard` therefore answered "route not found". In addition, the Rules & Species page
+had a bug: it showed its spinner whenever data was missing and ignored the error, so it stayed on
+"Loading..." forever.
+
+**Checks done.** All 20 migrations applied on the dev database; `frontend/.env` and the Vite proxy
+point to `http://localhost:5000`; with the current code every admin endpoint answered 200 through
+the proxy; the live Render API answered `NOT_FOUND` for `/api/public/impact` (old code) while the
+live Vercel app already contained the new pages; the service worker caches only the app files and
+map tiles, never `/api` (NFR04).
+
+**Fixes.** Every data page shows a clear message with "Try again" instead of an endless spinner;
+requests time out after 60 s; unknown routes answer `ROUTE_NOT_FOUND` with a message that the
+server is probably an older version; `/api/health` reports the deployed commit and administrators
+see a warning when the app and the API versions differ.
+
+**New tests.** The frontend-backend contract test (it fails when a page calls a route the API does
+not have; verified by temporarily renaming a route, which made 2 tests fail) and browser tests 12-14.
+
+## 8. Known limitations
 
 See `docs/DEVIATIONS.md`, in particular F2 (same sales rate for two batches of one species),
 W10 (web push not implemented), W16 (nightly job needs the API awake on the free plan) and the DEMO species values.

@@ -7,6 +7,7 @@ import { useI18n } from '../../i18n/I18nProvider'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
 import Notice from '../../components/ui/Notice'
+import ErrorState from '../../components/ui/ErrorState'
 import PageLoader from '../../components/ui/PageLoader'
 import { Pill } from '../../components/ui/Badges'
 import { Disclosure, EmptyState, PageHeader } from '../../components/ui/Layout'
@@ -31,7 +32,7 @@ export default function Planting() {
     <div className="mx-auto max-w-5xl space-y-5">
       <PageHeader title={t('planting.title')} intro={t('planting.intro')} />
       {notice && <Notice type={notice.type}>{t(notice.text)}</Notice>}
-      {error && <Notice type="error">{t(`errors.${error}`)}</Notice>}
+      {error && <ErrorState code={error} onRetry={reload} />}
       {!data && !error && <PageLoader />}
       {data && data.recommendations.length === 0 && <EmptyState icon="calendar" title={t('planting.empty')} text={t('planting.emptyText')} />}
       {data && data.recommendations.length > 0 && (

@@ -6,6 +6,7 @@ import { useI18n } from '../../i18n/I18nProvider'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
 import Notice from '../../components/ui/Notice'
+import ErrorState from '../../components/ui/ErrorState'
 import PageLoader from '../../components/ui/PageLoader'
 import { EmptyState, PageHeader } from '../../components/ui/Layout'
 import { formatDateTime } from '../../utils/format'
@@ -29,7 +30,7 @@ export default function EmailProblems() {
     <div className="mx-auto max-w-5xl space-y-5">
       <PageHeader title={t('emailProblems.title')} intro={t('emailProblems.intro')} />
       {notice && <Notice type={notice.type}>{t(notice.text, notice.values)}</Notice>}
-      {error && <Notice type="error">{t(`errors.${error}`)}</Notice>}
+      {error && <ErrorState code={error} onRetry={reload} />}
       {!data && !error && <PageLoader />}
       {data && data.notifications.length === 0 && <EmptyState icon="check" title={t('emailProblems.none')} />}
       {data && data.notifications.length > 0 && (
