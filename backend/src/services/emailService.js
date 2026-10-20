@@ -37,6 +37,11 @@ async function sendEmail({ to, subject, text, html }) {
       sentEmails.push({ to, subject, text });
       return { delivered: false, captured: true };
     }
+    // End-to-end tests read the emails from a file (never used in production)
+    if (!isProduction && process.env.EMAIL_OUTBOX_FILE) {
+      require('fs').appendFileSync(process.env.EMAIL_OUTBOX_FILE, `${JSON.stringify({ to, subject, text, at: new Date().toISOString() })}\n`);
+      return { delivered: false, printed: true };
+    }
     if (!isProduction) {
       console.log(`\n----- EMAIL (development, not sent) -----\nTo: ${to}\nSubject: ${subject}\n\n${text}\n-----------------------------------------\n`);
       return { delivered: false, printed: true };

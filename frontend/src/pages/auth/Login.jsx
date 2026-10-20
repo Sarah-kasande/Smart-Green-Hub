@@ -72,7 +72,7 @@ export default function Login() {
           required
         />
         <div className="text-right">
-          <Link to="/forgot-password" className="inline-flex min-h-10 items-center font-semibold text-teal underline">
+          <Link to="/forgot-password" className="inline-flex min-h-10 items-center font-semibold text-teal-text underline">
             {t('auth.forgot')}
           </Link>
         </div>
@@ -82,7 +82,7 @@ export default function Login() {
       </form>
       <p className="mt-6 text-center text-ink-soft">
         {t('auth.noAccount')}{' '}
-        <Link to="/register" className="font-semibold text-teal underline">
+        <Link to="/register" className="font-semibold text-teal-text underline">
           {t('common.register')}
         </Link>
       </p>

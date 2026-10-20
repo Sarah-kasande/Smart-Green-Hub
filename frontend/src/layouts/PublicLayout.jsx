@@ -12,10 +12,10 @@ export default function PublicLayout() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-white focus:p-3">
+      <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-surface focus:p-3">
         {t('common.skipToContent')}
       </a>
-      <header className="border-b border-line bg-white">
+      <header className="border-b border-line bg-surface">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-2">
           <Logo />
           <div className="flex flex-wrap items-center gap-2">
@@ -40,7 +40,7 @@ export default function PublicLayout() {
       <main id="main" className="flex-1">
         <Outlet />
       </main>
-      <footer className="border-t border-line bg-white">
+      <footer className="border-t border-line bg-surface">
         <div className="mx-auto max-w-6xl px-4 py-6 text-sm text-ink-soft">
           {t('app.name')} · {t('landing.free')}
         </div>

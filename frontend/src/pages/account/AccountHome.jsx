@@ -30,7 +30,7 @@ export default function AccountHome() {
   return (
     <div className="mx-auto max-w-4xl space-y-5">
       <div>
-        <p className="text-sm font-semibold text-leaf">{t(`roles.${user.role}`)}</p>
+        <p className="text-sm font-semibold text-leaf-text">{t(`roles.${user.role}`)}</p>
         <h1 className="text-2xl font-bold sm:text-3xl">{t('account.welcome', { name: user.full_name })}</h1>
         <p className="mt-1 flex items-start gap-2 text-ink-soft">
           <Icon name={organisation.type === 'nursery' ? 'sprout' : 'building'} size={18} className="mt-0.5" />

@@ -16,8 +16,8 @@ export function DocumentList({ documents, emptyText }) {
     <ul className="divide-y divide-line">
       {documents.map((doc) => (
         <li key={doc.id}>
-          <a href={fileUrl(doc.id)} target="_blank" rel="noreferrer" className="flex min-h-12 items-center gap-3 py-2 hover:text-teal">
-            <Icon name="file" className="text-teal" />
+          <a href={fileUrl(doc.id)} target="_blank" rel="noreferrer" className="flex min-h-12 items-center gap-3 py-2 hover:text-teal-text">
+            <Icon name="file" className="text-teal-text" />
             <span className="min-w-0 flex-1">
               <span className="block truncate font-medium underline">{doc.original_name}</span>
               <span className="block text-sm text-ink-soft">

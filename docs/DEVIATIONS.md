@@ -48,3 +48,36 @@ so the report can be updated. New items are added at the end of each phase.
 | W7 | Districts are limited to the three districts of the City of Kigali (Gasabo, Kicukiro, Nyarugenge); sector is free text. | Project scope is Kigali (1.5). |
 | W8 | Left out of the Figma design on purpose: the "Coordinated with REMA" claim, report-download buttons, surplus/risk information in the public directory, the "Seasonal demand multiplier" toggle and the "Download field summary (PDF/CSV)" button. Public statistics will come from real impact records only. | Not in the proposal, or would be unverified claims (decided before Phase 1). |
 | W9 | Uploads are sent as the raw request body (file type in Content-Type, name in X-File-Name) instead of multipart forms. The server checks the real type from the file's first bytes. | No extra upload library needed; NFR03 signature check. |
+
+## Phases 2-7: Operator core, risk engine, redirect, admin, notifications, testing
+
+### Database
+
+| # | Change | Where | Reason |
+|---|--------|-------|--------|
+| D14 | SURPLUS_REQUESTS: added `planting_site`, `planting_district`, `land_cleared_sqm` (migration `20261020000001`) | `surplus_requests` | Each party gives its part of the hand-over details when it confirms (institution: planting site; nursery: land cleared). They are copied into IMPACT_RECORDS only when BOTH have confirmed (FR11, FR12). |
+
+### Rules and calculations
+
+| # | Decision | Reason |
+|---|----------|--------|
+| F7 | Profit or loss is shown for the whole nursery and per period; species and batches show **income** (units and RWF). | Expenses are recorded by category (FR05), not per batch, so they cannot be split fairly across species or batches. |
+| F8 | One open alert per batch: a nightly run refreshes the existing open or acknowledged alert instead of creating a new one. After the operator **dismisses** an alert, the same batch is not alerted again at the same or a lower level for 7 days (a higher level still creates an alert). | FR07 says "one open alert"; without a quiet period a dismissed alert would come back every night. |
+| F9 | `projected_unsold` is rounded **up** to whole plants; the risk ratio uses the exact value. | Plants are whole units; rounding up never hides a remaining fraction. |
+| F10 | When the last plants of a batch are handed over (stock reaches 0), the batch is set to `cleared` automatically and this is written to the audit log. Apart from this, the system never changes a batch, price or listing by itself (stages are only *suggested* from the dates). | Figure 10 shows "clear batch when stock is zero"; FR07 forbids other automatic changes. |
+| F11 | A listing's status follows its quantities: `active` while plants can be requested, `reserved` when everything left is reserved, `fulfilled` when everything was handed over. | Listing lifecycle (ERD) with reservations from FR10. |
+
+### Workflows and features
+
+| # | Change | Reason |
+|---|--------|--------|
+| W10 | **Web push is not implemented** (future work). Notifications are in-app and by email (FR14). | It needs an extra library, VAPID keys, a subscriptions table and a custom service worker; time was used for testing the core flows instead (agreed: drop if time is short). |
+| W11 | The unique (listing, institution) pair is kept. If an institution's request was declined or cancelled, a new request for the same listing **reopens** that row instead of creating a second one. A fulfilled request cannot be repeated. | FR10 plus the ERD unique constraint. |
+| W12 | Nursery contact details (name, phone) are shown to an institution only after the operator **approves** its request; the operator always sees the institution's contact. | Proposal 3.2.3: separate consent for sharing contact details. |
+| W13 | When a listing expires, its approved requests are cancelled as well, even if one side had already confirmed. | F6; keeps reservations from blocking stock. Operators should confirm hand-overs before the listing ends. |
+| W14 | Offline changes sent to `/api/operator/sync` are validated with the same rules as the online forms; invalid ones come back as conflicts (`VALIDATION_FAILED`). | Security review (Phase 7). |
+| W15 | Notification emails are sent from the outbox right after the action and every 5 minutes (retries up to 5 attempts); failed emails are listed for the administrator ("Email problems"). | FR14 outbox with retries and visible failures. |
+| W16 | The nightly job runs inside the API at 02:00 Kigali time. On Render's free plan the API sleeps when unused, so the job only runs if the API is awake. Operators can use **Check now** and the administrator **Run nightly check now**. | Hosting limitation. Option: a free uptime ping (e.g. cron-job.org) to `/api/health` a few minutes before 02:00. |
+| W17 | **Dark mode** (Light / Dark / Same as device) in Settings, saved on the device. | Requested by the project owner; not in the proposal or the Figma design. |
+| W18 | A general API rate limit (600 requests per 5 minutes per IP) was added on top of the login, reset, registration and upload limits. | Security review (Phase 7). |
+| W19 | Pages are loaded on demand and the map library only when a map is shown. | NFR01: smaller first download on phones (landing page LCP 2.6 s in Lighthouse, mobile profile). |

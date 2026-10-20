@@ -9,7 +9,10 @@ const dotenv = require('dotenv');
 
 const backendRoot = path.join(__dirname, '..', '..');
 
-if (process.env.NODE_ENV === 'test') {
+if (process.env.ENV_FILE) {
+  // End-to-end tests start the API with their own file (backend/.env.e2e), and nothing else
+  dotenv.config({ path: path.join(backendRoot, process.env.ENV_FILE), quiet: true });
+} else if (process.env.NODE_ENV === 'test') {
   dotenv.config({ path: path.join(backendRoot, '.env.test'), quiet: true });
 } else {
   dotenv.config({ path: path.join(backendRoot, '.env.local'), quiet: true });

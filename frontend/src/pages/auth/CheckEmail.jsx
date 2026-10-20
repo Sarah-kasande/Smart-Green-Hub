@@ -20,7 +20,7 @@ export default function CheckEmail() {
   return (
     <AuthCard title={t('auth.checkEmailTitle')}>
       <div className="flex gap-3">
-        <Icon name="mail" size={28} className="text-leaf" />
+        <Icon name="mail" size={28} className="text-leaf-text" />
         <p>{t('auth.checkEmailText', { email: email || '…' })}</p>
       </div>
       <div className="mt-6 space-y-3">
@@ -33,7 +33,7 @@ export default function CheckEmail() {
             </Button>
           )
         )}
-        <Link to="/login" className="block text-center font-semibold text-teal underline">
+        <Link to="/login" className="block text-center font-semibold text-teal-text underline">
           {t('common.signIn')}
         </Link>
       </div>

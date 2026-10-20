@@ -17,6 +17,8 @@ function limiter({ windowMinutes, limit }) {
 }
 
 module.exports = {
+  // Every API call: generous, only stops runaway scripts (about 2 requests per second for 5 minutes)
+  apiLimiter: limiter({ windowMinutes: 5, limit: 600 }),
   loginLimiter: limiter({ windowMinutes: 15, limit: 10 }),
   emailLinkLimiter: limiter({ windowMinutes: 15, limit: 5 }),
   registerLimiter: limiter({ windowMinutes: 60, limit: 10 }),

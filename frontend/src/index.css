@@ -1,18 +1,25 @@
 @import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
 
 /* Design tokens from CLAUDE.md / design/. Use them as Tailwind classes,
-   e.g. bg-ink, text-leaf, bg-leaf-light, bg-risk-high. */
+   e.g. bg-surface, text-ink, bg-leaf, text-leaf-text, bg-risk-high.
+   Light mode values are here; dark mode overrides them further down. */
 @theme {
-  --color-ink: #1B3350;
-  --color-ink-soft: #4A5D75;
-  --color-leaf: #2E7D32;
-  --color-leaf-dark: #1F5E23;
-  --color-leaf-light: #E4F2DC;
+  --color-ink: #1B3350;          /* main text */
+  --color-ink-soft: #4A5D75;     /* secondary text */
+  --color-navy: #1B3350;         /* dark brand panels and active tabs (white text on top) */
+  --color-surface: #FFFFFF;      /* cards, header, inputs */
+  --color-canvas: #F5F6F8;       /* page background */
+  --color-line: #E2E6EC;         /* borders */
+  --color-info: #EBF3FA;
+
+  --color-leaf: #2E7D32;         /* primary buttons (white text) */
+  --color-leaf-dark: #1F5E23;    /* primary button hover */
+  --color-leaf-light: #E4F2DC;   /* light green backgrounds */
+  --color-leaf-text: #1F5E23;    /* green text */
   --color-teal: #1F8A7A;
   --color-teal-light: #DDF1EE;
-  --color-canvas: #F5F6F8;
-  --color-info: #EBF3FA;
-  --color-line: #E2E6EC;
+  --color-teal-text: #17695D;    /* links */
 
   /* Risk levels: always shown with an icon AND the word Low / Medium / High */
   --color-risk-low: #E4F2DC;
@@ -23,6 +30,34 @@
   --color-risk-high-text: #A12A1F;
 
   --font-sans: "Inter", "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+}
+
+/* Dark mode: chosen in Settings -> Appearance (saved on this device).
+   <html data-theme="dark"> is set by src/theme/ThemeProvider.jsx and by a small script in index.html. */
+[data-theme="dark"] {
+  color-scheme: dark;
+  --color-ink: #E6EBF2;
+  --color-ink-soft: #A3B1C2;
+  --color-navy: #2A4A73;
+  --color-surface: #172231;
+  --color-canvas: #0E1621;
+  --color-line: #2B394B;
+  --color-info: #18293D;
+
+  --color-leaf: #2E7D32;
+  --color-leaf-dark: #2F8A34;
+  --color-leaf-light: #1D3A22;
+  --color-leaf-text: #9BD3A0;
+  --color-teal: #2BA894;
+  --color-teal-light: #133C37;
+  --color-teal-text: #6FD1C1;
+
+  --color-risk-low: #1D3A22;
+  --color-risk-low-text: #9BD3A0;
+  --color-risk-medium: #3D3014;
+  --color-risk-medium-text: #F2C46B;
+  --color-risk-high: #48211D;
+  --color-risk-high-text: #F4A097;
 }
 
 @layer base {
@@ -37,4 +72,13 @@
     outline: 3px solid var(--color-teal);
     outline-offset: 2px;
   }
+}
+
+/* Map tiles are dimmed a little in dark mode so they do not glare */
+[data-theme="dark"] .leaflet-tile-pane {
+  filter: brightness(0.75) contrast(1.1);
+}
+.leaflet-container {
+  font: inherit;
+  border-radius: 1rem;
 }

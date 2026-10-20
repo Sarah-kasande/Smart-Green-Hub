@@ -4,7 +4,7 @@ import { useId } from 'react'
 import { useI18n } from '../../i18n/I18nProvider'
 
 const inputBase =
-  'mt-1 block min-h-12 w-full rounded-xl border bg-white px-3 text-base text-ink placeholder:text-ink-soft/60 focus:border-teal focus:outline-none'
+  'mt-1 block min-h-12 w-full rounded-xl border bg-surface px-3 text-base text-ink placeholder:text-ink-soft/60 focus:border-teal focus:outline-none'
 
 function FieldShell({ id, label, hint, error, optional, children }) {
   const { t } = useI18n()

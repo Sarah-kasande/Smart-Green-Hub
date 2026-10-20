@@ -2,10 +2,10 @@
 // Buttons are at least 48 px tall (large touch targets).
 const VARIANTS = {
   primary: 'bg-leaf text-white hover:bg-leaf-dark disabled:bg-leaf/50',
-  secondary: 'bg-white text-ink border border-line hover:bg-canvas disabled:text-ink/50',
-  dark: 'bg-ink text-white hover:bg-ink/90 disabled:bg-ink/50',
+  secondary: 'bg-surface text-ink border border-line hover:bg-canvas disabled:text-ink/50',
+  dark: 'bg-navy text-white hover:bg-navy/90 disabled:bg-navy/50',
   danger: 'bg-risk-high text-risk-high-text border border-risk-high-text/30 hover:brightness-95',
-  ghost: 'bg-transparent text-ink hover:bg-ink/5',
+  ghost: 'bg-transparent text-ink hover:bg-line/60',
 }
 
 export function buttonClasses(variant = 'primary', full = false) {

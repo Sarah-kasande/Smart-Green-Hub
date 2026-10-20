@@ -45,7 +45,7 @@ export default function ForgotPassword() {
           </Button>
         </form>
       )}
-      <Link to="/login" className="mt-6 block text-center font-semibold text-teal underline">
+      <Link to="/login" className="mt-6 block text-center font-semibold text-teal-text underline">
         {t('common.signIn')}
       </Link>
     </AuthCard>

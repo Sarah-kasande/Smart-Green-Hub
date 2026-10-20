@@ -41,6 +41,9 @@ router.put(
     v.requiredText('sector', 60),
     v.optionalText('address_text', 255),
     body('is_listed').optional().isBoolean({ strict: true }).withMessage('invalid'),
+    // Kigali lies around latitude -1.9 and longitude 30.1; the ranges keep pins inside Rwanda
+    body('latitude').optional({ values: 'null' }).isFloat({ min: -2.9, max: -1.0 }).withMessage('invalid_location').toFloat(),
+    body('longitude').optional({ values: 'null' }).isFloat({ min: 28.8, max: 31.0 }).withMessage('invalid_location').toFloat(),
     v.orgType('org_type', (value, { req }) => req.user.role === 'institution'),
     v.phone('contact_phone'),
   ],

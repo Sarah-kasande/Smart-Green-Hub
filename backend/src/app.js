@@ -11,6 +11,7 @@ const { isTest } = require('./config/env');
 const { issueCsrfCookie, verifyCsrf } = require('./middleware/csrf');
 const { loadUser } = require('./middleware/auth');
 const { notFound, errorHandler } = require('./middleware/errorHandler');
+const { apiLimiter } = require('./middleware/rateLimits');
 const routes = require('./routes');
 
 const app = express();
@@ -41,7 +42,7 @@ app.get('/api/health', async (req, res) => {
 
 // JSON bodies up to 100 KB. File uploads use their own raw parser (see uploads.routes.js).
 app.use('/api', express.json({ limit: '100kb' }));
-app.use('/api', issueCsrfCookie, verifyCsrf, loadUser, routes);
+app.use('/api', apiLimiter, issueCsrfCookie, verifyCsrf, loadUser, routes);
 
 app.use('/api', notFound);
 app.use(errorHandler);

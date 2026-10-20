@@ -4,3 +4,6 @@ certs/
 .env
 .env.*
 !.env.example
+
+# End-to-end test email file
+e2e-emails.jsonl

@@ -3,8 +3,7 @@
 const { sequelize, User, Nursery, Institution, UploadedFile } = require('../models');
 const HttpError = require('../utils/httpError');
 const audit = require('./auditService');
-const { sendEmail } = require('./emailService');
-const { render } = require('./emailTemplates');
+const { notify, dispatchSoon } = require('./notificationService');
 
 const MODELS = { nursery: Nursery, institution: Institution };
 
@@ -86,7 +85,7 @@ async function decide({ adminId, type, id, decision, reason }) {
       { verification_status: approved ? 'approved' : 'rejected', review_note: approved ? null : reason },
       { transaction }
     );
-    await audit.log(
+    const logRow = await audit.log(
       {
         actorId: adminId,
         action: approved ? 'verification.approved' : 'verification.rejected',
@@ -96,13 +95,19 @@ async function decide({ adminId, type, id, decision, reason }) {
       },
       { transaction }
     );
+    // In-app notification + email through the outbox (FR14). The audit row id makes the event unique.
+    const owner = type === 'nursery' ? row.owner : row.user;
+    await notify(
+      {
+        userId: owner.id,
+        type: approved ? 'verification_approved' : 'verification_rejected',
+        eventKey: `audit:${logRow.id}:user:${owner.id}`,
+        payload: { name: owner.full_name, orgName: type === 'nursery' ? row.name : row.org_name, reason: reason || null },
+      },
+      { transaction }
+    );
   });
-
-  const owner = type === 'nursery' ? row.owner : row.user;
-  const orgName = type === 'nursery' ? row.name : row.org_name;
-  const template = decision === 'approve' ? 'verificationApproved' : 'verificationRejected';
-  const { subject, text } = render(template, owner.preferred_language, { name: owner.full_name, orgName, reason });
-  await sendEmail({ to: owner.email, subject, text });
+  dispatchSoon();
 
   return getOne(type, id);
 }
@@ -131,7 +136,7 @@ function toOwnOrganisation({ type, row }) {
     review_note: row.review_note,
   };
   if (type === 'nursery') {
-    return { ...base, name: row.name, address_text: row.address_text, is_listed: row.is_listed, latitude: row.latitude, longitude: row.longitude };
+    return { ...base, name: row.name, address_text: row.address_text, is_listed: row.is_listed, latitude: row.latitude === null ? null : Number(row.latitude), longitude: row.longitude === null ? null : Number(row.longitude) };
   }
   return { ...base, name: row.org_name, org_type: row.org_type, contact_phone: row.contact_phone };
 }
@@ -145,6 +150,9 @@ async function updateOwnOrganisation(user, data) {
   if (org.type === 'nursery') {
     Object.assign(changes, { name: data.name?.trim(), address_text: data.address_text ?? org.row.address_text });
     if (typeof data.is_listed === 'boolean') changes.is_listed = data.is_listed;
+    // Map pin (FR03): both numbers, or null to remove the pin
+    if (data.latitude !== undefined) changes.latitude = data.latitude;
+    if (data.longitude !== undefined) changes.longitude = data.longitude;
   } else {
     Object.assign(changes, {
       org_name: data.name?.trim(),

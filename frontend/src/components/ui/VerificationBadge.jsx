@@ -4,7 +4,7 @@ import { useI18n } from '../../i18n/I18nProvider'
 
 const STYLES = {
   pending: { className: 'bg-risk-medium text-risk-medium-text', icon: 'clock' },
-  approved: { className: 'bg-leaf-light text-leaf-dark', icon: 'check' },
+  approved: { className: 'bg-leaf-light text-leaf-text', icon: 'check' },
   rejected: { className: 'bg-risk-high text-risk-high-text', icon: 'alert' },
 }
 

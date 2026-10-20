@@ -16,11 +16,11 @@ function RoleOption({ value, current, onChange, icon, title, hint }) {
   return (
     <label
       className={`flex min-h-16 cursor-pointer items-start gap-3 rounded-xl border-2 p-3 ${
-        selected ? 'border-leaf bg-leaf-light/50' : 'border-line bg-white hover:bg-canvas'
+        selected ? 'border-leaf bg-leaf-light/50' : 'border-line bg-surface hover:bg-canvas'
       }`}
     >
       <input type="radio" name="role" value={value} checked={selected} onChange={() => onChange(value)} className="mt-1 h-5 w-5 accent-leaf" />
-      <Icon name={icon} className="mt-0.5 text-leaf" />
+      <Icon name={icon} className="mt-0.5 text-leaf-text" />
       <span>
         <span className="block font-semibold">{title}</span>
         <span className="block text-sm text-ink-soft">{hint}</span>
@@ -160,7 +160,7 @@ export default function Register() {
       </form>
       <p className="mt-6 text-center text-ink-soft">
         {t('auth.haveAccount')}{' '}
-        <Link to="/login" className="font-semibold text-teal underline">
+        <Link to="/login" className="font-semibold text-teal-text underline">
           {t('common.signIn')}
         </Link>
       </p>

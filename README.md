@@ -1,14 +1,72 @@
 # Smart Green Hub
 
-A Progressive Web App for flower and tree nurseries in Kigali: predict surplus (rule-based),
-redirect surplus plants to institutions, plan planting and measure impact. ALU capstone project.
+A free Progressive Web App (PWA) for flower and tree nurseries in Kigali. It is a decision-support
+and surplus-prevention system, **not an online shop** (no cart, checkout, payments, retail search or delivery).
+ALU BSc Software Engineering capstone project.
 
-- `frontend/`: React + Vite + Tailwind CSS v4 PWA (deployed on Vercel)
-- `backend/`: Node.js + Express + Sequelize API (deployed on Render, database on Aiven MySQL)
-- `docs/`: research proposal and `DEVIATIONS.md` (differences from the proposal)
-- `design/`: Figma exports
+| Job | What it does |
+|-----|--------------|
+| **Predict** | Rule-based surplus-risk alerts (Low / Medium / High) every night and on demand. No machine learning. |
+| **Redirect** | A Surplus Board where verified schools, sector offices, churches, hotels and community groups request mature plants; two-sided hand-over confirmation. |
+| **Plan** | Planting suggestions from the nursery's own sales of the last 3 months. |
+| **Measure** | Impact dashboards: plants redirected, hand-overs, land cleared, planting sites. |
 
-A full README (deployment, test report) is written in Phase 7. This section covers local development.
+- Live frontend: https://smart-green-hub.vercel.app (Vercel)
+- Live API: https://smart-green-hub.onrender.com (Render; health check `/api/health`)
+- Database: Aiven for MySQL 8.4 (SSL)
+
+Documents: `docs/` (research proposal, `DEVIATIONS.md` = differences from the proposal, `TEST_REPORT.md`), `design/` (Figma exports).
+
+## Roles
+
+| Role | Can |
+|------|-----|
+| Nursery operator | Record batches, sales, expenses and stock changes (also offline), see alerts and planting suggestions, post surplus, decide requests, confirm hand-overs |
+| Receiving institution | Browse the Surplus Board (list and map), request plants, confirm receipt, see its impact |
+| Administrator | Verify nurseries and institutions, edit risk rules and species, moderate listings, read the audit log, see failed emails, run the risk check |
+| Public visitor | Landing page, nursery directory (consenting, approved nurseries only), aggregate impact |
+
+The first administrator is created automatically from `ADMIN_EMAIL` / `ADMIN_PASSWORD` when the API starts, only if no administrator exists.
+
+## Architecture
+
+```
+Browser (React PWA, IndexedDB offline store, service worker)
+   │  calls /api on its own domain
+   ▼
+Vercel (static app + rewrite /api/* → Render)      ← the login cookie is first-party
+   ▼
+Render: Node.js / Express API ── Sequelize ── Aiven MySQL
+          ├─ risk engine + planting planner (rules in backend/src/services/riskRules.js)
+          ├─ nightly job 02:00 Kigali (node-cron) + notification outbox every 5 min
+          └─ Brevo HTTP API for email
+```
+
+Folders:
+
+```
+backend/src/
+  config/        environment loading, database settings (SSL / CA certificate)
+  migrations/    versioned database changes (sequelize-cli)
+  models/        18 tables: the 15 ERD entities + auth_tokens, stock_adjustments, uploaded_files
+  middleware/    sign-in (cookie JWT), roles, CSRF, validation, rate limits, errors
+  routes/        auth, me, uploads, operator, institution, admin, public, shared (species, board, notifications)
+  services/      business logic (one file per area: inventory, finance, sync, risk, planning, surplus, impact, ...)
+  jobs/          scheduler (nightly risk check, email sending)
+backend/tests/   Jest unit + Supertest API tests
+backend/scripts/ seed-admin.js, start-e2e.js, load-test.js
+
+frontend/src/
+  api/           Axios client (CSRF header), data hook
+  auth/          who is signed in, route guards
+  offline/       Dexie database, outbox sync, sync status
+  i18n/          en.js, rw.js (Kinyarwanda, TODO marks for review)
+  theme/         light / dark mode
+  components/    UI pieces (buttons, badges, cards, chart, maps)
+  layouts/       public layout, app layout (sidebar on desktop, bottom bar on mobile)
+  pages/         public, auth, operator, institution, admin, shared
+frontend/e2e/    Playwright end-to-end tests
+```
 
 ## Local development
 
@@ -20,19 +78,22 @@ Local development and tests use a **local MySQL 8.4** in Docker, never the produ
    docker run -d --name sgh-mysql --restart unless-stopped -p 3307:3306 -v sgh-mysql-data:/var/lib/mysql ^
      -e MYSQL_ROOT_PASSWORD=local_root_only -e MYSQL_DATABASE=smart_green_hub_dev ^
      -e MYSQL_USER=sgh_local -e MYSQL_PASSWORD=sgh_local_pw mysql:8.4 --max-allowed-packet=67108864
-   docker exec sgh-mysql mysql -uroot -plocal_root_only -e "CREATE DATABASE IF NOT EXISTS smart_green_hub_test; GRANT ALL ON smart_green_hub_test.* TO 'sgh_local'@'%';"
+   docker exec sgh-mysql mysql -uroot -plocal_root_only -e "CREATE DATABASE IF NOT EXISTS smart_green_hub_test; CREATE DATABASE IF NOT EXISTS smart_green_hub_e2e; GRANT ALL ON smart_green_hub_test.* TO 'sgh_local'@'%'; GRANT ALL ON smart_green_hub_e2e.* TO 'sgh_local'@'%';"
    ```
 
-   Later: `docker start sgh-mysql`.
+   Later: start Docker Desktop, then `docker start sgh-mysql`.
 
-2. Backend environment files (none of them are committed):
-   - `backend/.env`: your real settings (Aiven, JWT_SECRET, ADMIN_EMAIL, ADMIN_PASSWORD, ...)
-   - `backend/.env.local`: overrides `DB_*` to point at the local MySQL (`DB_HOST=127.0.0.1`, `DB_PORT=3307`,
-     `DB_NAME=smart_green_hub_dev`, `DB_USER=sgh_local`, `DB_PASSWORD=sgh_local_pw`, `DB_SSL=false`) plus
-     `NODE_ENV=development`, `APP_URL=http://localhost:5173`, empty `BREVO_API_KEY`. Delete it to use `.env` alone.
-   - `backend/.env.test`: used only by `npm test` (local `smart_green_hub_test` database, fake accounts).
-     The tests stop immediately if `DB_HOST` contains `aivencloud.com`.
-   - See `backend/.env.example` for every variable name.
+2. Backend environment files (none are committed; see `backend/.env.example` for every name):
+   - `backend/.env`: real settings (Aiven, `JWT_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, ...)
+   - `backend/.env.local`: overrides for local development: `DB_HOST=127.0.0.1`, `DB_PORT=3307`,
+     `DB_NAME=smart_green_hub_dev`, `DB_USER=sgh_local`, `DB_PASSWORD=sgh_local_pw`, `DB_SSL=false`,
+     `NODE_ENV=development`, `APP_URL=http://localhost:5173`, `CORS_ORIGIN=http://localhost:5173`, empty `BREVO_API_KEY`
+   - `backend/.env.test`: used only by `npm test`: the same local values with `DB_NAME=smart_green_hub_test`,
+     a test `JWT_SECRET` and fake `ADMIN_EMAIL` / `ADMIN_PASSWORD`. Tests stop if `DB_HOST` contains `aivencloud.com`.
+   - `backend/.env.e2e`: used only by the Playwright tests: `PORT=5001`, `DB_NAME=smart_green_hub_e2e`,
+     fake admin `e2e-admin@example.test` / `E2eAdmin123`, `APP_URL=http://localhost:5174`,
+     `CORS_ORIGIN=http://localhost:5174`, `EMAIL_OUTBOX_FILE=e2e-emails.jsonl`, plus the local DB values above.
+   - `frontend/.env`: `VITE_API_URL=/api`
 
 3. Run:
 
@@ -40,23 +101,61 @@ Local development and tests use a **local MySQL 8.4** in Docker, never the produ
    cd backend
    npm install
    npm run migrate
-   npm run dev          # API on http://localhost:5000 (creates the admin from ADMIN_EMAIL/ADMIN_PASSWORD if none exists)
+   npm run dev          # API on http://localhost:5000
 
    cd frontend
    npm install
    npm run dev          # app on http://localhost:5173 (Vite forwards /api to the API)
    ```
 
-   Without `BREVO_API_KEY`, emails (confirmation and reset links) are printed in the API terminal.
+   Without `BREVO_API_KEY`, emails (confirmation and reset links, notifications) are printed in the API terminal.
 
-4. Tests: `cd backend && npm test`
+## Tests
 
-## Scripts (backend)
+| Command | What runs |
+|---------|-----------|
+| `cd backend && npm test` | 142 Jest unit + Supertest API tests on `smart_green_hub_test` |
+| `cd frontend && npm run test:e2e` | 11 Playwright tests in Microsoft Edge (starts its own API and app) |
+| `cd frontend && npm run lint` | ESLint |
+| `cd backend && node scripts/load-test.js <url> 50 10` | 50-user load test (NFR01) |
 
-| Command | What it does |
-|---------|--------------|
-| `npm start` | Runs migrations, then starts the API (used by Render) |
-| `npm run dev` | Starts the API with auto-reload |
-| `npm run migrate` / `npm run migrate:undo` | Apply / undo database migrations |
-| `npm run seed:admin` | Creates the first administrator if none exists |
-| `npm test` | Jest + Supertest tests on the local test database |
+Results: `docs/TEST_REPORT.md`.
+
+## Environment variables
+
+Render (API):
+
+| Name | Value |
+|------|-------|
+| `NODE_ENV` | `production` (Secure cookies; emails never printed) |
+| `PORT` | set by Render |
+| `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` | Aiven connection |
+| `DB_CA_CERT` | Aiven CA certificate text |
+| `JWT_SECRET` | long random text |
+| `ADMIN_EMAIL`, `ADMIN_PASSWORD` | first administrator |
+| `BREVO_API_KEY`, `MAIL_FROM` | email (sender verified in Brevo) |
+| `APP_URL` | `https://smart-green-hub.vercel.app` (no trailing slash) |
+| `CORS_ORIGIN` | `https://smart-green-hub.vercel.app` |
+| `TRUST_PROXY` | `2` (Vercel + Render in front of the API) |
+
+Vercel (frontend): `VITE_API_URL` = `/api` (Production and Preview). The project root directory must be `frontend`.
+
+## Deployment
+
+- **Render**: build command `npm install`, start command `npm start` (runs the migrations, then starts the API).
+  Auto-Deploy "On Commit" deploys every push to `main`; otherwise use *Manual Deploy → Deploy latest commit*.
+- **Vercel**: builds `frontend/` on every push; `frontend/vercel.json` rewrites `/api/*` to Render and serves the app for every other path.
+- After changing a `VITE_` variable on Vercel, redeploy (Vite reads it at build time).
+- Free-plan note: Render sleeps when unused (first request up to about 50 s). The nightly risk check runs only if the API is awake at 02:00; operators can use **Check now**.
+
+## Before the pilot
+
+- Replace the DEMO species values with the needs-assessment results (Admin → Rules & Species).
+- Have a native speaker review `frontend/src/i18n/rw.js` and `backend/src/services/emailTemplates.js` (TODO marks).
+- Turn on daily backups in Aiven and do one restore exercise (NFR05).
+- Confirm with RFA how forest-law provisions apply to nursery stock (proposal 3.2.3).
+
+## Future work (not in this capstone)
+
+Machine-learning forecasts, photo-based growth detection, SMS / USSD, mobile-money payments, delivery,
+web push notifications, native apps.

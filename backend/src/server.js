@@ -3,6 +3,7 @@ require('./config/env');
 const app = require('./app');
 const sequelize = require('./db');
 const { runBootstrap } = require('./services/bootstrapService');
+const { startScheduler } = require('./jobs/scheduler');
 
 if (!process.env.JWT_SECRET) console.warn('WARNING: JWT_SECRET is not set. Sign-in will not work.');
 
@@ -22,4 +23,6 @@ app.listen(port, async () => {
   } catch (e) {
     console.error('Startup data check FAILED:', e.message);
   }
+  // Nightly risk evaluation + notification sending (src/jobs/scheduler.js)
+  startScheduler();
 });

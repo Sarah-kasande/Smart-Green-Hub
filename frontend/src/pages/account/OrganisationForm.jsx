@@ -1,12 +1,16 @@
 // Edit nursery / institution details. If the administrator asked for a correction,
 // saving sends the details back for review.
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import api, { errorCode, fieldErrors } from '../../api/client'
 import { useI18n } from '../../i18n/I18nProvider'
 import Button from '../../components/ui/Button'
 import Notice from '../../components/ui/Notice'
 import { SelectField, TextField } from '../../components/ui/Fields'
 import { DISTRICTS, ORG_TYPES } from '../../utils/options'
+import PageLoader from '../../components/ui/PageLoader'
+
+// The map library is large: load it only when this form is shown
+const LocationPicker = lazy(() => import('../../components/map/Maps').then((m) => ({ default: m.LocationPicker })))
 
 export default function OrganisationForm({ organisation, onSaved, onCancel }) {
   const { t } = useI18n()
@@ -20,6 +24,8 @@ export default function OrganisationForm({ organisation, onSaved, onCancel }) {
     contact_phone: organisation.contact_phone || '',
     is_listed: Boolean(organisation.is_listed),
   })
+  // Map pin of the nursery (FR03); null until the operator taps the map
+  const [pin, setPin] = useState(organisation.latitude ? { lat: organisation.latitude, lng: organisation.longitude } : null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
   const [fields, setFields] = useState({})
@@ -32,7 +38,7 @@ export default function OrganisationForm({ organisation, onSaved, onCancel }) {
     setError(null)
     setFields({})
     const payload = isNursery
-      ? { name: form.name, district: form.district, sector: form.sector, address_text: form.address_text, is_listed: form.is_listed }
+      ? { name: form.name, district: form.district, sector: form.sector, address_text: form.address_text, is_listed: form.is_listed, latitude: pin?.lat ?? null, longitude: pin?.lng ?? null }
       : { name: form.name, org_type: form.org_type, district: form.district, sector: form.sector, contact_phone: form.contact_phone }
     try {
       await api.put('/me/organisation', payload)
@@ -72,6 +78,19 @@ export default function OrganisationForm({ organisation, onSaved, onCancel }) {
       {isNursery ? (
         <>
           <TextField label={t('auth.address')} value={form.address_text} onChange={set('address_text')} error={fields.address_text} optional />
+          <div>
+            <p className="text-sm font-semibold">{t('settings.location')}</p>
+            <p className="mb-2 text-sm text-ink-soft">{t('settings.locationHint')}</p>
+            <Suspense fallback={<PageLoader />}>
+              <LocationPicker value={pin} onChange={setPin} label={t('settings.location')} />
+            </Suspense>
+            {fields.latitude && <p className="mt-1 text-sm text-risk-high-text">{t('fieldErrors.invalid_location')}</p>}
+            {pin && (
+              <button type="button" onClick={() => setPin(null)} className="mt-2 min-h-10 font-semibold text-teal-text underline">
+                {t('settings.removePin')}
+              </button>
+            )}
+          </div>
           <label className="flex min-h-12 items-start gap-3 rounded-xl bg-canvas p-3">
             <input type="checkbox" checked={form.is_listed} onChange={set('is_listed')} className="mt-1 h-5 w-5 accent-leaf" />
             <span>{t('auth.listConsent')}</span>

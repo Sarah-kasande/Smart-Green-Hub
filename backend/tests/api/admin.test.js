@@ -80,6 +80,8 @@ describe('verification queue (FR02, FR15)', () => {
       .send({ decision: 'reject', reason: 'Please add the sector office letter' });
     expect(reject.status).toBe(200);
     expect(reject.body.item).toMatchObject({ verification_status: 'rejected', review_note: 'Please add the sector office letter' });
+    // The email goes through the notification outbox (FR14)
+    await require('../../src/services/notificationService').dispatchPending();
     expect(h.sentEmails.at(-1)).toMatchObject({ to: 'queue-op@example.test' });
     expect(h.sentEmails.at(-1).text).toContain('Please add the sector office letter');
 

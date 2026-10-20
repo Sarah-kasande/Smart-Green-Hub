@@ -79,7 +79,32 @@ async function adminClient() {
   return client;
 }
 
+// Registers a user and has the administrator approve their nursery / institution.
+// Returns { client, id } where id is the nursery or institution id.
+async function approvedUser(admin, data) {
+  const client = await registerVerifiedUser(data);
+  const me = await client.get('/api/auth/me');
+  const org = me.body.organisation;
+  const res = await admin.post(`/api/admin/verifications/${org.type}/${org.id}/decision`).send({ decision: 'approve' });
+  if (res.status !== 200) throw new Error(`approve failed: ${res.status}`);
+  return { client, id: org.id };
+}
+
+// Puts DEMO species in (the reset empties the table) and returns them
+async function demoSpecies() {
+  const { ensureDemoSpecies } = require('../src/services/bootstrapService');
+  const { PlantSpecies } = require('../src/models');
+  await ensureDemoSpecies();
+  return PlantSpecies.findAll({ order: [['id', 'ASC']] });
+}
+
+let counter = 0;
+const uniqueEmail = (prefix) => `${prefix}-${Date.now()}-${counter++}@example.test`;
+
 module.exports = {
+  approvedUser,
+  demoSpecies,
+  uniqueEmail,
   app,
   sequelize,
   sentEmails,

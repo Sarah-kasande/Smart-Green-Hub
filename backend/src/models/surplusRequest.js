@@ -14,6 +14,9 @@ module.exports = (sequelize, DataTypes, { common }) =>
       nursery_confirmed_at: { type: DataTypes.DATE },
       institution_confirmed_at: { type: DataTypes.DATE },
       fulfilled_at: { type: DataTypes.DATE },
+      planting_site: { type: DataTypes.STRING(255) },
+      planting_district: { type: DataTypes.STRING(60) },
+      land_cleared_sqm: { type: DataTypes.DECIMAL(10, 2) },
     },
     {
       ...common,

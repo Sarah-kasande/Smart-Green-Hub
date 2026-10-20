@@ -54,7 +54,7 @@ function Detail({ item, onDecided }) {
 
   return (
     <Card className="space-y-4">
-      <div className="rounded-xl bg-ink p-4 text-white">
+      <div className="rounded-xl bg-navy p-4 text-white">
         <p className="text-sm text-white/70">
           {t(`admin.${item.type}`)}
           {item.org_type && ` · ${t(`orgTypes.${item.org_type}`)}`}
@@ -84,7 +84,7 @@ function Detail({ item, onDecided }) {
           <dd className="text-ink-soft">
             {item.owner?.full_name}
             <br />
-            <a className="text-teal underline" href={`mailto:${item.owner?.email}`}>
+            <a className="text-teal-text underline" href={`mailto:${item.owner?.email}`}>
               {item.owner?.email}
             </a>
             {item.contact_phone && (
@@ -201,7 +201,7 @@ export default function VerificationQueue() {
             type="button"
             aria-pressed={status === s}
             onClick={() => setStatus(s)}
-            className={`min-h-12 rounded-xl px-4 font-semibold ${status === s ? 'bg-ink text-white' : 'border border-line bg-white text-ink'}`}
+            className={`min-h-12 rounded-xl px-4 font-semibold ${status === s ? 'bg-navy text-white' : 'border border-line bg-surface text-ink'}`}
           >
             {t(`admin.${s}`)}
             {data && s !== 'all' && (
@@ -213,7 +213,7 @@ export default function VerificationQueue() {
           aria-label={t('admin.filterAll')}
           value={type}
           onChange={(e) => setType(e.target.value)}
-          className="min-h-12 rounded-xl border border-line bg-white px-3 font-semibold"
+          className="min-h-12 rounded-xl border border-line bg-surface px-3 font-semibold"
         >
           {TYPE_FILTERS.map((f) => (
             <option key={f.value} value={f.value}>
@@ -231,7 +231,7 @@ export default function VerificationQueue() {
           {!data && !error && <PageLoader />}
           {data && data.items.length === 0 && (
             <Card className="flex items-center gap-3 text-ink-soft">
-              <Icon name="check" className="text-leaf" />
+              <Icon name="check" className="text-leaf-text" />
               {t('admin.empty')}
             </Card>
           )}
@@ -246,10 +246,10 @@ export default function VerificationQueue() {
                       onClick={() => open(item)}
                       aria-current={active ? 'true' : undefined}
                       className={`flex w-full items-start gap-3 rounded-2xl border p-4 text-left ${
-                        active ? 'border-leaf bg-leaf-light/60' : 'border-line bg-white hover:bg-canvas'
+                        active ? 'border-leaf bg-leaf-light/60' : 'border-line bg-surface hover:bg-canvas'
                       }`}
                     >
-                      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-canvas text-leaf">
+                      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-canvas text-leaf-text">
                         <Icon name={item.type === 'nursery' ? 'sprout' : 'building'} />
                       </span>
                       <span className="min-w-0 flex-1">

@@ -3,7 +3,7 @@ import Icon from './Icon'
 
 const STYLES = {
   info: { box: 'bg-info text-ink border-ink/10', icon: 'info' },
-  success: { box: 'bg-leaf-light text-leaf-dark border-leaf/20', icon: 'check' },
+  success: { box: 'bg-leaf-light text-leaf-text border-leaf/20', icon: 'check' },
   warning: { box: 'bg-risk-medium text-risk-medium-text border-risk-medium-text/20', icon: 'alert' },
   error: { box: 'bg-risk-high text-risk-high-text border-risk-high-text/20', icon: 'alert' },
 }

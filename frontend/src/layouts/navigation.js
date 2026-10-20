@@ -21,9 +21,13 @@ export const NAVIGATION = {
     { to: '/institution/settings', label: 'nav.settings', icon: 'settings' },
   ],
   admin: [
-    { to: '/admin', label: 'nav.verification', icon: 'shield', end: true, bottom: true },
-    { to: '/admin/rules', label: 'nav.rules', icon: 'sliders', bottom: true },
+    { to: '/admin', label: 'nav.dashboard', icon: 'home', end: true, bottom: true },
+    { to: '/admin/verification', label: 'nav.verification', short: 'nav.verificationShort', icon: 'shield', bottom: true },
+    { to: '/admin/rules', label: 'nav.rules', short: 'nav.rulesShort', icon: 'sliders', bottom: true },
+    { to: '/admin/listings', label: 'nav.listings', icon: 'board' },
+    { to: '/admin/impact', label: 'nav.impact', icon: 'chart' },
     { to: '/admin/audit', label: 'nav.audit', icon: 'list', bottom: true },
-    { to: '/admin/settings', label: 'nav.settings', icon: 'settings', bottom: true },
+    { to: '/admin/notifications-failed', label: 'nav.emailProblems', icon: 'mail' },
+    { to: '/admin/settings', label: 'nav.settings', icon: 'settings' },
   ],
 }

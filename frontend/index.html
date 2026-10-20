@@ -3,10 +3,21 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#1B3350" />
     <meta name="description" content="Smart Green Hub helps Kigali nurseries predict surplus plants, redirect them to institutions and plan planting." />
     <title>Smart Green Hub</title>
+    <script>
+      // Apply the saved light/dark choice before the page is drawn (see src/theme/ThemeProvider.jsx)
+      try {
+        var choice = localStorage.getItem('sgh_theme') || 'system'
+        var dark = choice === 'dark' || (choice === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+        document.documentElement.dataset.theme = dark ? 'dark' : 'light'
+      } catch (e) {
+        document.documentElement.dataset.theme = 'light'
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
