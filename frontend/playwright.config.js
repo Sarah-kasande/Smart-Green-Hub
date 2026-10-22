@@ -30,7 +30,8 @@ export default defineConfig({
     {
       command: 'npx vite --port 5174 --strictPort',
       url: 'http://localhost:5174',
-      env: { VITE_PROXY_TARGET: 'http://localhost:5001' },
+      // A fake app version, so the test 'no version banner' runs with app and API versions that differ
+      env: { VITE_PROXY_TARGET: 'http://localhost:5001', VERCEL_GIT_COMMIT_SHA: 'e2eapp0000000' },
       timeout: 120_000,
       reuseExistingServer: false,
     },

@@ -7,12 +7,13 @@ import { useApi } from '../../api/useApi'
 import { useI18n } from '../../i18n/I18nProvider'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
-import Icon from '../../components/ui/Icon'
 import Notice from '../../components/ui/Notice'
 import ErrorState from '../../components/ui/ErrorState'
 import PageLoader from '../../components/ui/PageLoader'
 import { RiskBadge, StatusBadge } from '../../components/ui/Badges'
-import { Disclosure, EmptyState, Fact, PageHeader, Segmented } from '../../components/ui/Layout'
+import { Disclosure, EmptyState, Fact, PageHeader } from '../../components/ui/Layout'
+import { FilterPanel, FilterSelect, SearchBox, Toolbar, WithFilters } from '../../components/ui/DataView'
+import { countLabel, matches } from '../../components/ui/dataViewTools'
 import { buttonClasses } from '../../components/ui/buttonStyles'
 import { formatDateTime, formatNumber } from '../../utils/format'
 
@@ -44,7 +45,7 @@ function AlertCard({ alert, onChanged }) {
     <Card className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <Link to={`/operator/batches/${alert.batch_id}`} className="text-lg font-bold underline-offset-2 hover:underline">
+          <Link to={`/operator/batches/${alert.batch_id}`} className="text-lg font-semibold underline-offset-2 hover:underline">
             {batch?.species?.common_name} · #{alert.batch_id}
           </Link>
           <p className="text-sm text-ink-soft">{t('alerts.generated', { date: formatDateTime(alert.generated_at) })}</p>
@@ -88,19 +89,18 @@ function AlertCard({ alert, onChanged }) {
           <input id={`note-${alert.id}`} value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} className="block min-h-12 w-full rounded-xl border border-line bg-surface px-3" />
           <div className="flex flex-wrap gap-2">
             {alert.status === 'open' && (
-              <Button variant="secondary" icon="check" disabled={busy} onClick={() => change('acknowledged')}>
+              <Button variant="secondary" disabled={busy} onClick={() => change('acknowledged')}>
                 {t('alerts.acknowledge')}
               </Button>
             )}
-            <Button icon="check" disabled={busy} onClick={() => change('resolved')}>
+            <Button disabled={busy} onClick={() => change('resolved')}>
               {t('alerts.resolve')}
             </Button>
-            <Button variant="ghost" icon="close" disabled={busy} onClick={() => change('dismissed')}>
+            <Button variant="ghost" disabled={busy} onClick={() => change('dismissed')}>
               {t('alerts.dismiss')}
             </Button>
             {alert.suggested_action === 'surplus_board_or_donate' && (
               <Link to={`/operator/surplus?new=1&batch=${alert.batch_id}`} className={buttonClasses('secondary')}>
-                <Icon name="board" />
                 {t('dashboard.postSurplus')}
               </Link>
             )}
@@ -114,6 +114,8 @@ function AlertCard({ alert, onChanged }) {
 export default function Alerts() {
   const { t } = useI18n()
   const [status, setStatus] = useState('open')
+  const [risk, setRisk] = useState('all')
+  const [search, setSearch] = useState('')
   const { data, error, reload } = useApi(`/operator/alerts?status=${status}`)
   const [notice, setNotice] = useState(null)
   const [checking, setChecking] = useState(false)
@@ -122,7 +124,7 @@ export default function Alerts() {
     setChecking(true)
     try {
       const res = await api.post('/operator/alerts/evaluate')
-      setNotice({ type: 'success', text: 'alerts.checked', values: { n: res.data.summary.evaluated, created: res.data.summary.created } })
+      setNotice({ type: 'success', text: 'alerts.checked', values: { n: res.data.summary?.evaluated ?? 0, created: res.data.summary?.created ?? 0 } })
       reload()
     } catch (err) {
       setNotice({ type: 'error', text: `errors.${errorCode(err)}` })
@@ -136,31 +138,56 @@ export default function Alerts() {
     reload()
   }
 
+  const alerts = data?.alerts || []
+  const statusOptions = FILTERS.map((f) => ({ value: f, label: f === 'all' ? t('table.allStatuses') : t(`alertStatus.${f}`) }))
+  // Risk levels are counted in the browser from the alerts already loaded
+  const riskOptions = ['all', 'high', 'medium', 'low'].map((level) => ({
+    value: level,
+    label: level === 'all' ? t('table.allLevels') : t(`risk.${level}`),
+    count: level === 'all' ? alerts.length : alerts.filter((a) => a.risk_level === level).length,
+  }))
+  const rows = alerts.filter((a) => (risk === 'all' || a.risk_level === risk) && matches(search, a.batch?.species?.common_name, `#${a.batch_id}`))
+
   return (
-    <div className="mx-auto max-w-5xl space-y-5">
+    <div className="mx-auto max-w-7xl space-y-5">
       <PageHeader
         title={t('alerts.title')}
-        intro={t('alerts.intro')}
+        meta={data && countLabel(t, rows.length)}
         actions={
-          <Button variant="secondary" icon="clock" onClick={checkNow} disabled={checking}>
+          <Button variant="secondary" onClick={checkNow} disabled={checking}>
             {checking ? t('common.loading') : t('alerts.checkNow')}
           </Button>
         }
       />
       {notice && <Notice type={notice.type}>{t(notice.text, notice.values)}</Notice>}
-      <Segmented label={t('alerts.title')} value={status} onChange={setStatus} options={FILTERS.map((f) => ({ value: f, label: f === 'all' ? t('common.all') : t(`alertStatus.${f}`) }))} />
+      <Toolbar>
+        <SearchBox value={search} onChange={setSearch} label={t('table.searchPlants')} />
+        <FilterSelect label={t('table.byStatus')} value={status} onChange={setStatus} options={statusOptions} />
+        <FilterSelect label={t('table.byRisk')} value={risk} onChange={setRisk} options={riskOptions} />
+      </Toolbar>
       {error && <ErrorState code={error} onRetry={reload} />}
-      {!data && !error && <PageLoader />}
-      {data && data.alerts.length === 0 && <EmptyState icon="check" title={t('alerts.empty')} text={t('alerts.emptyText')} />}
-      {data && data.alerts.length > 0 && (
-        <ul className="space-y-4">
-          {data.alerts.map((a) => (
-            <li key={a.id}>
-              <AlertCard alert={a} onChanged={changed} />
-            </li>
-          ))}
-        </ul>
-      )}
+      <WithFilters
+        panel={
+          <FilterPanel
+            groups={[
+              { label: t('table.byStatus'), value: status, onChange: setStatus, options: statusOptions },
+              { label: t('table.byRisk'), value: risk, onChange: setRisk, options: riskOptions },
+            ]}
+          />
+        }
+      >
+        {!data && !error && <PageLoader />}
+        {data && rows.length === 0 && (alerts.length === 0 ? <EmptyState title={t('alerts.empty')} text={t('alerts.emptyText')} /> : <EmptyState title={t('table.noMatch')} />)}
+        {rows.length > 0 && (
+          <ul className="space-y-4">
+            {rows.map((a) => (
+              <li key={a.id}>
+                <AlertCard alert={a} onChanged={changed} />
+              </li>
+            ))}
+          </ul>
+        )}
+      </WithFilters>
     </div>
   )
 }

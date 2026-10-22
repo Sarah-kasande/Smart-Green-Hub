@@ -120,8 +120,8 @@ Local development and tests use a **local MySQL 8.4** in Docker, never the produ
 - Journey: Register → **Verify your email** (`/verify-email`, code field, "Send the code again" after 60 s,
   "Use a different email") → signed in → home page with the next step (administrator approval).
   Signing in before confirming opens the same screen. Password: Forgot password → email → code + new password.
-- After a deploy the app reloads itself once when the new version is ready. If a browser still shows an old
-  screen, reload the page (Ctrl+Shift+R).
+- After a deploy the new version downloads in the background and is switched on at the next page change
+  inside the app (no message is shown). If a browser still shows an old screen, reload the page (Ctrl+Shift+R).
 - Every email goes through the outbox with a status `queued`, `sent`, `failed` or `skipped`.
   **Admin → Email problems** shows the counts and every failed or skipped email with Brevo's exact error and a Retry button.
 - `/api/health` shows `email: configured` or `not configured` (no secret is ever shown).
@@ -131,7 +131,7 @@ Local development and tests use a **local MySQL 8.4** in Docker, never the produ
 | Command | What runs |
 |---------|-----------|
 | `cd backend && npm test` | 231 Jest unit, API, one-time-code, outbox and frontend-backend contract tests on `smart_green_hub_test` |
-| `cd frontend && npm run test:e2e` | 18 Playwright tests in Microsoft Edge (starts its own API and app) |
+| `cd frontend && npm run test:e2e` | 23 Playwright tests in Microsoft Edge (starts its own API and app) |
 | `cd frontend && npm run lint` | ESLint |
 | `cd backend && node scripts/load-test.js <url> 50 10` | 50-user load test (NFR01) |
 
@@ -166,12 +166,24 @@ Vercel (frontend): `VITE_API_URL` = `/api` (Production and Preview). The project
 - After changing a `VITE_` variable on Vercel, redeploy (Vite reads it at build time).
 - Free-plan note: Render sleeps when unused (first request up to about 50 s). The nightly risk check runs only if the API is awake at 02:00; operators can use **Check now**.
 
+## Keeping Render and Vercel on the same commit
+
+Both services must deploy every push to `main`, so the app and the API never drift apart:
+
+- **Render** → your service → *Settings* → *Build & Deploy*: **Auto-Deploy = On Commit**, branch **main**.
+  After each push open *Events* and check that the deploy finished ("Deploy live"); a failed build keeps the old API.
+- **Vercel** → your project → *Settings* → *Git*: connected to the same GitHub repository; *Production Branch* = **main**;
+  root directory `frontend`.
+- After a push, `https://smart-green-hub.onrender.com/api/health` shows `version` = the first 7 characters of the
+  commit (also printed in the Render log as `API running on ... (version abc1234)`).
+- Push changes that touch both the app and the API in **one** commit, so both deploy the same version.
+
 ## Troubleshooting
 
-- **Pages say "The server does not know this request" (older versions: "Not found.")**: the app and the API
-  run different versions. Locally: stop the API (Ctrl+C) and start it again with `npm run dev` in `backend`.
-  Live: redeploy the API on Render (*Manual Deploy → Deploy latest commit*). Administrators see a warning
-  banner when the versions differ; `/api/health` shows the API version.
+- **A page says "This part of the app is not available right now"**: the app and the API were deployed from
+  different commits. Locally: restart the API (`npm run dev` in `backend`). Live: redeploy the API on Render
+  (*Manual Deploy → Deploy latest commit*). Compare the `version` in `/api/health` with the latest commit on GitHub.
+  Users never see version numbers; there is no banner.
 - **Database up to date?** `cd backend && npx sequelize-cli db:migrate:status` (every line should say `up`).
 - **Local database not reachable?** Start Docker Desktop, then `docker start sgh-mysql`.
 - **Nobody receives emails**: open Admin → Email problems. "Skipped" = no `BREVO_API_KEY` is loaded.

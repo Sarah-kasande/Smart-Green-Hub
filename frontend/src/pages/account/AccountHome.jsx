@@ -7,9 +7,9 @@ import { useAuth } from '../../auth/AuthContext'
 import { useI18n } from '../../i18n/I18nProvider'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
-import Icon from '../../components/ui/Icon'
 import Notice from '../../components/ui/Notice'
 import VerificationBadge from '../../components/ui/VerificationBadge'
+import { PageHeader } from '../../components/ui/Layout'
 import OrganisationForm from './OrganisationForm'
 import Documents from './Documents'
 
@@ -32,14 +32,7 @@ export default function AccountHome() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-5">
-      <div>
-        <p className="text-sm font-semibold text-leaf-text">{t(`roles.${user.role}`)}</p>
-        <h1 className="text-2xl font-bold sm:text-3xl">{t('account.welcome', { name: user.full_name })}</h1>
-        <p className="mt-1 flex items-start gap-2 text-ink-soft">
-          <Icon name={organisation.type === 'nursery' ? 'sprout' : 'building'} size={18} className="mt-0.5" />
-          {organisation.name} · {t(`districts.${organisation.district}`)}, {organisation.sector}
-        </p>
-      </div>
+      <PageHeader title={t('account.welcome', { name: user.full_name })} meta={`${organisation.name} · ${t(`districts.${organisation.district}`)}, ${organisation.sector}`} />
 
       {justVerified && (
         <Notice type="success">
@@ -51,7 +44,7 @@ export default function AccountHome() {
 
       <Card>
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-lg font-bold">{t('account.statusTitle')}</h2>
+          <h2 className="text-lg font-semibold">{t('account.statusTitle')}</h2>
           <VerificationBadge status={status} />
         </div>
         <div className="mt-3">
@@ -68,7 +61,7 @@ export default function AccountHome() {
           {editing ? (
             <OrganisationForm organisation={organisation} onSaved={onSaved} onCancel={() => setEditing(false)} />
           ) : (
-            <Button variant={status === 'rejected' ? 'primary' : 'secondary'} icon="edit" onClick={() => { setSaved(false); setEditing(true) }}>
+            <Button variant={status === 'rejected' ? 'primary' : 'secondary'} onClick={() => { setSaved(false); setEditing(true) }}>
               {t('account.editDetails')}
             </Button>
           )}
@@ -76,13 +69,12 @@ export default function AccountHome() {
       </Card>
 
       <Card>
-        <h2 className="mb-3 text-lg font-bold">{t('account.documentsTitle')}</h2>
+        <h2 className="mb-3 text-lg font-semibold">{t('account.documentsTitle')}</h2>
         <Documents />
       </Card>
 
       <Card className="bg-info">
-        <h2 className="flex items-center gap-2 text-lg font-bold">
-          <Icon name="info" />
+        <h2 className="text-lg font-semibold">
           {t('account.nextSteps')}
         </h2>
         <p className="mt-2 text-ink-soft">{user.role === 'operator' ? t('account.nextOperator') : t('account.nextInstitution')}</p>

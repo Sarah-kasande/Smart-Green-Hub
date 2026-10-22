@@ -7,9 +7,9 @@ import { useI18n } from '../../i18n/I18nProvider'
 import { useTheme } from '../../theme/ThemeProvider'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
-import Icon from '../../components/ui/Icon'
 import Notice from '../../components/ui/Notice'
 import VerificationBadge from '../../components/ui/VerificationBadge'
+import { PageHeader } from '../../components/ui/Layout'
 import { SelectField, TextField } from '../../components/ui/Fields'
 import OrganisationForm from './OrganisationForm'
 import Documents from './Documents'
@@ -18,13 +18,13 @@ function Appearance() {
   const { t } = useI18n()
   const { choice, setChoice } = useTheme()
   const options = [
-    { value: 'light', icon: 'sun', label: t('theme.light') },
-    { value: 'dark', icon: 'moon', label: t('theme.dark') },
-    { value: 'system', icon: 'phone', label: t('theme.system') },
+    { value: 'light', label: t('theme.light') },
+    { value: 'dark', label: t('theme.dark') },
+    { value: 'system', label: t('theme.system') },
   ]
   return (
     <Card>
-      <h2 className="text-lg font-bold">{t('theme.title')}</h2>
+      <h2 className="text-lg font-semibold">{t('theme.title')}</h2>
       <p className="mb-4 text-sm text-ink-soft">{t('theme.hint')}</p>
       <fieldset>
         <legend className="sr-only">{t('theme.title')}</legend>
@@ -37,7 +37,6 @@ function Appearance() {
               }`}
             >
               <input type="radio" name="theme" value={o.value} checked={choice === o.value} onChange={() => setChoice(o.value)} className="h-5 w-5 accent-leaf" />
-              <Icon name={o.icon} />
               {o.label}
             </label>
           ))}
@@ -76,7 +75,7 @@ function Profile() {
 
   return (
     <Card>
-      <h2 className="mb-4 text-lg font-bold">{t('settings.profile')}</h2>
+      <h2 className="mb-4 text-lg font-semibold">{t('settings.profile')}</h2>
       <form onSubmit={submit} className="space-y-4" noValidate>
         {message && <Notice type={message.type}>{message.text}</Notice>}
         <TextField label={t('auth.email')} value={user.email} disabled />
@@ -92,7 +91,7 @@ function Profile() {
             { value: 'rw', label: 'Kinyarwanda' },
           ]}
         />
-        <Button type="submit" icon="check" disabled={busy}>
+        <Button type="submit" disabled={busy}>
           {busy ? t('common.saving') : t('common.save')}
         </Button>
       </form>
@@ -108,7 +107,7 @@ function Organisation() {
     <>
       <Card>
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-lg font-bold">{organisation.type === 'nursery' ? t('auth.nurseryDetails') : t('auth.institutionDetails')}</h2>
+          <h2 className="text-lg font-semibold">{organisation.type === 'nursery' ? t('auth.nurseryDetails') : t('auth.institutionDetails')}</h2>
           <VerificationBadge status={organisation.verification_status} />
         </div>
         {organisation.verification_status === 'rejected' && (
@@ -132,7 +131,7 @@ function Organisation() {
         />
       </Card>
       <Card>
-        <h2 className="mb-3 text-lg font-bold">{t('account.documentsTitle')}</h2>
+        <h2 className="mb-3 text-lg font-semibold">{t('account.documentsTitle')}</h2>
         <Documents />
       </Card>
     </>
@@ -143,8 +142,8 @@ export default function Settings() {
   const { t } = useI18n()
   const { organisation } = useAuth()
   return (
-    <div className="mx-auto max-w-2xl space-y-5">
-      <h1 className="text-2xl font-bold sm:text-3xl">{t('settings.title')}</h1>
+    <div className="mx-auto max-w-3xl space-y-5">
+      <PageHeader title={t('settings.title')} />
       <Profile />
       <Appearance />
       {organisation && <Organisation />}

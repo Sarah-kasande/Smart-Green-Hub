@@ -8,7 +8,6 @@ import { useI18n } from '../../i18n/I18nProvider'
 import { record } from '../../offline/sync'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
-import Icon from '../../components/ui/Icon'
 import Notice from '../../components/ui/Notice'
 import ErrorState from '../../components/ui/ErrorState'
 import PageLoader from '../../components/ui/PageLoader'
@@ -58,7 +57,7 @@ function EditForm({ batch, onSaved }) {
         <TextField label={t('batches.readyDate')} type="date" value={form.expected_ready_date} onChange={set('expected_ready_date')} error={fields.expected_ready_date} />
         <TextField label={t('batches.primeEnd')} type="date" value={form.prime_end_date} onChange={set('prime_end_date')} error={fields.prime_end_date} />
       </div>
-      <Button type="submit" icon="check" disabled={busy}>
+      <Button type="submit" disabled={busy}>
         {busy ? t('common.saving') : t('common.save')}
       </Button>
     </form>
@@ -98,7 +97,7 @@ function AdjustForm({ batch, onSaved }) {
         <TextField label={t('batches.reason')} value={reason} onChange={(e) => setReason(e.target.value)} error={fields.reason} maxLength={255} placeholder={t('batches.reasonExample')} />
       </div>
       <p className="text-sm text-ink-soft">{t('batches.changeHint')}</p>
-      <Button type="submit" variant="secondary" icon="edit" disabled={busy}>
+      <Button type="submit" variant="secondary" disabled={busy}>
         {t('batches.adjust')}
       </Button>
     </form>
@@ -134,21 +133,22 @@ export default function BatchDetail() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-5">
-      <Link to="/operator/batches" className="inline-flex min-h-10 items-center gap-1 font-semibold text-teal-text">
-        <Icon name="arrowRight" size={16} className="rotate-180" />
-        {t('batches.title')}
-      </Link>
+    <div className="mx-auto max-w-7xl space-y-5">
+      {/* Breadcrumb back to the list */}
+      <nav aria-label={t('common.back')} className="text-sm">
+        <Link to="/operator/batches" className="inline-flex min-h-12 items-center font-semibold text-teal-text underline">
+          {t('batches.title')}
+        </Link>
+        <span className="text-ink-soft"> / #{batch.id}</span>
+      </nav>
       <PageHeader
         title={`${batch.species?.common_name} · #${batch.id}`}
         actions={
           <>
             <Link to={`/operator/sales?tab=sale&batch=${batch.id}`} className={buttonClasses('primary')}>
-              <Icon name="wallet" />
               {t('dashboard.recordSale')}
             </Link>
             <Link to={`/operator/surplus?new=1&batch=${batch.id}`} className={buttonClasses('secondary')}>
-              <Icon name="board" />
               {t('dashboard.postSurplus')}
             </Link>
           </>
@@ -173,18 +173,18 @@ export default function BatchDetail() {
 
       <div className="grid gap-5 lg:grid-cols-2">
         <Card>
-          <h2 className="mb-3 text-lg font-bold">{t('batches.edit')}</h2>
+          <h2 className="mb-3 text-lg font-semibold">{t('batches.edit')}</h2>
           <EditForm key={batch.updated_at} batch={batch} onSaved={saved} />
         </Card>
         <Card>
-          <h2 className="mb-3 text-lg font-bold">{t('batches.adjustTitle')}</h2>
+          <h2 className="mb-3 text-lg font-semibold">{t('batches.adjustTitle')}</h2>
           <AdjustForm batch={batch} onSaved={saved} />
         </Card>
       </div>
 
       <div className="grid gap-5 lg:grid-cols-2">
         <Card>
-          <h2 className="mb-3 text-lg font-bold">{t('batches.sales')}</h2>
+          <h2 className="mb-3 text-lg font-semibold">{t('batches.sales')}</h2>
           {sales.length === 0 ? (
             <p className="text-ink-soft">{t('sales.noSales')}</p>
           ) : (
@@ -202,7 +202,7 @@ export default function BatchDetail() {
           )}
         </Card>
         <Card>
-          <h2 className="mb-3 text-lg font-bold">{t('batches.adjustments')}</h2>
+          <h2 className="mb-3 text-lg font-semibold">{t('batches.adjustments')}</h2>
           {adjustments.length === 0 ? (
             <p className="text-ink-soft">{t('batches.noAdjustments')}</p>
           ) : (
@@ -225,7 +225,7 @@ export default function BatchDetail() {
       </div>
 
       <div>
-        <Button variant="danger" icon="close" onClick={archive}>
+        <Button variant="danger" onClick={archive}>
           {t('batches.archive')}
         </Button>
       </div>

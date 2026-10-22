@@ -13,6 +13,8 @@ import ErrorState from '../../components/ui/ErrorState'
 import PageLoader from '../../components/ui/PageLoader'
 import { StatusBadge } from '../../components/ui/Badges'
 import { EmptyState, Fact, PageHeader } from '../../components/ui/Layout'
+import { DataTable, FilterPanel, FilterSelect, SearchBox, Toolbar, ViewToggle, WithFilters } from '../../components/ui/DataView'
+import { countLabel, matches, useViewMode } from '../../components/ui/dataViewTools'
 import { SelectField, TextField } from '../../components/ui/Fields'
 import { addDaysIso, formatDate, formatNumber, formatRWF, todayIso } from '../../utils/format'
 
@@ -101,10 +103,10 @@ function NewListingForm({ initialBatch, onCreated, onCancel }) {
         <TextField label={t('listings.expiresAt')} type="date" value={form.expires_at} onChange={set('expires_at')} error={fields.expires_at} />
       </div>
       <div className="flex flex-wrap gap-2">
-        <Button type="submit" icon="board" disabled={busy}>
+        <Button type="submit" disabled={busy}>
           {busy ? t('common.saving') : t('listings.publish')}
         </Button>
-        <Button variant="secondary" icon="close" onClick={onCancel}>
+        <Button variant="secondary" onClick={onCancel}>
           {t('common.cancel')}
         </Button>
       </div>
@@ -116,10 +118,10 @@ function ListingCard({ listing, onWithdraw }) {
   const { t } = useI18n()
   const open = ['active', 'reserved'].includes(listing.status)
   return (
-    <Card className="space-y-3">
+    <Card className="h-full space-y-3">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <p className="text-lg font-bold">{listing.species?.name}</p>
+          <p className="text-lg font-semibold">{listing.species?.name}</p>
           <p className="text-sm text-ink-soft">
             {t('listings.fromBatch', { id: listing.batch_id })} · {listing.offer_type === 'free' ? t('listings.free') : t('board.priceEach', { price: formatRWF(listing.discounted_price) })}
           </p>
@@ -137,7 +139,7 @@ function ListingCard({ listing, onWithdraw }) {
         {listing.pickup_note ? ` · ${listing.pickup_note}` : ''}
       </p>
       {open && (
-        <Button variant="ghost" icon="close" onClick={() => onWithdraw(listing)}>
+        <Button variant="ghost" onClick={() => onWithdraw(listing)}>
           {t('listings.withdraw')}
         </Button>
       )}
@@ -145,12 +147,17 @@ function ListingCard({ listing, onWithdraw }) {
   )
 }
 
+const STATUSES = ['all', 'active', 'reserved', 'fulfilled', 'expired', 'withdrawn']
+
 export default function SurplusListings() {
   const { t } = useI18n()
   const [params, setParams] = useSearchParams()
   const creating = params.get('new') === '1'
   const { data, error, reload } = useApi('/operator/listings')
   const [notice, setNotice] = useState(null)
+  const [status, setStatus] = useState('all')
+  const [search, setSearch] = useState('')
+  const [view, setView] = useViewMode('operator-listings')
 
   async function withdraw(listing) {
     const reason = window.prompt(t('listings.withdrawReason'))
@@ -164,23 +171,66 @@ export default function SurplusListings() {
     }
   }
 
+  // All listings are loaded at once, so the status counts are worked out here
+  const listings = data?.listings || []
+  const statusOptions = STATUSES.map((s) => ({
+    value: s,
+    label: s === 'all' ? t('table.allStatuses') : t(`listingStatus.${s}`),
+    count: s === 'all' ? listings.length : listings.filter((l) => l.status === s).length,
+  }))
+  const rows = listings.filter((l) => (status === 'all' || l.status === status) && matches(search, l.species?.name, `#${l.batch_id}`, l.pickup_note))
+  const offerText = (l) => (l.offer_type === 'free' ? t('listings.free') : t('board.priceEach', { price: formatRWF(l.discounted_price) }))
+  const columns = [
+    {
+      key: 'species',
+      header: t('batches.species'),
+      primary: true,
+      render: (l) => (
+        <>
+          {l.species?.name} · #{l.batch_id}
+          <span className="block text-sm font-normal text-ink-soft">{offerText(l)}</span>
+        </>
+      ),
+    },
+    { key: 'offered', header: t('listings.offered'), align: 'right', render: (l) => formatNumber(l.quantity_offered) },
+    { key: 'left', header: t('listings.remaining'), align: 'right', render: (l) => formatNumber(l.remaining) },
+    { key: 'expires', header: t('listings.expiresAt'), render: (l) => <span className="whitespace-nowrap">{formatDate(l.expires_at)}</span> },
+    {
+      key: 'status',
+      header: t('table.status'),
+      render: (l) => (
+        <>
+          <StatusBadge group="listingStatus" status={l.status} />
+          <span className="mt-1 block whitespace-nowrap text-xs text-ink-soft">
+            {t('listings.reservedLabel')}: {formatNumber(l.reserved)} · {t('listings.handedOver')}: {formatNumber(l.fulfilled)}
+          </span>
+        </>
+      ),
+    },
+    {
+      key: 'actions',
+      header: t('table.actions'),
+      full: true,
+      render: (l) =>
+        ['active', 'reserved'].includes(l.status) && (
+          <Button variant="secondary" onClick={() => withdraw(l)}>
+            {t('listings.withdraw')}
+          </Button>
+        ),
+    },
+  ]
+
   return (
-    <div className="mx-auto max-w-5xl space-y-5">
+    <div className="mx-auto max-w-7xl space-y-5">
       <PageHeader
         title={t('listings.title')}
-        intro={t('listings.intro')}
-        actions={
-          !creating && (
-            <Button icon="board" onClick={() => setParams({ new: '1' })}>
-              {t('listings.new')}
-            </Button>
-          )
-        }
+        meta={data && countLabel(t, rows.length)}
+        actions={!creating && <Button onClick={() => setParams({ new: '1' })}>{t('listings.new')}</Button>}
       />
       {notice && <Notice type={notice.type}>{t(notice.text)}</Notice>}
       {creating && (
         <Card className="max-w-2xl">
-          <h2 className="mb-3 text-lg font-bold">{t('listings.new')}</h2>
+          <h2 className="mb-3 text-lg font-semibold">{t('listings.new')}</h2>
           <NewListingForm
             initialBatch={params.get('batch') || ''}
             onCreated={() => {
@@ -192,18 +242,34 @@ export default function SurplusListings() {
           />
         </Card>
       )}
+      <Toolbar>
+        <SearchBox value={search} onChange={setSearch} label={t('table.searchPlants')} />
+        <FilterSelect label={t('table.byStatus')} value={status} onChange={setStatus} options={statusOptions} />
+        <ViewToggle
+          value={view}
+          onChange={setView}
+          options={[
+            { value: 'table', label: t('table.table') },
+            { value: 'cards', label: t('table.cards') },
+          ]}
+        />
+      </Toolbar>
       {error && <ErrorState code={error} onRetry={reload} />}
-      {!data && !error && <PageLoader />}
-      {data && data.listings.length === 0 && !creating && <EmptyState icon="board" title={t('listings.empty')} text={t('listings.emptyText')} />}
-      {data && data.listings.length > 0 && (
-        <ul className="grid gap-4 md:grid-cols-2">
-          {data.listings.map((l) => (
-            <li key={l.id}>
-              <ListingCard listing={l} onWithdraw={withdraw} />
-            </li>
-          ))}
-        </ul>
-      )}
+      <WithFilters panel={<FilterPanel groups={[{ label: t('table.byStatus'), value: status, onChange: setStatus, options: statusOptions }]} />}>
+        {!data && !error && <PageLoader />}
+        {data && listings.length === 0 && !creating && <EmptyState title={t('listings.empty')} text={t('listings.emptyText')} />}
+        {listings.length > 0 && (
+          <DataTable
+            caption={t('listings.title')}
+            view={view}
+            columns={columns}
+            rows={rows}
+            rowKey={(l) => l.id}
+            empty={t('table.noMatch')}
+            renderCard={(l) => <ListingCard listing={l} onWithdraw={withdraw} />}
+          />
+        )}
+      </WithFilters>
     </div>
   )
 }

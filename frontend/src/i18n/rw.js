@@ -13,6 +13,7 @@ const rw = {
     signOut: 'Sohoka',
     register: 'Iyandikishe',
     menu: 'Ibikubiyemo', // TODO: unsure
+    quickMenu: "Amapaji y'ingenzi", // TODO: unsure
     close: 'Funga',
     optional: 'si ngombwa',
     language: 'Ururimi',
@@ -73,6 +74,59 @@ const rw = {
     listings: 'Amatangazo', // TODO: unsure
     audit: "Amateka y'ibikorwa",
     emailProblems: 'Imeri zitagezeyo', // TODO: unsure
+    sales: 'Igurisha', // TODO: unsure
+    expenses: 'Ibyakoreshejwe',
+    sync: 'Guhuza', // TODO: unsure
+    myRequests: 'Ubusabe bwanjye',
+    boardShort: 'Ibimera', // TODO: unsure
+  },
+  navGroups: {
+    review: 'Isuzuma', // TODO: unsure
+    manage: 'Gucunga', // TODO: unsure
+    settings: 'Igenamiterere',
+    work: 'Akazi', // TODO: unsure
+    insight: 'Isesengura', // TODO: unsure
+    share: 'Gusangira', // TODO: unsure
+    find: 'Gushaka ibimera', // TODO: unsure
+  },
+  userMenu: {
+    label: '{name}: ibijyanye na konti', // TODO: unsure
+    profile: "Umwirondoro n'igenamiterere", // TODO: unsure
+  },
+  table: {
+    count: '{n} byanditswe', // TODO: unsure
+    countOne: '1 cyanditswe', // TODO: unsure
+    search: 'Shakisha',
+    searchNameEmail: 'Shakisha izina cyangwa imeri',
+    searchPlants: "Shakisha ukoresheje izina ry'igihingwa", // TODO: unsure
+    searchBoard: "Shakisha igihingwa cyangwa pepiniyeri", // TODO: unsure
+    filter: 'Muyunguruzi', // TODO: unsure
+    view: 'Uko bigaragara', // TODO: unsure
+    table: 'Imbonerahamwe',
+    cards: 'Amakarita', // TODO: unsure
+    actions: 'Ibikorwa',
+    open: 'Fungura',
+    status: 'Imimerere', // TODO: unsure
+    byStatus: 'Ukurikije imimerere', // TODO: unsure
+    byType: 'Ukurikije ubwoko',
+    byStage: "Ukurikije icyiciro cy'ikura", // TODO: unsure
+    byRisk: "Ukurikije urwego rw'ibyago", // TODO: unsure
+    byDistrict: 'Ukurikije akarere',
+    byPlantType: "Ukurikije ubwoko bw'igihingwa",
+    byEntity: "Ukurikije ubwoko bw'inyandiko", // TODO: unsure
+    allStatuses: 'Imimerere yose', // TODO: unsure
+    allTypes: 'Ubwoko bwose',
+    allDistricts: 'Uturere twose',
+    allPlantTypes: "Ubwoko bwose bw'ibihingwa",
+    allLevels: "Inzego zose z'ibyago", // TODO: unsure
+    allEntities: "Ubwoko bwose bw'inyandiko", // TODO: unsure
+    name: 'Izina',
+    email: 'Imeri',
+    type: 'Ubwoko',
+    district: 'Akarere',
+    registered: 'Yiyandikishije', // TODO: unsure
+    noMatch: "Nta kintu gihuye n'ibyo ushaka.", // TODO: unsure
+    closeDetails: 'Funga ibisobanuro', // TODO: unsure
   },
   theme: {
     title: 'Imigaragarire', // TODO: unsure
@@ -269,6 +323,7 @@ const rw = {
     quantity: "Umubare w'ingemwe zagurishijwe",
     price: "Igiciro cy'ingemwe imwe (RWF)",
     total: 'Igiteranyo: {total}',
+    totalLabel: 'Igiteranyo',
     note: 'Icyitonderwa',
     saveSale: 'Bika igurisha',
     saleSaved: 'Igurisha ryabitswe.',
@@ -470,6 +525,7 @@ const rw = {
     markAll: 'Byose byasomwe',
     new: 'gishya',
     unreadLabel: 'Amatangazo, {n} ataresomwa',
+    unreadCount: '{n} bitarasomwa', // TODO: unsure
     types: {
       alert_created: 'Ibyago {level}: {species} (icyiciro #{batch_id}). Inama: {action}.',
       request_created: '{institution} yasabye {quantity} {species}.',
@@ -560,6 +616,7 @@ const rw = {
     override: "Itegeko ryihariye ry'igihe cyiza (iminsi)",
     summary: "yitegura nyuma y'iminsi {ready}, igihe cyiza iminsi {prime}",
     overridden: 'itegeko ryihariye',
+    empty: "Nta moko y'ibihingwa arahari.", // TODO: unsure
   },
   adminListings: {
     title: 'Kugenzura amatangazo',
@@ -658,7 +715,8 @@ const rw = {
     NOT_AUTHENTICATED: 'Banza winjire.',
     FORBIDDEN: 'Nta burenganzira ufite kuri ibi.',
     NOT_FOUND: 'Ntibibonetse. Bishobora kuba byakuweho.',
-    ROUTE_NOT_FOUND: 'Seriveri ntizi iki gisabwa. Birashoboka ko ikoresha verisiyo ishaje ya Smart Green Hub: ongera utangize cyangwa wohereze API, hanyuma wongere ugerageze.', // TODO: unsure
+    ROUTE_NOT_FOUND: 'Iki gice ntikiboneka ubu. Ongera ugerageze mu minota mike.', // TODO: unsure
+    PAGE_FAILED: 'Iyi paji ntiyashoboye kugaragara. Ongera ugerageze.', // TODO: unsure
     TIMEOUT: 'Seriveri yatinze gusubiza. Ishobora kuba irimo gukanguka; ongera ugerageze.', // TODO: unsure
     NOT_APPROVED: 'Konti yawe igomba kubanza kwemezwa n\'umuyobozi.',
     ALREADY_DECIDED: 'Iki cyamaze gufatirwa icyemezo.',
@@ -697,9 +755,6 @@ const rw = {
     invalid_location: 'Ikimenyetso kigomba kuba mu Rwanda.',
     must_be_below_high: "Hagati igomba kuba munsi ya Hejuru.",
     must_be_below_far: 'Imipaka "hafi" igomba kuba munsi ya "kure".',
-  },
-  version: {
-    mismatch: "Porogaramu (verisiyo {app}) na seriveri (verisiyo {server}) ntibihuye. Amapaji amwe ashobora kunanirwa kugeza byombi byoherejwe kuva ku 'commit' imwe: ongera wohereze API kuri Render.", // TODO: unsure
   },
   notFound: { title: 'Ipaji ntibonetse', text: 'Ipaji ushaka ntibaho.', home: 'Jya ahabanza' },
 }

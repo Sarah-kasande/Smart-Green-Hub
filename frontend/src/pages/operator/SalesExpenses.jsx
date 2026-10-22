@@ -13,7 +13,9 @@ import Card from '../../components/ui/Card'
 import Notice from '../../components/ui/Notice'
 import ErrorState from '../../components/ui/ErrorState'
 import PageLoader from '../../components/ui/PageLoader'
-import { PageHeader, Segmented, StatCard } from '../../components/ui/Layout'
+import { PageHeader, SectionTitle, StatCard } from '../../components/ui/Layout'
+import { DataTable, FilterSelect, SearchBox, TabBar, Toolbar } from '../../components/ui/DataView'
+import { countLabel, matches } from '../../components/ui/dataViewTools'
 import { SelectField, TextField } from '../../components/ui/Fields'
 import { addDaysIso, formatDate, formatDateTime, formatMonth, formatNumber, formatRWF, todayIso } from '../../utils/format'
 
@@ -82,7 +84,7 @@ function SaleForm({ initialBatch }) {
         <p className="font-semibold">{t('sales.total', { total: formatRWF(Number(form.quantity) * (form.unit_price === '' ? chosen.unit_price : Number(form.unit_price))) })}</p>
       )}
       <TextField label={t('sales.note')} value={form.customer_note} onChange={set('customer_note')} maxLength={255} optional />
-      <Button type="submit" icon="check" full disabled={busy}>
+      <Button type="submit" full disabled={busy}>
         {busy ? t('common.saving') : t('sales.saveSale')}
       </Button>
     </form>
@@ -127,7 +129,7 @@ function ExpenseForm() {
         <TextField label={t('sales.date')} type="date" value={form.spent_at} onChange={set('spent_at')} />
       </div>
       <TextField label={t('sales.note')} value={form.note} onChange={set('note')} maxLength={255} optional />
-      <Button type="submit" icon="check" full disabled={busy}>
+      <Button type="submit" full disabled={busy}>
         {busy ? t('common.saving') : t('sales.saveExpense')}
       </Button>
     </form>
@@ -139,6 +141,7 @@ function History() {
   const sales = useApi('/operator/sales')
   const expenses = useApi('/operator/expenses')
   const [message, setMessage] = useState(null)
+  const [search, setSearch] = useState('')
 
   async function undo(kind, id) {
     const reason = window.prompt(t('sales.undoConfirm'))
@@ -158,63 +161,46 @@ function History() {
     sales.reload()
     expenses.reload()
   }
-  if (failed === 'NETWORK_ERROR') return <ErrorState code="NETWORK_ERROR" onRetry={retry} />
   if (failed) return <ErrorState code={failed} onRetry={retry} />
   if (!sales.data || !expenses.data) return <PageLoader />
+
+  const saleRows = (sales.data.sales || []).filter((s) => matches(search, s.batch?.species?.common_name, `#${s.batch_id}`, s.customer_note))
+  const expenseRows = (expenses.data.expenses || []).filter((e) => matches(search, t(`expenseCategories.${e.category}`), e.note))
+  const undoButton = (kind, id) => (
+    <Button variant="secondary" onClick={() => undo(kind, id)}>
+      {t('sales.undo')}
+    </Button>
+  )
+  const saleColumns = [
+    { key: 'batch', header: t('sales.batch'), primary: true, render: (s) => `${s.batch?.species?.common_name || ''} #${s.batch_id}` },
+    { key: 'qty', header: t('impact.quantity'), align: 'right', render: (s) => formatNumber(s.quantity) },
+    { key: 'price', header: t('batches.unitPrice'), align: 'right', render: (s) => formatRWF(s.unit_price) },
+    { key: 'total', header: t('sales.totalLabel'), align: 'right', render: (s) => <span className="font-semibold">{formatRWF(s.quantity * s.unit_price)}</span> },
+    { key: 'when', header: t('sales.date'), render: (s) => <span className="whitespace-nowrap">{formatDateTime(s.sold_at)}</span> },
+    { key: 'actions', header: t('table.actions'), full: true, render: (s) => undoButton('sales', s.id) },
+  ]
+  const expenseColumns = [
+    { key: 'category', header: t('sales.category'), primary: true, render: (e) => t(`expenseCategories.${e.category}`) },
+    { key: 'amount', header: t('sales.amount'), align: 'right', render: (e) => <span className="font-semibold">{formatRWF(e.amount)}</span> },
+    { key: 'date', header: t('sales.date'), render: (e) => <span className="whitespace-nowrap">{formatDate(e.spent_at)}</span> },
+    { key: 'note', header: t('sales.note'), render: (e) => e.note },
+    { key: 'actions', header: t('table.actions'), full: true, render: (e) => undoButton('expenses', e.id) },
+  ]
+
   return (
-    <div className="grid gap-5 lg:grid-cols-2">
-      {message && <Notice type={message.type} className="lg:col-span-2">{t(message.text)}</Notice>}
-      <Card>
-        <h2 className="mb-3 text-lg font-bold">{t('sales.salesList')}</h2>
-        {sales.data.sales.length === 0 ? (
-          <p className="text-ink-soft">{t('sales.noSales')}</p>
-        ) : (
-          <ul className="divide-y divide-line">
-            {sales.data.sales.map((s) => (
-              <li key={s.id} className="flex items-center justify-between gap-3 py-2">
-                <span className="min-w-0">
-                  <span className="block font-semibold">{s.batch?.species?.common_name} #{s.batch_id}</span>
-                  <span className="block text-sm text-ink-soft">
-                    {formatNumber(s.quantity)} × {formatRWF(s.unit_price)} · {formatDateTime(s.sold_at)}
-                  </span>
-                </span>
-                <span className="flex items-center gap-2">
-                  <span className="font-semibold">{formatRWF(s.quantity * s.unit_price)}</span>
-                  <Button variant="ghost" onClick={() => undo('sales', s.id)} aria-label={t('sales.undo')}>
-                    {t('sales.undo')}
-                  </Button>
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Card>
-      <Card>
-        <h2 className="mb-3 text-lg font-bold">{t('sales.expensesList')}</h2>
-        {expenses.data.expenses.length === 0 ? (
-          <p className="text-ink-soft">{t('sales.noExpenses')}</p>
-        ) : (
-          <ul className="divide-y divide-line">
-            {expenses.data.expenses.map((e) => (
-              <li key={e.id} className="flex items-center justify-between gap-3 py-2">
-                <span className="min-w-0">
-                  <span className="block font-semibold">{t(`expenseCategories.${e.category}`)}</span>
-                  <span className="block text-sm text-ink-soft">
-                    {formatDate(e.spent_at)}
-                    {e.note ? ` · ${e.note}` : ''}
-                  </span>
-                </span>
-                <span className="flex items-center gap-2">
-                  <span className="font-semibold">{formatRWF(e.amount)}</span>
-                  <Button variant="ghost" onClick={() => undo('expenses', e.id)}>
-                    {t('sales.undo')}
-                  </Button>
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Card>
+    <div className="space-y-6">
+      {message && <Notice type={message.type}>{t(message.text)}</Notice>}
+      <Toolbar>
+        <SearchBox value={search} onChange={setSearch} />
+      </Toolbar>
+      <section className="space-y-3">
+        <SectionTitle actions={<span className="text-ink-soft">{countLabel(t, saleRows.length)}</span>}>{t('sales.salesList')}</SectionTitle>
+        <DataTable caption={t('sales.salesList')} columns={saleColumns} rows={saleRows} rowKey={(s) => s.id} empty={search ? t('table.noMatch') : t('sales.noSales')} />
+      </section>
+      <section className="space-y-3">
+        <SectionTitle actions={<span className="text-ink-soft">{countLabel(t, expenseRows.length)}</span>}>{t('sales.expensesList')}</SectionTitle>
+        <DataTable caption={t('sales.expensesList')} columns={expenseColumns} rows={expenseRows} rowKey={(e) => e.id} empty={search ? t('table.noMatch') : t('sales.noExpenses')} />
+      </section>
     </div>
   )
 }
@@ -234,30 +220,27 @@ function Profit() {
 
   return (
     <div className="space-y-5">
-      <Segmented
-        label={t('sales.period')}
-        value={period}
-        onChange={setPeriod}
-        options={['month', '3months', 'year', 'all'].map((p) => ({ value: p, label: t(`sales.periods.${p}`) }))}
-      />
+      <Toolbar>
+        <FilterSelect label={t('sales.period')} value={period} onChange={setPeriod} options={['month', '3months', 'year', 'all'].map((p) => ({ value: p, label: t(`sales.periods.${p}`) }))} />
+      </Toolbar>
       {error && <ErrorState code={error} onRetry={reload} />}
       {!data && !error && <PageLoader />}
       {data && (
         <>
           <div className="grid gap-3 sm:grid-cols-3">
-            <StatCard label={t('sales.income')} value={formatRWF(data.income)} hint={t('sales.unitsSold', { n: formatNumber(data.units_sold) })} icon="wallet" />
-            <StatCard label={t('sales.expensesLabel')} value={formatRWF(data.expenses)} icon="file" tone="amber" />
-            <StatCard label={data.profit < 0 ? t('sales.loss') : t('sales.profit')} value={formatRWF(data.profit)} icon="chart" tone={data.profit < 0 ? 'red' : 'teal'} />
+            <StatCard label={t('sales.income')} value={formatRWF(data.income)} hint={t('sales.unitsSold', { n: formatNumber(data.units_sold) })} />
+            <StatCard label={t('sales.expensesLabel')} value={formatRWF(data.expenses)} />
+            <StatCard label={data.profit < 0 ? t('sales.loss') : t('sales.profit')} value={formatRWF(data.profit)} />
           </div>
           {data.monthly.length > 0 && (
             <Card>
-              <h2 className="mb-3 text-lg font-bold">{t('sales.monthly')}</h2>
+              <h2 className="mb-3 text-lg font-semibold">{t('sales.monthly')}</h2>
               <BarChart title={t('sales.monthlyIncome')} data={data.monthly.map((m) => ({ label: formatMonth(m.month), value: m.income }))} format={(v) => formatNumber(v)} />
             </Card>
           )}
           <div className="grid gap-5 lg:grid-cols-3">
             <Card>
-              <h2 className="mb-3 font-bold">{t('sales.bySpecies')}</h2>
+              <h2 className="mb-3 font-semibold">{t('sales.bySpecies')}</h2>
               <table className="w-full text-sm">
                 <tbody className="divide-y divide-line">
                   {data.by_species.map((s) => (
@@ -272,7 +255,7 @@ function Profit() {
               {data.by_species.length === 0 && <p className="text-ink-soft">{t('sales.noSales')}</p>}
             </Card>
             <Card>
-              <h2 className="mb-3 font-bold">{t('sales.byBatch')}</h2>
+              <h2 className="mb-3 font-semibold">{t('sales.byBatch')}</h2>
               <table className="w-full text-sm">
                 <tbody className="divide-y divide-line">
                   {data.by_batch.map((b) => (
@@ -288,7 +271,7 @@ function Profit() {
               {data.by_batch.length === 0 && <p className="text-ink-soft">{t('sales.noSales')}</p>}
             </Card>
             <Card>
-              <h2 className="mb-3 font-bold">{t('sales.byCategory')}</h2>
+              <h2 className="mb-3 font-semibold">{t('sales.byCategory')}</h2>
               <table className="w-full text-sm">
                 <tbody className="divide-y divide-line">
                   {data.expenses_by_category.map((c) => (
@@ -316,9 +299,9 @@ export default function SalesExpenses() {
   const tabs = ['sale', 'expense', 'history', 'profit']
 
   return (
-    <div className="mx-auto max-w-5xl space-y-5">
-      <PageHeader title={t('sales.title')} intro={t('sales.intro')} />
-      <Segmented label={t('sales.title')} value={tab} onChange={(v) => setParams({ tab: v })} options={tabs.map((v) => ({ value: v, label: t(`sales.tabs.${v}`) }))} />
+    <div className="mx-auto max-w-7xl space-y-5">
+      <PageHeader title={t('sales.title')} />
+      <TabBar label={t('sales.title')} value={tab} onChange={(v) => setParams({ tab: v })} options={tabs.map((v) => ({ value: v, label: t(`sales.tabs.${v}`) }))} />
       {tab === 'sale' && (
         <Card className="max-w-2xl">
           <SaleForm initialBatch={params.get('batch') || ''} />

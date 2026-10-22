@@ -1,34 +1,53 @@
 // Layout for signed-in users.
-//  - Desktop (1024 px and wider): sidebar on the left, as in design/home.png
-//  - Mobile: top bar + bottom navigation bar; "Menu" opens the full list
-import { useState } from 'react'
-import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
+//  - Top bar: logo and name on the left; sync status, notifications, language and the user menu
+//    (profile and settings, sign out) on the right.
+//  - Desktop (1024 px and wider): a sidebar with short UPPERCASE group labels and text links.
+//  - Phones: a bottom bar with the 4 main pages; "Menu" opens the full menu as a drawer.
+import { useEffect, useId, useRef, useState } from 'react'
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import Icon from '../components/ui/Icon'
 import Logo from '../components/ui/Logo'
 import LanguageSwitch from '../components/ui/LanguageSwitch'
 import SyncChip from '../components/ui/SyncChip'
-import VersionCheck from '../components/ui/VersionCheck'
+import PageErrorBoundary from '../components/ui/PageErrorBoundary'
 import { homePathFor, useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nProvider'
 import { useSync } from '../offline/SyncProvider'
 import { clearOfflineData } from '../offline/db'
 import { useApi } from '../api/useApi'
-import { NAVIGATION } from './navigation'
+import { NAVIGATION, bottomItems, isActive } from './navigation'
 
-function SideLink({ item, onClick }) {
+// The grouped menu (sidebar and phone drawer): text links, the open page highlighted
+function MenuGroups({ groups, onNavigate }) {
   const { t } = useI18n()
+  const location = useLocation()
   return (
-    <NavLink
-      to={item.to}
-      end={item.end}
-      onClick={onClick}
-      className={({ isActive }) =>
-        `flex min-h-12 items-center gap-3 rounded-xl px-3 font-medium ${isActive ? 'bg-leaf-light text-leaf-text' : 'text-ink hover:bg-canvas'}`
-      }
-    >
-      <Icon name={item.icon} />
-      {t(item.label)}
-    </NavLink>
+    <div className="space-y-6">
+      {groups.map((group) => (
+        <div key={group.group}>
+          <p className="px-5 text-xs font-semibold uppercase tracking-wider text-ink-soft">{t(group.group)}</p>
+          <ul className="mt-2 space-y-0.5 px-3">
+            {group.items.map((item) => {
+              const active = isActive(item, location)
+              return (
+                <li key={item.to}>
+                  <Link
+                    to={item.to}
+                    onClick={onNavigate}
+                    aria-current={active ? 'page' : undefined}
+                    className={`flex min-h-12 items-center rounded-lg border-l-4 px-3 ${
+                      active ? 'border-leaf bg-leaf-light font-semibold text-leaf-text' : 'border-transparent text-ink hover:bg-canvas'
+                    }`}
+                  >
+                    {t(item.label)}
+                  </Link>
+                </li>
+              )
+            })}
+          </ul>
+        </div>
+      ))}
+    </div>
   )
 }
 
@@ -40,7 +59,7 @@ function NotificationBell({ role }) {
   return (
     <Link
       to={`${homePathFor(role)}/notifications`}
-      className="relative grid h-12 w-12 place-items-center rounded-xl hover:bg-canvas"
+      className="relative grid h-12 w-12 place-items-center rounded-lg hover:bg-canvas"
       aria-label={unread ? t('notifications.unreadLabel', { n: unread }) : t('notifications.title')}
     >
       <Icon name="bell" />
@@ -51,13 +70,84 @@ function NotificationBell({ role }) {
   )
 }
 
+// The user's name with a small menu: profile and settings, language (phones), sign out
+function UserMenu({ onSignOut }) {
+  const { t } = useI18n()
+  const { user, organisation } = useAuth()
+  const [open, setOpen] = useState(false)
+  const box = useRef(null)
+  const menuId = useId()
+
+  // Close when clicking outside the menu or pressing Escape
+  useEffect(() => {
+    if (!open) return undefined
+    const onPointer = (e) => !box.current?.contains(e.target) && setOpen(false)
+    const onKey = (e) => e.key === 'Escape' && setOpen(false)
+    document.addEventListener('mousedown', onPointer)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onPointer)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [open])
+
+  return (
+    <div ref={box} className="relative">
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={menuId}
+        aria-label={t('userMenu.label', { name: user.full_name })}
+        onClick={() => setOpen(!open)}
+        className="flex min-h-12 min-w-12 items-center justify-center gap-1.5 rounded-lg px-2 font-semibold hover:bg-canvas sm:px-3"
+      >
+        {/* Phones: a person mark instead of the name, so the button stays visible */}
+        <Icon name="user" className="sm:hidden" />
+        <span className="hidden max-w-[12rem] truncate sm:inline">{user.full_name}</span>
+        <Icon name="chevronDown" size={18} />
+      </button>
+      {open && (
+        <div id={menuId} className="absolute right-0 top-full z-40 mt-2 w-72 rounded-xl border border-line bg-surface p-2">
+          <div className="border-b border-line px-3 pb-3 pt-2">
+            <p className="truncate font-semibold">{user.full_name}</p>
+            <p className="truncate text-sm text-ink-soft">{organisation?.name || t(`roles.${user.role}`)}</p>
+          </div>
+          <Link
+            to={`${homePathFor(user.role)}/settings`}
+            onClick={() => setOpen(false)}
+            className="mt-1 flex min-h-12 items-center rounded-lg px-3 hover:bg-canvas"
+          >
+            {t('userMenu.profile')}
+          </Link>
+          <div className="px-3 py-2 md:hidden">
+            <p className="mb-2 text-sm text-ink-soft">{t('common.language')}</p>
+            <LanguageSwitch />
+          </div>
+          <button type="button" onClick={onSignOut} className="flex min-h-12 w-full items-center rounded-lg px-3 text-left hover:bg-canvas">
+            {t('common.signOut')}
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function AppLayout() {
   const { t } = useI18n()
-  const { user, organisation, logout } = useAuth()
+  const { user, logout } = useAuth()
   const { pending } = useSync()
   const navigate = useNavigate()
+  const location = useLocation()
   const [menuOpen, setMenuOpen] = useState(false)
-  const items = NAVIGATION[user.role] || []
+  const groups = NAVIGATION[user.role] || []
+
+  // The phone drawer closes with Escape
+  useEffect(() => {
+    if (!menuOpen) return undefined
+    const onKey = (e) => e.key === 'Escape' && setMenuOpen(false)
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [menuOpen])
 
   async function signOut() {
     // Changes still waiting on this phone would be lost: ask first
@@ -67,89 +157,61 @@ export default function AppLayout() {
     navigate('/login')
   }
 
-  const userBox = (
-    <Link to={`${homePathFor(user.role)}/settings`} className="flex items-center gap-3 rounded-xl bg-canvas p-3 hover:bg-line/60">
-      <span className="grid h-10 w-10 place-items-center rounded-full bg-navy text-white">
-        <Icon name="user" />
-      </span>
-      <span className="min-w-0 leading-tight">
-        <span className="block truncate font-semibold">{user.full_name}</span>
-        <span className="block truncate text-sm text-ink-soft">{organisation?.name || t(`roles.${user.role}`)}</span>
-      </span>
-    </Link>
-  )
-
   return (
-    <div className="min-h-screen lg:flex">
+    <div className="min-h-screen">
       <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-surface focus:p-3">
         {t('common.skipToContent')}
       </a>
 
-      {/* Desktop sidebar */}
-      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-line bg-surface p-4 lg:flex">
-        <Logo to={homePathFor(user.role)} />
-        <nav aria-label={t('common.menu')} className="mt-6 flex-1 space-y-1 overflow-y-auto">
-          {items.map((item) => (
-            <SideLink key={item.to} item={item} />
-          ))}
-        </nav>
-        <div className="space-y-3">
-          {userBox}
-          <button type="button" onClick={signOut} className="flex min-h-12 w-full items-center gap-3 rounded-xl px-3 font-medium text-ink hover:bg-canvas">
-            <Icon name="logout" />
-            {t('common.signOut')}
-          </button>
-        </div>
-      </aside>
-
-      <div className="flex min-w-0 flex-1 flex-col">
-        {/* Top bar */}
-        <header className="sticky top-0 z-20 border-b border-line bg-surface/95 backdrop-blur">
-          <div className="flex items-center justify-between gap-2 px-4 py-2">
-            <div className="lg:hidden">
-              <Logo to={homePathFor(user.role)} />
-            </div>
-            <div className="ml-auto flex items-center gap-1 sm:gap-2">
-              <span className="hidden sm:inline-flex">
-                <SyncChip />
-              </span>
-              <NotificationBell role={user.role} />
-              <LanguageSwitch />
-            </div>
-          </div>
-          {/* On phones the sync chip gets its own thin row so it is always visible */}
-          <div className="flex justify-end px-4 pb-2 sm:hidden">
+      {/* Top bar */}
+      <header className="sticky top-0 z-30 border-b border-line bg-surface">
+        <div className="flex h-16 items-center gap-2 px-4 lg:px-6">
+          <Logo to={homePathFor(user.role)} compact />
+          <div className="ml-auto flex items-center gap-1 sm:gap-2">
             <SyncChip />
+            <NotificationBell role={user.role} />
+            <span className="hidden md:inline-flex">
+              <LanguageSwitch />
+            </span>
+            <UserMenu onSignOut={signOut} />
           </div>
-        </header>
+        </div>
+      </header>
 
-        <main id="main" className="flex-1 px-4 pb-28 pt-4 lg:px-8 lg:pb-10 lg:pt-6">
-          {/* Administrators are warned when the app and the API run different versions */}
-          {user.role === 'admin' && <VersionCheck />}
-          <Outlet />
+      <div className="lg:flex">
+        {/* Desktop sidebar */}
+        <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] w-64 shrink-0 overflow-y-auto border-r border-line bg-surface py-6 lg:block">
+          <nav aria-label={t('common.menu')}>
+            <MenuGroups groups={groups} />
+          </nav>
+        </aside>
+
+        <main id="main" className="min-w-0 flex-1 px-4 pb-28 pt-5 sm:pt-6 lg:px-10 lg:pb-12 lg:pt-8">
+          {/* A page that cannot be drawn shows "Try again" instead of a blank screen */}
+          <PageErrorBoundary key={location.pathname}>
+            <Outlet />
+          </PageErrorBoundary>
         </main>
       </div>
 
-      {/* Mobile bottom navigation */}
-      <nav aria-label={t('common.menu')} className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface lg:hidden">
+      {/* Phone bottom bar: 4 main pages + Menu */}
+      <nav aria-label={t('common.quickMenu')} className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface lg:hidden">
         <ul className="grid grid-cols-5">
-          {/* 4 main items + Menu */}
-          {items
-            .filter((item) => item.bottom)
-            .map((item) => (
+          {bottomItems(groups).map((item) => {
+            const active = isActive(item, location)
+            return (
               <li key={item.to}>
-                <NavLink
+                <Link
                   to={item.to}
-                  end={item.end}
-                  className={({ isActive }) =>
-                    `flex min-h-16 flex-col items-center justify-center gap-1 px-1 text-xs font-medium ${isActive ? 'text-leaf-text' : 'text-ink-soft'}`
-                  }
+                  aria-current={active ? 'page' : undefined}
+                  className={`flex min-h-16 flex-col items-center justify-center gap-1 px-1 text-xs ${active ? 'font-semibold text-leaf-text' : 'font-medium text-ink-soft'}`}
                 >
-                  <Icon name={item.icon} size={22} />
+                  <Icon name={item.icon} size={20} />
                   <span className="max-w-full truncate">{t(item.short || item.label)}</span>
-                </NavLink>
+                </Link>
               </li>
-            ))}
+            )
+          })}
           <li>
             <button
               type="button"
@@ -157,34 +219,39 @@ export default function AppLayout() {
               aria-expanded={menuOpen}
               className="flex min-h-16 w-full flex-col items-center justify-center gap-1 text-xs font-medium text-ink-soft"
             >
-              <Icon name="menu" size={22} />
+              <Icon name="menu" size={20} />
               {t('common.menu')}
             </button>
           </li>
         </ul>
       </nav>
 
-      {/* Mobile full menu */}
+      {/* Phone menu drawer: the same groups as the sidebar */}
       {menuOpen && (
         <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true" aria-label={t('common.menu')}>
           <button type="button" className="absolute inset-0 bg-black/50" aria-label={t('common.close')} onClick={() => setMenuOpen(false)} />
-          <div className="absolute inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-3xl bg-surface p-4">
-            <div className="mb-3 flex items-center justify-between">
-              <span className="text-lg font-bold">{t('common.menu')}</span>
-              <button type="button" onClick={() => setMenuOpen(false)} className="grid h-12 w-12 place-items-center rounded-xl hover:bg-canvas" aria-label={t('common.close')}>
+          <div className="absolute inset-y-0 left-0 flex w-[85%] max-w-xs flex-col overflow-y-auto bg-surface pb-6">
+            <div className="flex h-16 items-center justify-between border-b border-line pl-5 pr-2">
+              <span className="text-lg font-semibold">{t('common.menu')}</span>
+              {/* Autofocus: keyboard and screen-reader users start inside the drawer */}
+              <button
+                type="button"
+                autoFocus
+                onClick={() => setMenuOpen(false)}
+                className="grid h-12 w-12 place-items-center rounded-lg hover:bg-canvas"
+                aria-label={t('common.close')}
+              >
                 <Icon name="close" />
               </button>
             </div>
-            <div onClick={() => setMenuOpen(false)}>{userBox}</div>
-            <nav className="mt-3 space-y-1">
-              {items.map((item) => (
-                <SideLink key={item.to} item={item} onClick={() => setMenuOpen(false)} />
-              ))}
+            <nav aria-label={t('common.menu')} className="mt-5 flex-1">
+              <MenuGroups groups={groups} onNavigate={() => setMenuOpen(false)} />
             </nav>
-            <button type="button" onClick={signOut} className="mt-2 flex min-h-12 w-full items-center gap-3 rounded-xl px-3 font-medium text-ink hover:bg-canvas">
-              <Icon name="logout" />
-              {t('common.signOut')}
-            </button>
+            <div className="mt-6 border-t border-line px-3 pt-3">
+              <button type="button" onClick={signOut} className="flex min-h-12 w-full items-center rounded-lg px-3 text-left font-medium hover:bg-canvas">
+                {t('common.signOut')}
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -5,7 +5,6 @@ import api, { errorCode } from '../../api/client'
 import { fileUrl } from '../../api/files'
 import { useI18n } from '../../i18n/I18nProvider'
 import Button from '../../components/ui/Button'
-import Icon from '../../components/ui/Icon'
 import Notice from '../../components/ui/Notice'
 import { formatDate, formatFileSize } from '../../utils/format'
 import { ALLOWED_UPLOAD_TYPES, MAX_UPLOAD_BYTES } from '../../utils/options'
@@ -17,7 +16,6 @@ export function DocumentList({ documents, emptyText }) {
       {documents.map((doc) => (
         <li key={doc.id}>
           <a href={fileUrl(doc.id)} target="_blank" rel="noreferrer" className="flex min-h-12 items-center gap-3 py-2 hover:text-teal-text">
-            <Icon name="file" className="text-teal-text" />
             <span className="min-w-0 flex-1">
               <span className="block truncate font-medium underline">{doc.original_name}</span>
               <span className="block text-sm text-ink-soft">
@@ -84,7 +82,7 @@ export default function Documents() {
       {message && <Notice type={message.type}>{message.type === 'success' ? t('account.uploaded') : t(`errors.${message.code}`)}</Notice>}
       <DocumentList documents={documents} emptyText={t('account.noDocuments')} />
       <input ref={input} type="file" accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg" onChange={upload} className="sr-only" tabIndex={-1} aria-hidden="true" />
-      <Button variant="secondary" icon="upload" onClick={() => input.current?.click()} disabled={busy}>
+      <Button variant="secondary" onClick={() => input.current?.click()} disabled={busy}>
         {busy ? t('account.uploading') : t('account.upload')}
       </Button>
     </div>

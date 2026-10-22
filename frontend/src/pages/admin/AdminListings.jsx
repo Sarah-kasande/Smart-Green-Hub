@@ -5,12 +5,13 @@ import api, { errorCode } from '../../api/client'
 import { useApi } from '../../api/useApi'
 import { useI18n } from '../../i18n/I18nProvider'
 import Button from '../../components/ui/Button'
-import Card from '../../components/ui/Card'
 import Notice from '../../components/ui/Notice'
 import ErrorState from '../../components/ui/ErrorState'
 import PageLoader from '../../components/ui/PageLoader'
 import { StatusBadge } from '../../components/ui/Badges'
-import { EmptyState, PageHeader, Segmented } from '../../components/ui/Layout'
+import { PageHeader } from '../../components/ui/Layout'
+import { DataTable, FilterPanel, FilterSelect, SearchBox, Toolbar, ViewToggle, WithFilters } from '../../components/ui/DataView'
+import { countLabel, matches, useViewMode } from '../../components/ui/dataViewTools'
 import { formatDate, formatNumber, formatRWF } from '../../utils/format'
 
 const FILTERS = ['active', 'reserved', 'fulfilled', 'expired', 'withdrawn', 'all']
@@ -18,6 +19,8 @@ const FILTERS = ['active', 'reserved', 'fulfilled', 'expired', 'withdrawn', 'all
 export default function AdminListings() {
   const { t } = useI18n()
   const [status, setStatus] = useState('active')
+  const [search, setSearch] = useState('')
+  const [view, setView] = useViewMode('admin-listings')
   const { data, error, reload } = useApi(`/admin/listings?status=${status}`)
   const [notice, setNotice] = useState(null)
 
@@ -33,56 +36,68 @@ export default function AdminListings() {
     }
   }
 
+  const statusOptions = FILTERS.map((f) => ({ value: f, label: f === 'all' ? t('table.allStatuses') : t(`listingStatus.${f}`) }))
+  const rows = (data?.listings || []).filter((l) => matches(search, l.species?.name, l.nursery?.name, l.nursery?.district))
+  const columns = [
+    {
+      key: 'species',
+      header: t('batches.species'),
+      primary: true,
+      render: (l) => (
+        <>
+          {l.species?.name}
+          <span className="block text-sm font-normal text-ink-soft">{l.offer_type === 'free' ? t('listings.free') : formatRWF(l.discounted_price)}</span>
+        </>
+      ),
+    },
+    { key: 'nursery', header: t('impact.nursery'), render: (l) => `${l.nursery?.name || ''} (${l.nursery?.district || ''})` },
+    { key: 'offered', header: t('listings.offered'), align: 'right', render: (l) => formatNumber(l.quantity_offered) },
+    { key: 'left', header: t('listings.remaining'), align: 'right', render: (l) => formatNumber(l.remaining) },
+    { key: 'expires', header: t('listings.expiresAt'), render: (l) => <span className="whitespace-nowrap">{formatDate(l.expires_at)}</span> },
+    { key: 'status', header: t('table.status'), render: (l) => <StatusBadge group="listingStatus" status={l.status} /> },
+    {
+      key: 'actions',
+      header: t('table.actions'),
+      full: true,
+      render: (l) =>
+        ['active', 'reserved'].includes(l.status) && (
+          <Button variant="secondary" onClick={() => withdraw(l)}>
+            {t('listings.withdraw')}
+          </Button>
+        ),
+    },
+  ]
+
   return (
-    <div className="mx-auto max-w-6xl space-y-5">
-      <PageHeader title={t('adminListings.title')} intro={t('adminListings.intro')} />
+    <div className="mx-auto max-w-7xl space-y-5">
+      <PageHeader title={t('adminListings.title')} meta={data && countLabel(t, rows.length)} />
+      <Toolbar>
+        <SearchBox value={search} onChange={setSearch} label={t('table.searchBoard')} />
+        <FilterSelect label={t('table.byStatus')} value={status} onChange={setStatus} options={statusOptions} />
+        <ViewToggle
+          value={view}
+          onChange={setView}
+          options={[
+            { value: 'table', label: t('table.table') },
+            { value: 'cards', label: t('table.cards') },
+          ]}
+        />
+      </Toolbar>
       {notice && <Notice type={notice.type}>{t(notice.text)}</Notice>}
-      <Segmented label={t('adminListings.title')} value={status} onChange={setStatus} options={FILTERS.map((f) => ({ value: f, label: f === 'all' ? t('common.all') : t(`listingStatus.${f}`) }))} />
       {error && <ErrorState code={error} onRetry={reload} />}
-      {!data && !error && <PageLoader />}
-      {data && data.listings.length === 0 && <EmptyState icon="board" title={t('listings.empty')} />}
-      {data && data.listings.length > 0 && (
-        <Card className="overflow-x-auto p-0 sm:p-0">
-          <table className="w-full min-w-[44rem] text-left text-sm">
-            <thead className="border-b border-line text-ink-soft">
-              <tr>
-                <th className="p-3">{t('batches.species')}</th>
-                <th className="p-3">{t('impact.nursery')}</th>
-                <th className="p-3 text-right">{t('listings.offered')}</th>
-                <th className="p-3 text-right">{t('listings.remaining')}</th>
-                <th className="p-3">{t('listings.offerType')}</th>
-                <th className="p-3">{t('listings.expiresAt')}</th>
-                <th className="p-3">{t('adminListings.status')}</th>
-                <th className="p-3" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line">
-              {data.listings.map((l) => (
-                <tr key={l.id}>
-                  <td className="p-3 font-semibold">{l.species?.name}</td>
-                  <td className="p-3">
-                    {l.nursery?.name} <span className="text-ink-soft">({l.nursery?.district})</span>
-                  </td>
-                  <td className="p-3 text-right">{formatNumber(l.quantity_offered)}</td>
-                  <td className="p-3 text-right">{formatNumber(l.remaining)}</td>
-                  <td className="p-3">{l.offer_type === 'free' ? t('listings.free') : formatRWF(l.discounted_price)}</td>
-                  <td className="p-3">{formatDate(l.expires_at)}</td>
-                  <td className="p-3">
-                    <StatusBadge group="listingStatus" status={l.status} />
-                  </td>
-                  <td className="p-3">
-                    {['active', 'reserved'].includes(l.status) && (
-                      <Button variant="ghost" onClick={() => withdraw(l)}>
-                        {t('listings.withdraw')}
-                      </Button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </Card>
-      )}
+      <WithFilters panel={<FilterPanel groups={[{ label: t('table.byStatus'), value: status, onChange: setStatus, options: statusOptions }]} />}>
+        {!data && !error && <PageLoader />}
+        {data && (
+          <DataTable
+            caption={t('adminListings.title')}
+            view={view}
+            columns={columns}
+            rows={rows}
+            rowKey={(l) => l.id}
+            empty={search ? t('table.noMatch') : t('listings.empty')}
+          />
+        )}
+      </WithFilters>
     </div>
   )
 }

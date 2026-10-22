@@ -5,23 +5,10 @@ import { useApi } from '../../api/useApi'
 import { useI18n } from '../../i18n/I18nProvider'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
-import Icon from '../../components/ui/Icon'
 import ErrorState from '../../components/ui/ErrorState'
 import PageLoader from '../../components/ui/PageLoader'
 import { EmptyState, PageHeader } from '../../components/ui/Layout'
 import { formatDateTime } from '../../utils/format'
-
-const ICONS = {
-  alert_created: 'alert',
-  request_created: 'inbox',
-  request_decided: 'check',
-  request_cancelled: 'close',
-  handover_confirmed: 'clock',
-  handover_completed: 'check',
-  listing_expired: 'clock',
-  verification_approved: 'shield',
-  verification_rejected: 'edit',
-}
 
 function notificationText(t, n) {
   const p = n.payload || {}
@@ -44,12 +31,13 @@ export default function Notifications() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-5">
+    <div className="mx-auto max-w-4xl space-y-5">
       <PageHeader
         title={t('notifications.title')}
+        meta={data && t('notifications.unreadCount', { n: data.unread || 0 })}
         actions={
           data?.unread > 0 && (
-            <Button variant="secondary" icon="check" onClick={markAll}>
+            <Button variant="secondary" onClick={markAll}>
               {t('notifications.markAll')}
             </Button>
           )
@@ -57,14 +45,13 @@ export default function Notifications() {
       />
       {error && <ErrorState code={error} onRetry={reload} />}
       {!data && !error && <PageLoader />}
-      {data && data.items.length === 0 && <EmptyState icon="bell" title={t('notifications.empty')} />}
+      {data && data.items.length === 0 && <EmptyState title={t('notifications.empty')} />}
       {data && data.items.length > 0 && (
         <Card className="p-0 sm:p-0">
           <ul className="divide-y divide-line">
             {data.items.map((n) => (
-              <li key={n.id} className={`flex gap-3 p-4 ${n.read_at ? '' : 'bg-info'}`}>
-                <Icon name={ICONS[n.type] || 'bell'} className="mt-0.5 text-teal-text" />
-                <div className="min-w-0 flex-1">
+              <li key={n.id} className={`px-5 py-4 ${n.read_at ? '' : 'bg-info'}`}>
+                <div className="min-w-0">
                   <p className={n.read_at ? '' : 'font-semibold'}>{notificationText(t, n)}</p>
                   <p className="text-sm text-ink-soft">
                     {formatDateTime(n.created_at)}

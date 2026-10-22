@@ -9,12 +9,13 @@ import { useAuth } from '../../auth/AuthContext'
 import { useI18n } from '../../i18n/I18nProvider'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
-import Icon from '../../components/ui/Icon'
 import Notice from '../../components/ui/Notice'
 import ErrorState from '../../components/ui/ErrorState'
 import PageLoader from '../../components/ui/PageLoader'
 import { Pill, StatusBadge } from '../../components/ui/Badges'
-import { EmptyState, Fact, PageHeader, Segmented } from '../../components/ui/Layout'
+import { EmptyState, Fact, PageHeader } from '../../components/ui/Layout'
+import { FilterPanel, FilterSelect, SearchBox, Toolbar, WithFilters } from '../../components/ui/DataView'
+import { countLabel, matches } from '../../components/ui/dataViewTools'
 import { SelectField, TextField } from '../../components/ui/Fields'
 import { DISTRICTS } from '../../utils/options'
 import { formatDate, formatDateTime, formatNumber, formatRWF } from '../../utils/format'
@@ -56,7 +57,7 @@ function Confirm({ request, side, institutionDistrict, onDone }) {
           <SelectField label={t('auth.district')} value={district} onChange={(e) => setDistrict(e.target.value)} options={DISTRICTS.map((d) => ({ value: d, label: t(`districts.${d}`) }))} />
         </>
       )}
-      <Button type="submit" icon="check" disabled={busy}>
+      <Button type="submit" disabled={busy}>
         {side === 'operator' ? t('requests.confirmHandover') : t('requests.confirmReceipt')}
       </Button>
     </form>
@@ -87,7 +88,7 @@ function RequestCard({ request, side, institutionDistrict, onChanged }) {
     <Card className="space-y-3">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <p className="text-lg font-bold">
+          <p className="text-lg font-semibold">
             {formatNumber(request.quantity_requested)} × {request.species}
           </p>
           <p className="text-sm text-ink-soft">
@@ -133,8 +134,7 @@ function RequestCard({ request, side, institutionDistrict, onChanged }) {
         </div>
       )}
       {request.status === 'fulfilled' && (
-        <p className="flex items-center gap-2 text-sm text-leaf-text">
-          <Icon name="check" size={16} />
+        <p className="text-sm text-leaf-text">
           {t('requests.fulfilledOn', { date: formatDate(request.fulfilled_at), site: request.planting_site || '' })}
         </p>
       )}
@@ -143,10 +143,10 @@ function RequestCard({ request, side, institutionDistrict, onChanged }) {
         <div className="space-y-2 border-t border-line pt-3">
           <TextField label={t('requests.reason')} value={reason} onChange={(e) => setReason(e.target.value)} maxLength={500} optional />
           <div className="flex flex-wrap gap-2">
-            <Button icon="check" disabled={busy} onClick={() => act(`/operator/requests/${request.id}/decision`, { decision: 'approve', reason: reason || null }, 'requests.approved')}>
+            <Button disabled={busy} onClick={() => act(`/operator/requests/${request.id}/decision`, { decision: 'approve', reason: reason || null }, 'requests.approved')}>
               {t('requests.approve')}
             </Button>
-            <Button variant="danger" icon="close" disabled={busy} onClick={() => act(`/operator/requests/${request.id}/decision`, { decision: 'decline', reason: reason || null }, 'requests.declined')}>
+            <Button variant="danger" disabled={busy} onClick={() => act(`/operator/requests/${request.id}/decision`, { decision: 'decline', reason: reason || null }, 'requests.declined')}>
               {t('requests.decline')}
             </Button>
           </div>
@@ -157,7 +157,7 @@ function RequestCard({ request, side, institutionDistrict, onChanged }) {
       {request.status === 'approved' && myConfirm && !theirConfirm && <Notice type="info">{t('requests.waitingOther')}</Notice>}
 
       {side === 'institution' && ['pending', 'approved'].includes(request.status) && !myConfirm && (
-        <Button variant="ghost" icon="close" disabled={busy} onClick={() => window.confirm(t('requests.cancelConfirm')) && act(`/institution/requests/${request.id}/cancel`, {}, 'requests.cancelled')}>
+        <Button variant="ghost" disabled={busy} onClick={() => window.confirm(t('requests.cancelConfirm')) && act(`/institution/requests/${request.id}/cancel`, {}, 'requests.cancelled')}>
           {t('requests.cancel')}
         </Button>
       )}
@@ -170,6 +170,7 @@ export default function Requests() {
   const { user, organisation } = useAuth()
   const side = user.role === 'operator' ? 'operator' : 'institution'
   const [status, setStatus] = useState('pending')
+  const [search, setSearch] = useState('')
   const { data, error, reload } = useApi(`/${side}/requests?status=${status}`)
   const [notice, setNotice] = useState(null)
 
@@ -178,23 +179,32 @@ export default function Requests() {
     reload()
   }
 
+  const statusOptions = FILTERS.map((f) => ({ value: f, label: f === 'all' ? t('table.allStatuses') : t(`requestStatus.${f}`) }))
+  const requests = data?.requests || []
+  const rows = requests.filter((r) => matches(search, r.species, r.institution?.name, r.nursery?.name, r.purpose))
+
   return (
-    <div className="mx-auto max-w-5xl space-y-5">
-      <PageHeader title={t('requests.title')} intro={side === 'operator' ? t('requests.introOperator') : t('requests.introInstitution')} />
+    <div className="mx-auto max-w-7xl space-y-5">
+      <PageHeader title={side === 'operator' ? t('requests.title') : t('nav.myRequests')} meta={data && countLabel(t, rows.length)} />
       {notice && <Notice type={notice.type}>{t(notice.text)}</Notice>}
-      <Segmented label={t('requests.title')} value={status} onChange={setStatus} options={FILTERS.map((f) => ({ value: f, label: f === 'all' ? t('common.all') : t(`requestStatus.${f}`) }))} />
+      <Toolbar>
+        <SearchBox value={search} onChange={setSearch} />
+        <FilterSelect label={t('table.byStatus')} value={status} onChange={setStatus} options={statusOptions} />
+      </Toolbar>
       {error && <ErrorState code={error} onRetry={reload} />}
-      {!data && !error && <PageLoader />}
-      {data && data.requests.length === 0 && <EmptyState icon="inbox" title={t('requests.empty')} />}
-      {data && data.requests.length > 0 && (
-        <ul className="space-y-4">
-          {data.requests.map((r) => (
-            <li key={r.id}>
-              <RequestCard request={r} side={side} institutionDistrict={organisation?.district} onChanged={changed} />
-            </li>
-          ))}
-        </ul>
-      )}
+      <WithFilters panel={<FilterPanel groups={[{ label: t('table.byStatus'), value: status, onChange: setStatus, options: statusOptions }]} />}>
+        {!data && !error && <PageLoader />}
+        {data && rows.length === 0 && <EmptyState title={search ? t('table.noMatch') : t('requests.empty')} />}
+        {rows.length > 0 && (
+          <ul className="space-y-4">
+            {rows.map((r) => (
+              <li key={r.id}>
+                <RequestCard request={r} side={side} institutionDistrict={organisation?.district} onChanged={changed} />
+              </li>
+            ))}
+          </ul>
+        )}
+      </WithFilters>
     </div>
   )
 }

@@ -10,7 +10,9 @@ import Notice from '../../components/ui/Notice'
 import ErrorState from '../../components/ui/ErrorState'
 import PageLoader from '../../components/ui/PageLoader'
 import { Pill } from '../../components/ui/Badges'
-import { PageHeader } from '../../components/ui/Layout'
+import { PageHeader, SectionTitle } from '../../components/ui/Layout'
+import { DataTable, SearchBox, Toolbar } from '../../components/ui/DataView'
+import { countLabel, matches } from '../../components/ui/dataViewTools'
 import { SelectField, TextField } from '../../components/ui/Fields'
 
 const CATEGORIES = ['flower', 'tree', 'shrub', 'other']
@@ -68,7 +70,7 @@ function RulesForm({ rules, onSaved }) {
         <TextField label={t('rules.near')} type="number" min="1" value={form.near_days} onChange={set('near_days')} error={fields.near_days} />
       </div>
       <TextField label={t('rules.margin')} type="number" min="0" max="100" value={form.margin_percent} onChange={set('margin_percent')} error={fields.margin_percent} hint={t('rules.marginHint')} />
-      <Button type="submit" icon="check" disabled={busy}>
+      <Button type="submit" disabled={busy}>
         {busy ? t('common.saving') : t('rules.save')}
       </Button>
     </form>
@@ -127,10 +129,10 @@ function SpeciesForm({ species, onSaved, onCancel }) {
         <TextField label={t('species.override')} type="number" min="1" value={form.prime_window_override} onChange={set('prime_window_override')} error={fields.prime_window_override} optional />
       </div>
       <div className="flex flex-wrap gap-2">
-        <Button type="submit" icon="check" disabled={busy}>
+        <Button type="submit" disabled={busy}>
           {t('common.save')}
         </Button>
-        <Button variant="ghost" icon="close" onClick={onCancel}>
+        <Button variant="ghost" onClick={onCancel}>
           {t('common.cancel')}
         </Button>
       </div>
@@ -145,6 +147,7 @@ export default function RulesSpecies() {
   const species = useApi(`/admin/species?archived=${showArchived}`)
   const [editing, setEditing] = useState(null) // species id, 'new' or null
   const [notice, setNotice] = useState(null)
+  const [search, setSearch] = useState('')
 
   async function archive(s) {
     const reason = window.prompt(t('species.archiveConfirm'))
@@ -160,17 +163,87 @@ export default function RulesSpecies() {
     species.reload()
   }
 
+  function saved() {
+    setEditing(null)
+    setNotice('species.saved')
+    species.reload()
+  }
+
+  const list = species.data?.species || []
+  const rows = list.filter((s) => matches(search, s.common_name, s.kinyarwanda_name))
+  const editedSpecies = list.find((s) => s.id === editing)
+  const columns = [
+    {
+      key: 'name',
+      header: t('species.name'),
+      primary: true,
+      render: (s) => (
+        <>
+          {s.common_name}
+          {s.kinyarwanda_name && <span className="font-normal text-ink-soft"> · {s.kinyarwanda_name}</span>}
+        </>
+      ),
+    },
+    { key: 'category', header: t('species.category'), render: (s) => t(`categories.${s.category}`) },
+    { key: 'ready', header: t('species.daysToReady'), align: 'right', render: (s) => s.default_days_to_ready },
+    {
+      key: 'prime',
+      header: t('species.primeDays'),
+      align: 'right',
+      render: (s) => (
+        <>
+          {s.prime_window_override ?? s.default_prime_days}
+          {s.prime_window_override !== null && <span className="block text-xs text-ink-soft">{t('species.overridden')}</span>}
+        </>
+      ),
+    },
+    {
+      key: 'status',
+      header: t('table.status'),
+      render: (s) =>
+        s.archived_at && (
+          <Pill tone="grey" icon="close">
+            {t('species.archivedLabel')}
+          </Pill>
+        ),
+    },
+    {
+      key: 'actions',
+      header: t('table.actions'),
+      full: true,
+      render: (s) => (
+        <div className="flex flex-wrap gap-2">
+          {s.archived_at ? (
+            <Button variant="secondary" onClick={() => restore(s)}>
+              {t('species.restore')}
+            </Button>
+          ) : (
+            <>
+              <Button variant="secondary" onClick={() => setEditing(s.id)}>
+                {t('species.edit')}
+              </Button>
+              <Button variant="ghost" onClick={() => archive(s)}>
+                {t('species.archive')}
+              </Button>
+            </>
+          )}
+        </div>
+      ),
+    },
+  ]
+
   return (
-    <div className="mx-auto max-w-6xl space-y-5">
-      <PageHeader title={t('rules.title')} intro={t('rules.intro')} />
+    <div className="mx-auto max-w-7xl space-y-6">
+      <PageHeader title={t('rules.title')} />
       {notice && <Notice type="success">{t(notice)}</Notice>}
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
-        <Card>
-          <h2 className="mb-1 text-lg font-bold">{t('rules.thresholds')}</h2>
-          <p className="mb-4 text-sm text-ink-soft">{t('rules.thresholdsHint')}</p>
-          {rules.error && <ErrorState code={rules.error} onRetry={rules.reload} />}
-          {!rules.data && !rules.error && <PageLoader />}
-          {rules.data && (
+
+      <Card>
+        <h2 className="text-lg font-semibold">{t('rules.thresholds')}</h2>
+        <p className="mb-4 text-sm text-ink-soft">{t('rules.thresholdsHint')}</p>
+        {rules.error && <ErrorState code={rules.error} onRetry={rules.reload} />}
+        {!rules.data && !rules.error && <PageLoader />}
+        {rules.data && (
+          <div className="max-w-3xl">
             <RulesForm
               key={rules.data.rules.updated_at}
               rules={rules.data.rules}
@@ -179,88 +252,32 @@ export default function RulesSpecies() {
                 rules.reload()
               }}
             />
-          )}
-        </Card>
-        <Card>
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-lg font-bold">{t('species.title')}</h2>
-            <div className="flex flex-wrap items-center gap-2">
-              <label className="flex min-h-12 items-center gap-2 text-sm">
-                <input type="checkbox" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} className="h-5 w-5 accent-leaf" />
-                {t('species.showArchived')}
-              </label>
-              <Button icon="sprout" onClick={() => setEditing('new')}>
-                {t('species.add')}
-              </Button>
-            </div>
           </div>
-          {editing === 'new' && (
-            <SpeciesForm
-              onSaved={() => {
-                setEditing(null)
-                setNotice('species.saved')
-                species.reload()
-              }}
-              onCancel={() => setEditing(null)}
-            />
-          )}
-          {species.error && <ErrorState code={species.error} onRetry={species.reload} />}
-          {!species.data && !species.error && <PageLoader />}
-          {species.data && (
-            <ul className="mt-3 divide-y divide-line">
-              {species.data.species.map((s) => (
-                <li key={s.id} className="py-3">
-                  {editing === s.id ? (
-                    <SpeciesForm
-                      species={s}
-                      onSaved={() => {
-                        setEditing(null)
-                        setNotice('species.saved')
-                        species.reload()
-                      }}
-                      onCancel={() => setEditing(null)}
-                    />
-                  ) : (
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="font-semibold">
-                          {s.common_name}
-                          {s.kinyarwanda_name && <span className="font-normal text-ink-soft"> · {s.kinyarwanda_name}</span>}
-                        </p>
-                        <p className="text-sm text-ink-soft">
-                          {t(`categories.${s.category}`)} · {t('species.summary', { ready: s.default_days_to_ready, prime: s.prime_window_override ?? s.default_prime_days })}
-                          {s.prime_window_override !== null && ` (${t('species.overridden')})`}
-                        </p>
-                        {s.archived_at && (
-                          <Pill tone="grey" icon="close">
-                            {t('species.archivedLabel')}
-                          </Pill>
-                        )}
-                      </div>
-                      <div className="flex gap-2">
-                        {s.archived_at ? (
-                          <Button variant="secondary" onClick={() => restore(s)}>
-                            {t('species.restore')}
-                          </Button>
-                        ) : (
-                          <>
-                            <Button variant="secondary" icon="edit" onClick={() => setEditing(s.id)}>
-                              {t('species.edit')}
-                            </Button>
-                            <Button variant="ghost" onClick={() => archive(s)}>
-                              {t('species.archive')}
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
-      </div>
+        )}
+      </Card>
+
+      <section className="space-y-4">
+        <SectionTitle actions={species.data && <span className="text-ink-soft">{countLabel(t, rows.length)}</span>}>{t('species.title')}</SectionTitle>
+        <Toolbar>
+          <SearchBox value={search} onChange={setSearch} />
+          <label className="flex min-h-12 items-center gap-2">
+            <input type="checkbox" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} className="h-5 w-5 accent-leaf" />
+            {t('species.showArchived')}
+          </label>
+          <span className="sm:ml-auto">
+            <Button onClick={() => setEditing('new')}>{t('species.add')}</Button>
+          </span>
+        </Toolbar>
+        {/* Adding or editing a species opens the form above the table */}
+        {(editing === 'new' || editedSpecies) && (
+          <SpeciesForm key={editing} species={editedSpecies} onSaved={saved} onCancel={() => setEditing(null)} />
+        )}
+        {species.error && <ErrorState code={species.error} onRetry={species.reload} />}
+        {!species.data && !species.error && <PageLoader />}
+        {species.data && (
+          <DataTable caption={t('species.title')} columns={columns} rows={rows} rowKey={(s) => s.id} empty={search ? t('table.noMatch') : t('species.empty')} />
+        )}
+      </section>
     </div>
   )
 }

@@ -1,27 +1,30 @@
 // Administrator: approve nurseries and institutions, or ask them to correct their details
-// (FR02, FR15). Layout follows design/admin verification.png: list on the left, details on the right.
+// (FR02, FR15). A table of applications with a filter panel; "Open" shows the details and the
+// decision buttons below the table.
 import { useCallback, useEffect, useRef, useState } from 'react'
 import api, { errorCode, fieldErrors } from '../../api/client'
 import { useI18n } from '../../i18n/I18nProvider'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
-import Icon from '../../components/ui/Icon'
 import Notice from '../../components/ui/Notice'
 import ErrorState from '../../components/ui/ErrorState'
 import PageLoader from '../../components/ui/PageLoader'
 import VerificationBadge from '../../components/ui/VerificationBadge'
 import { TextArea } from '../../components/ui/Fields'
+import { PageHeader } from '../../components/ui/Layout'
+import { DataTable, FilterPanel, FilterSelect, SearchBox, Toolbar, WithFilters } from '../../components/ui/DataView'
+import { countLabel, matches } from '../../components/ui/dataViewTools'
 import { formatDate } from '../../utils/format'
 import { DocumentList } from '../account/Documents'
 
-const STATUS_TABS = ['pending', 'approved', 'rejected', 'all']
+const STATUSES = ['pending', 'approved', 'rejected', 'all']
 const TYPE_FILTERS = [
   { value: 'all', label: 'admin.filterAll' },
   { value: 'nursery', label: 'admin.filterNursery' },
   { value: 'institution', label: 'admin.filterInstitution' },
 ]
 
-function Detail({ item, onDecided }) {
+function Detail({ item, onDecided, onClose }) {
   const { t } = useI18n()
   const [rejecting, setRejecting] = useState(false)
   const [reason, setReason] = useState('')
@@ -54,35 +57,41 @@ function Detail({ item, onDecided }) {
   }
 
   return (
-    <Card className="space-y-4">
-      <div className="rounded-xl bg-navy p-4 text-white">
-        <p className="text-sm text-white/70">
-          {t(`admin.${item.type}`)}
-          {item.org_type && ` · ${t(`orgTypes.${item.org_type}`)}`}
-        </p>
-        <h2 className="text-xl font-bold">{item.name}</h2>
-        <p className="mt-1 text-sm text-white/80">{t('admin.registered', { date: formatDate(item.created_at) })}</p>
-      </div>
-      <VerificationBadge status={item.verification_status} />
-
-      <dl className="grid gap-3 text-sm sm:grid-cols-2">
+    <Card className="space-y-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <dt className="font-semibold">{t('auth.district')}</dt>
-          <dd className="text-ink-soft">{t(`districts.${item.district}`)}</dd>
+          <p className="text-sm text-ink-soft">
+            {t(`admin.${item.type}`)}
+            {item.org_type && ` · ${t(`orgTypes.${item.org_type}`)}`} · {t('admin.registered', { date: formatDate(item.created_at) })}
+          </p>
+          <h2 className="text-xl font-semibold">{item.name}</h2>
+        </div>
+        <div className="flex items-center gap-2">
+          <VerificationBadge status={item.verification_status} />
+          <Button variant="ghost" onClick={onClose}>
+            {t('table.closeDetails')}
+          </Button>
+        </div>
+      </div>
+
+      <dl className="grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
+        <div>
+          <dt className="text-xs font-semibold uppercase tracking-wider text-ink-soft">{t('auth.district')}</dt>
+          <dd className="mt-1">{t(`districts.${item.district}`)}</dd>
         </div>
         <div>
-          <dt className="font-semibold">{t('auth.sector')}</dt>
-          <dd className="text-ink-soft">{item.sector}</dd>
+          <dt className="text-xs font-semibold uppercase tracking-wider text-ink-soft">{t('auth.sector')}</dt>
+          <dd className="mt-1">{item.sector}</dd>
         </div>
         {item.address_text && (
           <div className="sm:col-span-2">
-            <dt className="font-semibold">{t('auth.address')}</dt>
-            <dd className="text-ink-soft">{item.address_text}</dd>
+            <dt className="text-xs font-semibold uppercase tracking-wider text-ink-soft">{t('auth.address')}</dt>
+            <dd className="mt-1">{item.address_text}</dd>
           </div>
         )}
         <div className="sm:col-span-2">
-          <dt className="font-semibold">{t('admin.owner')}</dt>
-          <dd className="text-ink-soft">
+          <dt className="text-xs font-semibold uppercase tracking-wider text-ink-soft">{t('admin.owner')}</dt>
+          <dd className="mt-1">
             {item.owner?.full_name}
             <br />
             <a className="text-teal-text underline" href={`mailto:${item.owner?.email}`}>
@@ -105,7 +114,7 @@ function Detail({ item, onDecided }) {
       )}
 
       <div>
-        <h3 className="mb-2 font-bold">{t('admin.documents')}</h3>
+        <h3 className="mb-2 font-semibold">{t('admin.documents')}</h3>
         <DocumentList documents={item.documents || []} emptyText={t('admin.noDocuments')} />
       </div>
 
@@ -117,20 +126,20 @@ function Detail({ item, onDecided }) {
             <>
               <TextArea label={t('admin.reason')} value={reason} onChange={(e) => setReason(e.target.value)} error={reasonError} maxLength={500} />
               <div className="flex flex-col gap-3 sm:flex-row">
-                <Button variant="danger" icon="alert" onClick={() => decide('reject')} disabled={busy}>
+                <Button variant="danger" onClick={() => decide('reject')} disabled={busy}>
                   {t('admin.confirmReject')}
                 </Button>
-                <Button variant="secondary" icon="close" onClick={() => setRejecting(false)} disabled={busy}>
+                <Button variant="secondary" onClick={() => setRejecting(false)} disabled={busy}>
                   {t('common.cancel')}
                 </Button>
               </div>
             </>
           ) : (
             <div className="flex flex-col gap-3 sm:flex-row">
-              <Button icon="check" onClick={() => decide('approve')} disabled={busy}>
+              <Button onClick={() => decide('approve')} disabled={busy}>
                 {t('admin.approve')}
               </Button>
-              <Button variant="danger" icon="edit" onClick={() => setRejecting(true)} disabled={busy}>
+              <Button variant="danger" onClick={() => setRejecting(true)} disabled={busy}>
                 {t('admin.reject')}
               </Button>
             </div>
@@ -145,6 +154,7 @@ export default function VerificationQueue() {
   const { t } = useI18n()
   const [status, setStatus] = useState('pending')
   const [type, setType] = useState('all')
+  const [search, setSearch] = useState('')
   const [data, setData] = useState(null)
   const [error, setError] = useState(null)
   const [selected, setSelected] = useState(null)
@@ -153,7 +163,7 @@ export default function VerificationQueue() {
 
   const fetchQueue = useCallback(() => api.get('/admin/verifications', { params: { status, type } }), [status, type])
 
-  // Reload the list whenever the status tab or type filter changes
+  // Reload the list whenever the status or type filter changes
   useEffect(() => {
     let cancelled = false
     fetchQueue()
@@ -181,111 +191,100 @@ export default function VerificationQueue() {
 
   async function open(item) {
     setNotice(null)
-    const res = await api.get(`/admin/verifications/${item.type}/${item.id}`)
-    setSelected(res.data.item)
-    // On a phone the details are below the list: scroll to them
-    detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    try {
+      const res = await api.get(`/admin/verifications/${item.type}/${item.id}`)
+      setSelected(res.data.item)
+      // The details are below the table: scroll to them
+      requestAnimationFrame(() => detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
+    } catch (err) {
+      setNotice({ type: 'error', text: t(`errors.${errorCode(err)}`) })
+    }
   }
 
   async function onDecided() {
-    setNotice(t('admin.decided'))
+    setNotice({ type: 'success', text: t('admin.decided') })
     const res = await api.get(`/admin/verifications/${selected.type}/${selected.id}`)
     setSelected(res.data.item)
     await load()
   }
 
+  const counts = data?.counts || {}
+  const statusOptions = STATUSES.map((s) => ({
+    value: s,
+    label: s === 'all' ? t('table.allStatuses') : t(`admin.${s}`),
+    count: s === 'all' ? (counts.pending || 0) + (counts.approved || 0) + (counts.rejected || 0) : counts[s] || 0,
+  }))
+  const typeOptions = TYPE_FILTERS.map((f) => ({ value: f.value, label: t(f.label) }))
+  const items = data?.items || []
+  const rows = items.filter((item) => matches(search, item.name, item.owner?.email, item.owner?.full_name, item.sector))
+
+  const columns = [
+    { key: 'name', header: t('table.name'), primary: true, render: (item) => item.name },
+    { key: 'email', header: t('table.email'), render: (item) => <span className="break-all">{item.owner?.email}</span> },
+    {
+      key: 'type',
+      header: t('table.type'),
+      render: (item) => (item.org_type ? `${t(`admin.${item.type}`)} · ${t(`orgTypes.${item.org_type}`)}` : t(`admin.${item.type}`)),
+    },
+    { key: 'district', header: t('table.district'), render: (item) => `${t(`districts.${item.district}`)}, ${item.sector}` },
+    { key: 'registered', header: t('table.registered'), render: (item) => <span className="whitespace-nowrap">{formatDate(item.created_at)}</span> },
+    { key: 'status', header: t('table.status'), render: (item) => <VerificationBadge status={item.verification_status} /> },
+    {
+      key: 'actions',
+      header: t('table.actions'),
+      full: true,
+      render: (item) => (
+        // The spoken name includes the organisation, so each "Open" button is unique
+        <Button variant="secondary" onClick={() => open(item)} aria-label={`${t('table.open')}: ${item.name}`}>
+          {t('table.open')}
+        </Button>
+      ),
+    },
+  ]
+
   return (
-    <div className="mx-auto max-w-6xl space-y-5">
-      <div>
-        <h1 className="text-2xl font-bold sm:text-3xl">{t('admin.queueTitle')}</h1>
-        <p className="mt-1 text-ink-soft">{t('admin.queueIntro')}</p>
-      </div>
+    <div className="mx-auto max-w-7xl space-y-5">
+      <PageHeader title={t('admin.queueTitle')} meta={data && countLabel(t, rows.length)} />
+      <Toolbar>
+        <SearchBox value={search} onChange={setSearch} label={t('table.searchNameEmail')} />
+        <FilterSelect label={t('table.byStatus')} value={status} onChange={setStatus} options={statusOptions} />
+        <FilterSelect label={t('table.byType')} value={type} onChange={setType} options={typeOptions} />
+      </Toolbar>
 
-      <div className="flex flex-wrap gap-2" role="group" aria-label={t('admin.queueTitle')}>
-        {STATUS_TABS.map((s) => (
-          <button
-            key={s}
-            type="button"
-            aria-pressed={status === s}
-            onClick={() => setStatus(s)}
-            className={`min-h-12 rounded-xl px-4 font-semibold ${status === s ? 'bg-navy text-white' : 'border border-line bg-surface text-ink'}`}
-          >
-            {t(`admin.${s}`)}
-            {data && s !== 'all' && (
-              <span className={`ml-2 rounded-full px-2 text-sm ${status === s ? 'bg-white/20' : 'bg-canvas'}`}>{data.counts[s]}</span>
-            )}
-          </button>
-        ))}
-        <select
-          aria-label={t('admin.filterAll')}
-          value={type}
-          onChange={(e) => setType(e.target.value)}
-          className="min-h-12 rounded-xl border border-line bg-surface px-3 font-semibold"
-        >
-          {TYPE_FILTERS.map((f) => (
-            <option key={f.value} value={f.value}>
-              {t(f.label)}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {notice && <Notice type="success">{notice}</Notice>}
+      {notice && <Notice type={notice.type}>{notice.text}</Notice>}
       {error && <ErrorState code={error} onRetry={retry} />}
 
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-        <div>
-          {!data && !error && <PageLoader />}
-          {data && data.items.length === 0 && (
-            <Card className="flex items-center gap-3 text-ink-soft">
-              <Icon name="check" className="text-leaf-text" />
-              {t('admin.empty')}
-            </Card>
-          )}
-          {data && data.items.length > 0 && (
-            <ul className="space-y-3">
-              {data.items.map((item) => {
-                const active = selected && selected.type === item.type && selected.id === item.id
-                return (
-                  <li key={`${item.type}-${item.id}`}>
-                    <button
-                      type="button"
-                      onClick={() => open(item)}
-                      aria-current={active ? 'true' : undefined}
-                      className={`flex w-full items-start gap-3 rounded-2xl border p-4 text-left ${
-                        active ? 'border-leaf bg-leaf-light/60' : 'border-line bg-surface hover:bg-canvas'
-                      }`}
-                    >
-                      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-canvas text-leaf-text">
-                        <Icon name={item.type === 'nursery' ? 'sprout' : 'building'} />
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate font-semibold">{item.name}</span>
-                        <span className="block text-sm text-ink-soft">
-                          {t(`admin.${item.type}`)}
-                          {item.org_type && ` · ${t(`orgTypes.${item.org_type}`)}`} · {t(`districts.${item.district}`)}, {item.sector}
-                        </span>
-                        <span className="mt-2 block">
-                          <VerificationBadge status={item.verification_status} />
-                        </span>
-                      </span>
-                      <Icon name="arrowRight" className="mt-2 text-ink-soft" />
-                    </button>
-                  </li>
-                )
-              })}
-            </ul>
-          )}
-        </div>
-
+      <WithFilters
+        panel={
+          <FilterPanel
+            groups={[
+              { label: t('table.byStatus'), value: status, onChange: setStatus, options: statusOptions },
+              { label: t('table.byType'), value: type, onChange: setType, options: typeOptions },
+            ]}
+          />
+        }
+      >
+        {!data && !error && <PageLoader />}
+        {data && (
+          <DataTable
+            caption={t('admin.queueTitle')}
+            columns={columns}
+            rows={rows}
+            rowKey={(item) => `${item.type}-${item.id}`}
+            empty={search ? t('table.noMatch') : t('admin.empty')}
+          />
+        )}
         <div ref={detailRef} className="scroll-mt-20">
-          {selected ? (
-            <Detail key={`${selected.type}-${selected.id}-${selected.verification_status}`} item={selected} onDecided={onDecided} />
-          ) : (
-            <Card className="hidden text-ink-soft lg:block">{t('admin.select')}</Card>
+          {selected && (
+            <Detail
+              key={`${selected.type}-${selected.id}-${selected.verification_status}`}
+              item={selected}
+              onDecided={onDecided}
+              onClose={() => setSelected(null)}
+            />
           )}
         </div>
-      </div>
+      </WithFilters>
     </div>
   )
 }

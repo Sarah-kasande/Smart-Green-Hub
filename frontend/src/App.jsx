@@ -6,6 +6,7 @@ import PageLoader from './components/ui/PageLoader'
 import PublicLayout from './layouts/PublicLayout'
 import AppLayout from './layouts/AppLayout'
 import RequireRole from './auth/RequireRole'
+import { UpdateOnNavigate } from './pwa'
 const Landing = lazy(() => import('./pages/public/Landing'))
 const Login = lazy(() => import('./pages/auth/Login'))
 const Register = lazy(() => import('./pages/auth/Register'))
@@ -39,6 +40,7 @@ const NotFound = lazy(() => import('./pages/NotFound'))
 export default function App() {
   return (
     <Suspense fallback={<PageLoader />}>
+    <UpdateOnNavigate />
     <Routes>
       {/* Anyone */}
       <Route element={<PublicLayout />}>

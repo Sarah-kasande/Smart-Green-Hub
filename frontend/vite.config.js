@@ -7,7 +7,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 export default defineConfig({
   // Blocks stray PostCSS config files outside the project (Tailwind v4 runs through its Vite plugin).
   css: { postcss: { plugins: [] } },
-  // The git commit Vercel builds (VERCEL_GIT_COMMIT_SHA), compared with the API's version in the app
+  // The git commit Vercel builds (VERCEL_GIT_COMMIT_SHA). Only used for a console note in development.
   define: {
     'import.meta.env.VITE_APP_VERSION': JSON.stringify((process.env.VERCEL_GIT_COMMIT_SHA || 'local').slice(0, 7)),
   },
@@ -23,7 +23,9 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // 'prompt' = a new version waits until src/pwa.js switches it on (at the next page change).
+      // No prompt is ever shown to the person.
+      registerType: 'prompt',
       includeAssets: ['favicon.svg', 'icons/apple-touch-icon.png'],
       workbox: {
         // The app shell (HTML, JS, CSS, icons) is precached so the app opens offline.

@@ -100,10 +100,10 @@ export default function OrganisationForm({ organisation, onSaved, onCancel }) {
         <TextField label={t('auth.contactPhone')} type="tel" value={form.contact_phone} onChange={set('contact_phone')} error={fields.contact_phone} optional />
       )}
       <div className="flex flex-col gap-3 sm:flex-row">
-        <Button type="submit" icon="check" disabled={busy}>
+        <Button type="submit" disabled={busy}>
           {busy ? t('common.saving') : organisation.verification_status === 'rejected' ? t('account.resubmit') : t('common.save')}
         </Button>
-        <Button variant="secondary" icon="close" onClick={onCancel}>
+        <Button variant="secondary" onClick={onCancel}>
           {t('common.cancel')}
         </Button>
       </div>

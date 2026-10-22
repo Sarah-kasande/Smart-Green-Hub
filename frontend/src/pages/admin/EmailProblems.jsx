@@ -8,12 +8,13 @@ import api, { errorCode } from '../../api/client'
 import { useApi } from '../../api/useApi'
 import { useI18n } from '../../i18n/I18nProvider'
 import Button from '../../components/ui/Button'
-import Card from '../../components/ui/Card'
 import Notice from '../../components/ui/Notice'
 import ErrorState from '../../components/ui/ErrorState'
 import PageLoader from '../../components/ui/PageLoader'
 import { Pill } from '../../components/ui/Badges'
-import { EmptyState, PageHeader, StatCard } from '../../components/ui/Layout'
+import { PageHeader, StatCard } from '../../components/ui/Layout'
+import { DataTable, FilterPanel, FilterSelect, SearchBox, Toolbar, WithFilters } from '../../components/ui/DataView'
+import { countLabel, matches } from '../../components/ui/dataViewTools'
 import { formatDateTime, formatNumber } from '../../utils/format'
 
 export default function EmailProblems() {
@@ -21,6 +22,8 @@ export default function EmailProblems() {
   const { data, error, reload } = useApi('/admin/emails')
   const [notice, setNotice] = useState(null)
   const [busyId, setBusyId] = useState(null)
+  const [status, setStatus] = useState('all')
+  const [search, setSearch] = useState('')
 
   async function retry(item) {
     setBusyId(item.id)
@@ -36,60 +39,84 @@ export default function EmailProblems() {
     }
   }
 
+  // An unknown email type (e.g. from a newer server) is shown as its raw name
+  const typeName = (type) => (t(`emailProblems.types.${type}`) === `emailProblems.types.${type}` ? type : t(`emailProblems.types.${type}`))
+  const counts = data?.counts || {}
+  const items = data?.items || []
+  const statusOptions = [
+    { value: 'all', label: t('table.allStatuses'), count: items.length },
+    { value: 'failed', label: t('emailProblems.status.failed'), count: items.filter((i) => i.status === 'failed').length },
+    { value: 'skipped', label: t('emailProblems.status.skipped'), count: items.filter((i) => i.status === 'skipped').length },
+  ]
+  const rows = items.filter((i) => (status === 'all' || i.status === status) && matches(search, i.recipient, typeName(i.type), i.error))
+
+  const columns = [
+    { key: 'time', header: t('emailProblems.time'), render: (item) => formatDateTime(item.time) },
+    {
+      key: 'type',
+      header: t('emailProblems.type'),
+      primary: true,
+      render: (item) => (
+        <>
+          {typeName(item.type)}
+          <span className="block break-all font-mono text-xs font-normal text-ink-soft">{item.recipient}</span>
+        </>
+      ),
+    },
+    {
+      key: 'status',
+      header: t('emailProblems.statusLabel'),
+      render: (item) => (
+        <>
+          <Pill tone={item.status === 'failed' ? 'red' : 'amber'} icon={item.status === 'failed' ? 'alert' : 'clock'}>
+            {t(`emailProblems.status.${item.status}`)}
+          </Pill>
+          <span className="mt-1 block text-xs text-ink-soft">
+            {t('emailProblems.attemptsLabel')}: {item.attempts}
+          </span>
+        </>
+      ),
+    },
+    { key: 'error', header: t('emailProblems.error'), full: true, render: (item) => <span className="block min-w-56 break-words text-risk-high-text">{item.error}</span> },
+    {
+      key: 'actions',
+      header: t('table.actions'),
+      full: true,
+      render: (item) => (
+        <Button variant="secondary" onClick={() => retry(item)} disabled={busyId === item.id}>
+          {item.retry_issues_new_code ? t('emailProblems.retryNewCode') : t('emailProblems.retry')}
+        </Button>
+      ),
+    },
+  ]
+
   return (
-    <div className="mx-auto max-w-6xl space-y-5">
-      <PageHeader title={t('emailProblems.title')} intro={t('emailProblems.intro')} />
+    <div className="mx-auto max-w-7xl space-y-5">
+      <PageHeader title={t('emailProblems.title')} meta={data && countLabel(t, rows.length)} />
       {notice && <Notice type={notice.type}>{t(notice.text, notice.values)}</Notice>}
       {error && <ErrorState code={error} onRetry={reload} />}
       {!data && !error && <PageLoader />}
       {data && (
         <>
           <div className="grid gap-3 sm:grid-cols-3">
-            <StatCard label={t('emailProblems.status.sent')} value={formatNumber(data.counts.sent)} icon="check" />
-            <StatCard label={t('emailProblems.status.failed')} value={formatNumber(data.counts.failed)} icon="alert" tone={data.counts.failed ? 'red' : 'blue'} />
-            <StatCard label={t('emailProblems.status.skipped')} value={formatNumber(data.counts.skipped)} hint={t('emailProblems.skippedHint')} icon="clock" tone={data.counts.skipped ? 'amber' : 'blue'} />
+            <StatCard label={t('emailProblems.status.sent')} value={formatNumber(counts.sent || 0)} />
+            <StatCard label={t('emailProblems.status.failed')} value={formatNumber(counts.failed || 0)} />
+            <StatCard label={t('emailProblems.status.skipped')} value={formatNumber(counts.skipped || 0)} hint={t('emailProblems.skippedHint')} />
           </div>
-          {data.counts.queued > 0 && <p className="text-sm text-ink-soft">{t('emailProblems.queued', { n: data.counts.queued })}</p>}
-          {data.items.length === 0 ? (
-            <EmptyState icon="check" title={t('emailProblems.none')} />
-          ) : (
-            <Card className="overflow-x-auto p-0 sm:p-0">
-              <table className="w-full min-w-[48rem] text-left text-sm">
-                <thead className="border-b border-line text-ink-soft">
-                  <tr>
-                    <th className="p-3">{t('emailProblems.time')}</th>
-                    <th className="p-3">{t('emailProblems.type')}</th>
-                    <th className="p-3">{t('emailProblems.recipient')}</th>
-                    <th className="p-3">{t('emailProblems.statusLabel')}</th>
-                    <th className="p-3 text-right">{t('emailProblems.attemptsLabel')}</th>
-                    <th className="p-3">{t('emailProblems.error')}</th>
-                    <th className="p-3" />
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-line">
-                  {data.items.map((item) => (
-                    <tr key={item.id} className="align-top">
-                      <td className="whitespace-nowrap p-3">{formatDateTime(item.time)}</td>
-                      <td className="p-3">{t(`emailProblems.types.${item.type}`) === `emailProblems.types.${item.type}` ? item.type : t(`emailProblems.types.${item.type}`)}</td>
-                      <td className="p-3 font-mono text-xs">{item.recipient}</td>
-                      <td className="p-3">
-                        <Pill tone={item.status === 'failed' ? 'red' : 'amber'} icon={item.status === 'failed' ? 'alert' : 'clock'}>
-                          {t(`emailProblems.status.${item.status}`)}
-                        </Pill>
-                      </td>
-                      <td className="p-3 text-right">{item.attempts}</td>
-                      <td className="max-w-xs break-words p-3 text-risk-high-text">{item.error}</td>
-                      <td className="p-3">
-                        <Button variant="secondary" icon="mail" onClick={() => retry(item)} disabled={busyId === item.id}>
-                          {item.retry_issues_new_code ? t('emailProblems.retryNewCode') : t('emailProblems.retry')}
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </Card>
-          )}
+          {counts.queued > 0 && <p className="text-sm text-ink-soft">{t('emailProblems.queued', { n: counts.queued })}</p>}
+          <Toolbar>
+            <SearchBox value={search} onChange={setSearch} />
+            <FilterSelect label={t('table.byStatus')} value={status} onChange={setStatus} options={statusOptions} />
+          </Toolbar>
+          <WithFilters panel={<FilterPanel groups={[{ label: t('table.byStatus'), value: status, onChange: setStatus, options: statusOptions }]} />}>
+            <DataTable
+              caption={t('emailProblems.title')}
+              columns={columns}
+              rows={rows}
+              rowKey={(item) => item.id}
+              empty={search || status !== 'all' ? t('table.noMatch') : t('emailProblems.none')}
+            />
+          </WithFilters>
         </>
       )}
     </div>

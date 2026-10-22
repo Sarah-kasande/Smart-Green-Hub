@@ -1,6 +1,6 @@
 # Smart Green Hub: test report
 
-Date of the runs: 20 October 2026. Environment: Windows 11, Node.js 24, MySQL 8.4.11 in Docker
+Date of the runs: 22 October 2026 (layout redesign); earlier rows from 20 October 2026. Environment: Windows 11, Node.js 24, MySQL 8.4.11 in Docker
 (same version as the Aiven production database), Microsoft Edge (headless) for browser tests.
 All tests use local test databases and fake accounts; none touch the production database
 (the test setup aborts if `DB_HOST` points to Aiven).
@@ -14,7 +14,7 @@ All tests use local test databases and fake accounts; none touch the production 
 | Frontend-backend contract: every API call found in `frontend/src` exists in the backend; every admin page GET answers 200 | Jest + Supertest | 69 / 69 passed |
 | One-time codes and email outbox: correct / wrong / expired code, 5-try lock, resend invalidates the old code, 60 s and daily limits, per-IP limits, sent / failed / skipped statuses with Brevo's exact error, admin report and retry | Jest + Supertest | included below |
 | **Total backend** | | **231 / 231 passed** |
-| End-to-end tests in a real browser (390 px mobile and 1440 px desktop) | Playwright + Edge | **18 / 18 passed** |
+| End-to-end tests in a real browser (390 px mobile and 1440 px desktop) | Playwright + Edge | **23 / 23 passed** |
 | Accessibility, performance, best practices | Lighthouse 12 (mobile profile) | see section 4 |
 | Load test: 50 concurrent users | `backend/scripts/load-test.js` | p95 243 ms, 0 errors (local) |
 | Dependency audit | `npm audit --omit=dev` | frontend 0; backend 2 moderate (explained in section 5) |
@@ -41,7 +41,7 @@ database and its own app on port 5174).
 
 | # | Scenario | Result |
 |---|----------|--------|
-| 1 | A nursery registers in the form, opens the confirmation link from the email and signs in ("Waiting for approval") | Passed |
+| 1 | A nursery registers in the form, enters the 6-digit code from the email, is signed in and sees "Waiting for approval" | Passed |
 | 2 | The administrator approves it in the Verification Queue (desktop 1440 px) | Passed |
 | 3 | The operator adds a batch of 120 plants and records a sale of 20 (total shown: RWF 10,000) | Passed |
 | 4 | **Offline**: the browser goes offline, a sale of 5 is saved on the phone ("1 waiting to sync"), the browser comes back online, the sale syncs automatically and stock is exactly 95 | Passed |
@@ -53,22 +53,40 @@ database and its own app on port 5174).
 | 10 | Protected pages redirect visitors to Sign in | Passed |
 | 11 | Wrong password shows a clear error message | Passed |
 | 12 | Every administrator page opens without an error and without an endless spinner | Passed |
-| 13 | A request answered by an older API (unknown route) shows a clear message; "Try again" recovers | Passed |
+| 13 | A request answered by an older API (unknown route) shows a friendly message ("This part of the app is not available right now"); "Try again" recovers | Passed |
 | 14 | A dropped connection ends with "Cannot reach the server" and "Try again", not an endless spinner | Passed |
 | 15 | Registration code: 60 s resend countdown, wrong code ("4 tries left"), pasted "123 456" accepted, confirmed | Passed |
 | 16 | Signing in before confirming leads to the code screen | Passed |
 | 17 | Password reset with a code; the new password works | Passed |
 | 18 | The code screen in dark mode | Passed |
+| 19 | Desktop: sidebar shows the groups Review / Manage / Settings, links are text only (no icons), the open page has `aria-current`; a list page has a search box, the status dropdown and the FILTER panel | Passed |
+| 20 | **No version banner** on the admin pages while the app (version e2eapp0) and the API (version abc1234) differ | Passed |
+| 21 | Phone: the Menu drawer shows the same groups and closes after choosing a page; every bottom-bar target is at least 48 px high; no horizontal scrolling at 390 px | Passed |
+| 22 | User menu: "Profile and settings" and "Sign out" | Passed |
+| 23 | Public: a wrong password shows a clear message (unchanged) | Passed |
+
+In step 7 of the main flow the request status is now chosen in the toolbar dropdown ("By status").
 
 ## 4. Lighthouse (mobile profile, production build)
 
+Run on 22 October 2026 after the layout redesign: Lighthouse 12, mobile profile, Microsoft Edge headless,
+production build served by `vite preview` with the local e2e API. Signed-in pages were measured with fake
+test accounts (the final URL was checked: no redirect to the sign-in page).
+
 | Page | Performance | Accessibility | Best practices | Largest Contentful Paint |
 |------|-------------|---------------|----------------|--------------------------|
-| Landing `/` | 94 | 100 | 100 | 2.6 s |
-| Sign in `/login` | 96 | 100 | 100 | 2.3 s |
-| Register `/register` | 96 | 100 | 100 | 2.4 s |
+| Landing `/` | 95 | 100 | 100 | 2.5 s |
+| Sign in `/login` | 93 | 100 | 100 | 2.6 s |
+| Admin dashboard `/admin` | 95 | 100 | 100 | 2.6 s |
+| Verification queue `/admin/verification` | 95 | 100 | 100 | 2.5 s |
+| Listing moderation `/admin/listings` | 96 | 100 | 100 | 2.4 s |
+| Operator dashboard `/operator` | 95 | 100 | 100 | 2.6 s |
+| Batches `/operator/batches` | 95 | 100 | 100 | 2.6 s |
+| Alerts `/operator/alerts` | 95 | 100 | 100 | 2.5 s |
 
-NFR01 target LCP < 3 s: met on all three pages (local build; the live site adds network time).
+Before the redesign (20 October): landing 94 / 100 / 100 (LCP 2.6 s), sign in 96 / 100 / 100 (2.3 s),
+register 96 / 100 / 100 (2.4 s). Accessibility and best practices stay at 100; performance stays in the
+93-96 range (small run-to-run variation). NFR01 target LCP < 3 s: met on every page measured.
 Lighthouse 12 no longer has a separate "PWA" score; installability was checked through the manifest
 (name, icons 192 / 512 / maskable, standalone display, start URL) and the service worker.
 

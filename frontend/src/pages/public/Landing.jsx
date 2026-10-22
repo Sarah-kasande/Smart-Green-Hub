@@ -54,7 +54,7 @@ function ImpactStats() {
           </li>
         ))}
       </ul>
-      {error && <ErrorState code={error} onRetry={reload} className="mt-3" />}
+      {error && <ErrorState code={error} onRetry={reload} className="mt-3" retryIcon="clock" />}
       {data && data.handovers === 0 && <p className="mt-3 text-sm text-ink-soft">{t('landing.impactEmpty')}</p>}
     </section>
   )
@@ -88,7 +88,7 @@ function Directory() {
         />
       </div>
       <div className="mt-4">
-        {error && <ErrorState code={error} onRetry={reload} />}
+        {error && <ErrorState code={error} onRetry={reload} retryIcon="clock" />}
         {data && nurseries.length === 0 && <Card className="text-ink-soft">{t('landing.directoryEmpty')}</Card>}
         {nurseries.length > 0 && view === 'list' && (
           <ul className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">

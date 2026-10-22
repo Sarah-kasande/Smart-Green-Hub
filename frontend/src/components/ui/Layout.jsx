@@ -1,54 +1,51 @@
 // Building blocks used by most pages.
 import { useId } from 'react'
 import Icon from './Icon'
-import Card from './Card'
 
-export function PageHeader({ title, intro, actions }) {
+// Page title on the left; a short count or summary (`meta`, e.g. "28 entries") and buttons on the right.
+export function PageHeader({ title, meta, actions }) {
   return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-      <div>
-        <h1 className="text-2xl font-bold sm:text-3xl">{title}</h1>
-        {intro && <p className="mt-1 max-w-3xl text-ink-soft">{intro}</p>}
-      </div>
-      {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
+    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+      <h1 className="text-2xl font-semibold sm:text-[1.75rem]">{title}</h1>
+      {(meta || actions) && (
+        <div className="flex flex-wrap items-center gap-3">
+          {meta && <p className="text-ink-soft">{meta}</p>}
+          {actions}
+        </div>
+      )}
     </div>
   )
 }
 
-export function StatCard({ label, value, hint, icon, tone = 'leaf' }) {
-  const tones = {
-    leaf: 'bg-leaf-light text-leaf-text',
-    amber: 'bg-risk-medium text-risk-medium-text',
-    red: 'bg-risk-high text-risk-high-text',
-    teal: 'bg-teal-light text-teal-text',
-    blue: 'bg-info text-ink',
-  }
+// A number with its label (dashboards). Text only: the label says what the number means.
+export function StatCard({ label, value, hint }) {
   return (
-    <Card className="flex items-start justify-between gap-3">
-      <div className="min-w-0">
-        <p className="text-sm font-semibold text-ink-soft">{label}</p>
-        <p className="mt-1 text-2xl font-bold sm:text-3xl">{value}</p>
-        {hint && <p className="mt-1 text-sm text-ink-soft">{hint}</p>}
-      </div>
-      {icon && (
-        <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ${tones[tone]}`}>
-          <Icon name={icon} />
-        </span>
-      )}
-    </Card>
+    <div className="rounded-xl border border-line bg-surface px-5 py-4">
+      <p className="text-sm font-semibold text-ink-soft">{label}</p>
+      <p className="mt-1 text-2xl font-semibold sm:text-3xl">{value}</p>
+      {hint && <p className="mt-1 text-sm text-ink-soft">{hint}</p>}
+    </div>
   )
 }
 
-export function EmptyState({ icon = 'info', title, text, action }) {
+// One clear "nothing here" box, optionally with a short explanation and a button
+export function EmptyState({ title, text, action }) {
   return (
-    <Card className="flex flex-col items-center gap-2 py-10 text-center">
-      <span className="grid h-12 w-12 place-items-center rounded-full bg-canvas text-ink-soft">
-        <Icon name={icon} />
-      </span>
-      <p className="font-semibold">{title}</p>
-      {text && <p className="max-w-md text-sm text-ink-soft">{text}</p>}
-      {action && <div className="mt-2">{action}</div>}
-    </Card>
+    <div className="rounded-xl border border-line bg-info px-5 py-5">
+      <p className="text-base text-ink">{title}</p>
+      {text && <p className="mt-1 text-sm text-ink-soft">{text}</p>}
+      {action && <div className="mt-3">{action}</div>}
+    </div>
+  )
+}
+
+// Section heading inside a page (e.g. "Impact" on the dashboard)
+export function SectionTitle({ children, actions }) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2">
+      <h2 className="text-lg font-semibold">{children}</h2>
+      {actions}
+    </div>
   )
 }
 

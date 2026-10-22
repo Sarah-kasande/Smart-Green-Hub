@@ -9,6 +9,7 @@ import Card from '../../components/ui/Card'
 import Notice from '../../components/ui/Notice'
 import { Pill } from '../../components/ui/Badges'
 import { EmptyState, PageHeader } from '../../components/ui/Layout'
+import { countLabel } from '../../components/ui/dataViewTools'
 import { formatDateTime, formatNumber, formatRWF } from '../../utils/format'
 
 function describe(t, row) {
@@ -31,12 +32,12 @@ export default function SyncPage() {
   }, [])
 
   return (
-    <div className="mx-auto max-w-3xl space-y-5">
+    <div className="mx-auto max-w-5xl space-y-5">
       <PageHeader
         title={t('sync.title')}
-        intro={t('sync.intro')}
+        meta={countLabel(t, rows.length)}
         actions={
-          <Button icon="clock" onClick={syncNow} disabled={!online || syncing}>
+          <Button onClick={syncNow} disabled={!online || syncing}>
             {t('sync.syncNow')}
           </Button>
         }
@@ -46,12 +47,12 @@ export default function SyncPage() {
         <Notice type="success">{t('sync.lastResult', { applied: lastResult.applied, skipped: lastResult.skipped, conflicts: lastResult.conflicts, time: formatDateTime(lastResult.at) })}</Notice>
       )}
       {rows.length === 0 ? (
-        <EmptyState icon="check" title={t('sync.allSynced')} />
+        <EmptyState title={t('sync.allSynced')} />
       ) : (
         <Card className="p-0 sm:p-0">
           <ul className="divide-y divide-line">
             {rows.map((row) => (
-              <li key={row.id} className="flex flex-wrap items-center justify-between gap-3 p-4">
+              <li key={row.id} className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
                 <div className="min-w-0">
                   <p className="font-semibold">{describe(t, row)}</p>
                   <p className="text-sm text-ink-soft">{formatDateTime(row.created_at)}</p>
@@ -67,7 +68,7 @@ export default function SyncPage() {
                       <Pill tone="red" icon="alert">
                         {t('sync.refused')}
                       </Pill>
-                      <Button variant="ghost" icon="close" onClick={() => discard(row.id)}>
+                      <Button variant="ghost" onClick={() => discard(row.id)}>
                         {t('sync.discard')}
                       </Button>
                     </>

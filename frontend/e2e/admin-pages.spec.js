@@ -7,7 +7,7 @@ test.use({ viewport: { width: 1440, height: 900 } })
 
 const PAGES = [
   ['/admin', 'Administrator dashboard'],
-  ['/admin/verification', 'Verification Queue'],
+  ['/admin/verification', 'Verification queue'],
   ['/admin/rules', 'Rules & Species'],
   ['/admin/listings', 'Listing moderation'],
   ['/admin/impact', 'Impact'],
@@ -43,7 +43,7 @@ test('a failed request shows a clear message and "Try again" recovers', async ({
   await page.route('**/api/admin/species**', oldServer)
 
   await page.goto('/admin/rules')
-  await expect(page.getByText('The server does not know this request').first()).toBeVisible()
+  await expect(page.getByText('This part of the app is not available right now').first()).toBeVisible()
   await expect(page.getByText('Loading…')).toHaveCount(0)
 
   // The server is fixed: "Try again" loads the data
@@ -52,7 +52,7 @@ test('a failed request shows a clear message and "Try again" recovers', async ({
   await page.getByRole('button', { name: 'Try again' }).first().click()
   await page.getByRole('button', { name: 'Try again' }).first().click()
   await expect(page.getByLabel('Sales lookback (days)')).toHaveValue('28')
-  await expect(page.getByText('The server does not know this request')).toHaveCount(0)
+  await expect(page.getByText('This part of the app is not available right now')).toHaveCount(0)
 })
 
 test('a request that never answers ends with a message, not an endless spinner', async ({ page }) => {

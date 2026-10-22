@@ -50,7 +50,7 @@ export default function BatchNew() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-5">
-      <PageHeader title={t('batches.newTitle')} intro={t('batches.newIntro')} />
+      <PageHeader title={t('batches.newTitle')} />
       <Card>
         <form onSubmit={submit} className="space-y-4" noValidate>
           {error && <Notice type="error">{t(`errors.${error}`)}</Notice>}
@@ -74,7 +74,7 @@ export default function BatchNew() {
               <TextField label={t('batches.primeDays')} type="number" min="1" value={form.prime_days} onChange={set('prime_days')} placeholder={chosen?.default_prime_days} optional />
             </div>
           </Disclosure>
-          <Button type="submit" icon="check" full disabled={busy}>
+          <Button type="submit" full disabled={busy}>
             {busy ? t('common.saving') : t('batches.save')}
           </Button>
         </form>

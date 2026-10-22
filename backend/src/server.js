@@ -22,7 +22,9 @@ if (!email.configured && isProduction) {
 
 const port = process.env.PORT || 5000;
 app.listen(port, async () => {
-  console.log(`API running on ${port}`);
+  // The git commit Render deployed. Shown here and in /api/health only (never to users), so
+  // you can check that the API and the app on Vercel were deployed from the same commit.
+  console.log(`API running on ${port} (version ${(process.env.RENDER_GIT_COMMIT || 'local').slice(0, 7)})`);
   try {
     await sequelize.authenticate();
     console.log('Database connected');
