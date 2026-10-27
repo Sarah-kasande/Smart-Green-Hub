@@ -4,6 +4,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { useI18n } from '../../i18n/I18nProvider'
 import { useBatches } from '../../offline/useOfflineData'
 import Card from '../../components/ui/Card'
+import { Progress } from '@/components/shadcn/progress'
 import Notice from '../../components/ui/Notice'
 import PageLoader from '../../components/ui/PageLoader'
 import { Pill, StatusBadge } from '../../components/ui/Badges'
@@ -14,6 +15,25 @@ import { buttonClasses } from '../../components/ui/buttonStyles'
 import { formatDate, formatNumber, formatRWF } from '../../utils/format'
 
 const STAGES = ['', 'seedling', 'growing', 'ready', 'overgrown', 'cleared']
+
+// How far the batch is from planting to the end of its prime window (best time to sell)
+function PrimeProgress({ batch }) {
+  const { t } = useI18n()
+  // "Now" is read once when the card appears (reading the clock on every redraw is not allowed)
+  const [now] = useState(() => Date.now())
+  const start = new Date(`${batch.planting_date}T00:00:00`).getTime()
+  const end = new Date(`${batch.prime_end_date}T00:00:00`).getTime()
+  const value = Math.min(100, Math.max(0, ((now - start) / (end - start || 1)) * 100))
+  return (
+    <div>
+      <div className="flex justify-between text-xs text-ink-soft">
+        <span>{t('batches.primeProgress')}</span>
+        <span className="tabular-nums">{Math.round(value)}%</span>
+      </div>
+      <Progress value={value} className="mt-1 h-2" aria-label={t('batches.primeProgress')} />
+    </div>
+  )
+}
 
 export function BatchCard({ batch }) {
   const { t } = useI18n()
@@ -46,6 +66,7 @@ export function BatchCard({ batch }) {
           <dd className="font-semibold">{formatRWF(batch.unit_price)}</dd>
         </div>
       </dl>
+      {batch.prime_end_date && batch.stage !== 'cleared' && <PrimeProgress batch={batch} />}
       {batch.pending && (
         <Pill tone="amber" icon="clock">
           {t('sync.waitingOne')}
