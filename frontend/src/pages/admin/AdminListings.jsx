@@ -4,6 +4,7 @@ import { useState } from 'react'
 import api, { errorCode } from '../../api/client'
 import { useApi } from '../../api/useApi'
 import { useI18n } from '../../i18n/I18nProvider'
+import { useAsk } from '../../components/ui/AskDialog'
 import Button from '../../components/ui/Button'
 import Notice from '../../components/ui/Notice'
 import ErrorState from '../../components/ui/ErrorState'
@@ -23,9 +24,10 @@ export default function AdminListings() {
   const [view, setView] = useViewMode('admin-listings')
   const { data, error, reload } = useApi(`/admin/listings?status=${status}`)
   const [notice, setNotice] = useState(null)
+  const [askElement, ask] = useAsk()
 
   async function withdraw(listing) {
-    const reason = window.prompt(t('adminListings.reason'))
+    const reason = await ask({ title: t('listings.withdraw'), label: t('adminListings.reason'), required: true, confirmLabel: t('listings.withdraw'), danger: true })
     if (!reason) return
     try {
       await api.post(`/admin/listings/${listing.id}/withdraw`, { reason })
@@ -70,6 +72,7 @@ export default function AdminListings() {
 
   return (
     <div className="mx-auto max-w-7xl space-y-5">
+      {askElement}
       <PageHeader title={t('adminListings.title')} meta={data && countLabel(t, rows.length)} />
       <Toolbar>
         <SearchBox value={search} onChange={setSearch} label={t('table.searchBoard')} />
