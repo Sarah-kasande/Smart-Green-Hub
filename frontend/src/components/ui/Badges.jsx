@@ -1,5 +1,6 @@
 // Small status labels. Each one shows an icon AND a word, never colour alone (CLAUDE.md design rules).
 import Icon from './Icon'
+import { Badge } from '@/components/shadcn/badge'
 import { useI18n } from '../../i18n/I18nProvider'
 
 const TONES = {
@@ -11,12 +12,13 @@ const TONES = {
   grey: 'bg-line/60 text-ink-soft',
 }
 
+// Built on the shadcn/ui Badge; the tone colours come from the palette (risk / status tokens)
 export function Pill({ tone = 'grey', icon, children }) {
   return (
-    <span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-sm font-semibold ${TONES[tone]}`}>
+    <Badge variant="outline" className={`gap-1.5 border-transparent px-2.5 py-1 text-sm font-semibold [&>svg]:size-4 ${TONES[tone]}`}>
       {icon && <Icon name={icon} size={16} />}
       {children}
-    </span>
+    </Badge>
   )
 }
 
