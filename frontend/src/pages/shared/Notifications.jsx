@@ -5,6 +5,7 @@ import { useApi } from '../../api/useApi'
 import { useI18n } from '../../i18n/I18nProvider'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
+import Reveal from '../../components/ui/Reveal'
 import ErrorState from '../../components/ui/ErrorState'
 import PageLoader from '../../components/ui/PageLoader'
 import { EmptyState, PageHeader } from '../../components/ui/Layout'
@@ -49,8 +50,9 @@ export default function Notifications() {
       {data && data.items.length > 0 && (
         <Card className="p-0 sm:p-0">
           <ul className="divide-y divide-line">
-            {data.items.map((n) => (
+            {data.items.map((n, i) => (
               <li key={n.id} className={`px-5 py-4 ${n.read_at ? '' : 'bg-info'}`}>
+                <Reveal delay={Math.min(i, 8) * 40}>
                 <div className="min-w-0">
                   <p className={n.read_at ? '' : 'font-semibold'}>{notificationText(t, n)}</p>
                   <p className="text-sm text-ink-soft">
@@ -58,6 +60,7 @@ export default function Notifications() {
                     {!n.read_at && ` · ${t('notifications.new')}`}
                   </p>
                 </div>
+                </Reveal>
               </li>
             ))}
           </ul>
