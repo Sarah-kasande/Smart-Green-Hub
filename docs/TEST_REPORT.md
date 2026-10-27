@@ -1,6 +1,6 @@
 # Smart Green Hub: test report
 
-Date of the runs: 22 October 2026 (layout redesign); earlier rows from 20 October 2026. Environment: Windows 11, Node.js 24, MySQL 8.4.11 in Docker
+Date of the runs: 27 October 2026 (shadcn/ui redesign); earlier rows from 20-22 October 2026. Environment: Windows 11, Node.js 24, MySQL 8.4.11 in Docker
 (same version as the Aiven production database), Microsoft Edge (headless) for browser tests.
 All tests use local test databases and fake accounts; none touch the production database
 (the test setup aborts if `DB_HOST` points to Aiven).
@@ -13,8 +13,8 @@ All tests use local test databases and fake accounts; none touch the production 
 | API tests: auth, roles, verification, uploads, batches, sales, expenses, sync, alerts, planting, Surplus Board, hand-over, impact, admin, notifications | Jest + Supertest | 93 / 93 passed |
 | Frontend-backend contract: every API call found in `frontend/src` exists in the backend; every admin page GET answers 200 | Jest + Supertest | 69 / 69 passed |
 | One-time codes and email outbox: correct / wrong / expired code, 5-try lock, resend invalidates the old code, 60 s and daily limits, per-IP limits, sent / failed / skipped statuses with Brevo's exact error, admin report and retry | Jest + Supertest | included below |
-| **Total backend** | | **231 / 231 passed** |
-| End-to-end tests in a real browser (390 px mobile and 1440 px desktop) | Playwright + Edge | **23 / 23 passed** |
+| **Total backend** | | **233 / 233 passed** |
+| End-to-end tests in a real browser (390 px mobile and 1440 px desktop) | Playwright + Edge | **24 / 24 passed** |
 | Accessibility, performance, best practices | Lighthouse 12 (mobile profile) | see section 4 |
 | Load test: 50 concurrent users | `backend/scripts/load-test.js` | p95 243 ms, 0 errors (local) |
 | Dependency audit | `npm audit --omit=dev` | frontend 0; backend 2 moderate (explained in section 5) |
@@ -64,31 +64,43 @@ database and its own app on port 5174).
 | 21 | Phone: the Menu drawer shows the same groups and closes after choosing a page; every bottom-bar target is at least 48 px high; no horizontal scrolling at 390 px | Passed |
 | 22 | User menu: "Profile and settings" and "Sign out" | Passed |
 | 23 | Public: a wrong password shows a clear message (unchanged) | Passed |
+| 24 | Ctrl+K search finds "Audit log" and opens it | Passed |
+
+Updated for the shadcn/ui redesign: the user menu items are menu items (shadcn dropdown); Settings opens the
+"Appearance" tab before choosing Dark; "Request plants" fills the form in a dialog / bottom sheet; the landing
+test also checks the hero photo's text description and the photo credits.
 
 In step 7 of the main flow the request status is now chosen in the toolbar dropdown ("By status").
 
 ## 4. Lighthouse (mobile profile, production build)
 
-Run on 22 October 2026 after the layout redesign: Lighthouse 12, mobile profile, Microsoft Edge headless,
-production build served by `vite preview` with the local e2e API. Signed-in pages were measured with fake
-test accounts (the final URL was checked: no redirect to the sign-in page).
+Run on 27 October 2026 after the shadcn/ui redesign: Lighthouse 12, mobile profile (simulated low-end phone:
+4x slower processor, slow 4G), Microsoft Edge headless, production build served by `vite preview` with the local
+e2e API. Signed-in pages measured with fake test accounts (no redirect to sign-in). Scores vary by about +-5
+between runs.
 
-| Page | Performance | Accessibility | Best practices | Largest Contentful Paint |
-|------|-------------|---------------|----------------|--------------------------|
-| Landing `/` | 95 | 100 | 100 | 2.5 s |
-| Sign in `/login` | 93 | 100 | 100 | 2.6 s |
-| Admin dashboard `/admin` | 95 | 100 | 100 | 2.6 s |
-| Verification queue `/admin/verification` | 95 | 100 | 100 | 2.5 s |
-| Listing moderation `/admin/listings` | 96 | 100 | 100 | 2.4 s |
-| Operator dashboard `/operator` | 95 | 100 | 100 | 2.6 s |
-| Batches `/operator/batches` | 95 | 100 | 100 | 2.6 s |
-| Alerts `/operator/alerts` | 95 | 100 | 100 | 2.5 s |
+| Page | Performance | Accessibility | Best practices | First paint | Largest Contentful Paint |
+|------|-------------|---------------|----------------|-------------|--------------------------|
+| Landing `/` | 80 | 100 | 100 | 2.9 s | 3.8 s |
+| Sign in `/login` | 89 | 100 | 100 | 2.5 s | 3.0 s |
+| Admin dashboard `/admin` | 79 | 100 | 100 | 2.9 s | 3.6 s |
+| Verification queue `/admin/verification` | 78 | 100 | 100 | 3.0 s | 3.8 s |
+| Operator dashboard `/operator` | 79 | 100 | 100 | 3.0 s | 3.9 s |
+| Batches `/operator/batches` | 77 | 100 | 100 | 2.9 s | 3.9 s |
+| Alerts `/operator/alerts` | 82 | 100 | 100 | 3.0 s | 3.7 s |
 
-Before the redesign (20 October): landing 94 / 100 / 100 (LCP 2.6 s), sign in 96 / 100 / 100 (2.3 s),
-register 96 / 100 / 100 (2.4 s). Accessibility and best practices stay at 100; performance stays in the
-93-96 range (small run-to-run variation). NFR01 target LCP < 3 s: met on every page measured.
+Compared with the previous design (22 October: performance 93-96, LCP 2.4-2.6 s): accessibility and best
+practices stay at 100; performance is lower (77-89) and LCP is 3.0-3.9 s on the simulated low-end phone, so the
+NFR01 target (LCP < 3 s) is met on the sign-in page only. Reasons: the richer pages (photos, charts, more
+widgets, a larger stylesheet). Already done to limit the cost: photos in phone sizes (45-110 KB), charts and
+maps loaded only when needed, lower page parts built after the first screen, no animation library, only the
+Latin font files, the signed-in layout loaded only after signing in (and in parallel when a dashboard is
+opened directly). The first version of the redesign scored 51-85; these steps brought it to 77-89.
+Possible next steps: server-side rendering or pre-rendering of the landing page, smaller CSS, and
+`<link rel="preload">` for the hero photo.
+
 Lighthouse 12 no longer has a separate "PWA" score; installability was checked through the manifest
-(name, icons 192 / 512 / maskable, standalone display, start URL) and the service worker.
+(name, icons 192 / 512 / maskable, standalone display, start URL, shortcuts) and the service worker.
 
 ## 5. Security review (Phase 7)
 
