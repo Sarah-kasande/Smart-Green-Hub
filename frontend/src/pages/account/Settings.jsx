@@ -10,6 +10,7 @@ import Card from '../../components/ui/Card'
 import Notice from '../../components/ui/Notice'
 import VerificationBadge from '../../components/ui/VerificationBadge'
 import { PageHeader } from '../../components/ui/Layout'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/shadcn/tabs'
 import { SelectField, TextField } from '../../components/ui/Fields'
 import OrganisationForm from './OrganisationForm'
 import Documents from './Documents'
@@ -141,12 +142,37 @@ function Organisation() {
 export default function Settings() {
   const { t } = useI18n()
   const { organisation } = useAuth()
+  const tabClass = 'min-h-11 flex-1 rounded-lg px-4 font-semibold data-[state=active]:bg-surface data-[state=active]:shadow-xs'
   return (
     <div className="mx-auto max-w-3xl space-y-5">
       <PageHeader title={t('settings.title')} />
-      <Profile />
-      <Appearance />
-      {organisation && <Organisation />}
+      {/* Sections as tabs (UI.md 5.7): profile, appearance, and the organisation for nurseries and institutions */}
+      <Tabs defaultValue="profile" className="gap-5">
+        <TabsList className="h-auto w-full flex-wrap rounded-xl bg-canvas p-1">
+          <TabsTrigger value="profile" className={tabClass}>
+            {t('settings.profile')}
+          </TabsTrigger>
+          <TabsTrigger value="appearance" className={tabClass}>
+            {t('theme.title')}
+          </TabsTrigger>
+          {organisation && (
+            <TabsTrigger value="organisation" className={tabClass}>
+              {organisation.type === 'nursery' ? t('auth.nurseryDetails') : t('auth.institutionDetails')}
+            </TabsTrigger>
+          )}
+        </TabsList>
+        <TabsContent value="profile">
+          <Profile />
+        </TabsContent>
+        <TabsContent value="appearance">
+          <Appearance />
+        </TabsContent>
+        {organisation && (
+          <TabsContent value="organisation" className="space-y-5">
+            <Organisation />
+          </TabsContent>
+        )}
+      </Tabs>
     </div>
   )
 }
