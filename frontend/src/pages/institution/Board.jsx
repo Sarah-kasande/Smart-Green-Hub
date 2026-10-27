@@ -6,6 +6,7 @@ import api, { errorCode, fieldErrors } from '../../api/client'
 import { qs, useApi } from '../../api/useApi'
 import { useI18n } from '../../i18n/I18nProvider'
 import Button from '../../components/ui/Button'
+import ResponsiveDialog from '../../components/ui/ResponsiveDialog'
 import Card from '../../components/ui/Card'
 import Notice from '../../components/ui/Notice'
 import ErrorState from '../../components/ui/ErrorState'
@@ -47,7 +48,7 @@ function RequestForm({ listing, onDone, onCancel }) {
   }
 
   return (
-    <form onSubmit={submit} className="space-y-3 rounded-xl bg-canvas p-3" noValidate>
+    <form onSubmit={submit} className="space-y-4" noValidate>
       {error && error.code !== 'VALIDATION_FAILED' && <Notice type="error">{t(`errors.${error.code}`, { remaining: error.details?.remaining ?? '' })}</Notice>}
       <TextField label={t('board.quantity')} type="number" min="1" max={listing.remaining} value={quantity} onChange={(e) => setQuantity(e.target.value)} error={fields.quantity} hint={t('board.left', { n: formatNumber(listing.remaining) })} />
       <TextField label={t('board.purpose')} value={purpose} onChange={(e) => setPurpose(e.target.value)} error={fields.purpose} maxLength={255} placeholder={t('board.purposeExample')} />
@@ -67,7 +68,7 @@ function ListingCard({ listing, onRequested }) {
   const { t } = useI18n()
   const [open, setOpen] = useState(false)
   return (
-    <Card className="flex h-full flex-col gap-3">
+    <Card className="flex h-full flex-col gap-3 transition-shadow hover:shadow-md">
       <div className="flex items-start justify-between gap-2">
         <div>
           <p className="text-lg font-semibold">{listing.species?.name}</p>
@@ -91,22 +92,22 @@ function ListingCard({ listing, onRequested }) {
         {t('board.until', { date: formatDate(listing.expires_at) })}
         {listing.pickup_note ? ` · ${listing.pickup_note}` : ''}
       </p>
-      <div className="mt-auto">
-        {open ? (
-          <RequestForm
-            listing={listing}
-            onCancel={() => setOpen(false)}
-            onDone={(text) => {
-              setOpen(false)
-              onRequested(text)
-            }}
-          />
-        ) : (
-          <Button onClick={() => setOpen(true)}>
-            {t('board.request')}
-          </Button>
-        )}
+      <div className="mt-auto pt-1">
+        <Button full onClick={() => setOpen(true)}>
+          {t('board.request')}
+        </Button>
       </div>
+      {/* The request form: a dialog on wide screens, a bottom sheet on phones */}
+      <ResponsiveDialog open={open} onOpenChange={setOpen} title={`${t('board.request')}: ${listing.species?.name || ''}`} description={`${listing.nursery?.name} · ${t('board.left', { n: formatNumber(listing.remaining) })}`}>
+        <RequestForm
+          listing={listing}
+          onCancel={() => setOpen(false)}
+          onDone={(text) => {
+            setOpen(false)
+            onRequested(text)
+          }}
+        />
+      </ResponsiveDialog>
     </Card>
   )
 }
