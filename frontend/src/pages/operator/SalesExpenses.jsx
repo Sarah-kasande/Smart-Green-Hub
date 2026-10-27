@@ -7,7 +7,8 @@ import { qs, useApi } from '../../api/useApi'
 import { useI18n } from '../../i18n/I18nProvider'
 import { record } from '../../offline/sync'
 import { useBatches } from '../../offline/useOfflineData'
-import BarChart from '../../components/ui/BarChart'
+import { IncomeExpenseChart } from '../../components/charts'
+import { useAsk } from '../../components/ui/AskDialog'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
 import Notice from '../../components/ui/Notice'
@@ -142,9 +143,10 @@ function History() {
   const expenses = useApi('/operator/expenses')
   const [message, setMessage] = useState(null)
   const [search, setSearch] = useState('')
+  const [askElement, ask] = useAsk()
 
   async function undo(kind, id) {
-    const reason = window.prompt(t('sales.undoConfirm'))
+    const reason = await ask({ title: t('sales.undo'), label: t('sales.undoConfirm'), confirmLabel: t('sales.undo') })
     if (reason === null) return
     try {
       await api.delete(`/operator/${kind}/${id}`, { data: { reason } })
@@ -189,6 +191,7 @@ function History() {
 
   return (
     <div className="space-y-6">
+      {askElement}
       {message && <Notice type={message.type}>{t(message.text)}</Notice>}
       <Toolbar>
         <SearchBox value={search} onChange={setSearch} />
@@ -227,7 +230,7 @@ function Profit() {
       {!data && !error && <PageLoader />}
       {data && (
         <>
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <StatCard label={t('sales.income')} value={formatRWF(data.income)} hint={t('sales.unitsSold', { n: formatNumber(data.units_sold) })} />
             <StatCard label={t('sales.expensesLabel')} value={formatRWF(data.expenses)} />
             <StatCard label={data.profit < 0 ? t('sales.loss') : t('sales.profit')} value={formatRWF(data.profit)} />
@@ -235,7 +238,12 @@ function Profit() {
           {data.monthly.length > 0 && (
             <Card>
               <h2 className="mb-3 text-lg font-semibold">{t('sales.monthly')}</h2>
-              <BarChart title={t('sales.monthlyIncome')} data={data.monthly.map((m) => ({ label: formatMonth(m.month), value: m.income }))} format={(v) => formatNumber(v)} />
+              <IncomeExpenseChart
+                title={t('sales.monthly')}
+                labels={{ income: t('sales.income'), expenses: t('sales.expensesLabel') }}
+                data={data.monthly.map((m) => ({ label: formatMonth(m.month), income: m.income, expenses: m.expenses }))}
+                format={(v) => formatNumber(v)}
+              />
             </Card>
           )}
           <div className="grid gap-5 lg:grid-cols-3">
