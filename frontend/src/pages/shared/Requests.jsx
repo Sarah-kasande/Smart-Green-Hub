@@ -7,7 +7,9 @@ import api, { errorCode, fieldErrors } from '../../api/client'
 import { useApi } from '../../api/useApi'
 import { useAuth } from '../../auth/AuthContext'
 import { useI18n } from '../../i18n/I18nProvider'
+import { useAsk } from '../../components/ui/AskDialog'
 import Button from '../../components/ui/Button'
+import Stepper from '../../components/ui/Stepper'
 import Card from '../../components/ui/Card'
 import Notice from '../../components/ui/Notice'
 import ErrorState from '../../components/ui/ErrorState'
@@ -68,6 +70,7 @@ function RequestCard({ request, side, institutionDistrict, onChanged }) {
   const { t } = useI18n()
   const [busy, setBusy] = useState(false)
   const [reason, setReason] = useState('')
+  const [askElement, ask] = useAsk()
   const other = side === 'operator' ? request.institution : request.nursery
   const myConfirm = side === 'operator' ? request.nursery_confirmed_at : request.institution_confirmed_at
   const theirConfirm = side === 'operator' ? request.institution_confirmed_at : request.nursery_confirmed_at
@@ -86,6 +89,7 @@ function RequestCard({ request, side, institutionDistrict, onChanged }) {
 
   return (
     <Card className="space-y-3">
+      {askElement}
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <p className="text-lg font-semibold">
@@ -97,6 +101,17 @@ function RequestCard({ request, side, institutionDistrict, onChanged }) {
         </div>
         <StatusBadge group="requestStatus" status={request.status} />
       </div>
+      {['pending', 'approved', 'fulfilled'].includes(request.status) && (
+        <Stepper
+          label={t('institutionHome.tracker')}
+          steps={[
+            { label: t('institutionHome.stepRequested'), done: true },
+            { label: t('institutionHome.stepApproved'), done: request.status !== 'pending' },
+            { label: t('institutionHome.stepHandedOver'), done: Boolean(request.nursery_confirmed_at) },
+            { label: t('institutionHome.stepReceived'), done: Boolean(request.institution_confirmed_at) },
+          ]}
+        />
+      )}
       <dl className="grid gap-3 sm:grid-cols-2">
         <Fact label={t('requests.purpose')}>{request.purpose}</Fact>
         <Fact label={t('listings.offerType')}>{request.offer_type === 'free' ? t('listings.free') : t('board.priceEach', { price: formatRWF(request.discounted_price) })}</Fact>
@@ -157,7 +172,7 @@ function RequestCard({ request, side, institutionDistrict, onChanged }) {
       {request.status === 'approved' && myConfirm && !theirConfirm && <Notice type="info">{t('requests.waitingOther')}</Notice>}
 
       {side === 'institution' && ['pending', 'approved'].includes(request.status) && !myConfirm && (
-        <Button variant="ghost" disabled={busy} onClick={() => window.confirm(t('requests.cancelConfirm')) && act(`/institution/requests/${request.id}/cancel`, {}, 'requests.cancelled')}>
+        <Button variant="ghost" disabled={busy} onClick={async () => (await ask({ title: t('requests.cancel'), text: t('requests.cancelConfirm'), confirmLabel: t('requests.cancel'), danger: true })) && act(`/institution/requests/${request.id}/cancel`, {}, 'requests.cancelled')}>
           {t('requests.cancel')}
         </Button>
       )}
