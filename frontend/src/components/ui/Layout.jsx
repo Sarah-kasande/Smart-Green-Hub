@@ -1,12 +1,14 @@
 // Building blocks used by most pages.
 import { useId } from 'react'
 import Icon from './Icon'
+import CountUp from './CountUp'
+import Sparkline from './Sparkline'
 
 // Page title on the left; a short count or summary (`meta`, e.g. "28 entries") and buttons on the right.
 export function PageHeader({ title, meta, actions }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-      <h1 className="text-2xl font-semibold sm:text-[1.75rem]">{title}</h1>
+      <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{title}</h1>
       {(meta || actions) && (
         <div className="flex flex-wrap items-center gap-3">
           {meta && <p className="text-ink-soft">{meta}</p>}
@@ -18,12 +20,31 @@ export function PageHeader({ title, meta, actions }) {
 }
 
 // A number with its label (dashboards). Text only: the label says what the number means.
-export function StatCard({ label, value, hint }) {
+//   value: ready text ("RWF 2,000"), or count: a number that counts up when it appears (CountUp)
+//   trend: optional list of numbers drawn as a small line (e.g. sales per month)
+//   accent: a short note under the number, e.g. "+12% vs last month"
+export function StatCard({ label, value, count, decimals = 0, prefix = '', suffix = '', hint, trend, trendClass, children }) {
   return (
-    <div className="rounded-xl border border-line bg-surface px-5 py-4">
+    <div className="flex flex-col rounded-2xl border border-line bg-surface px-4 py-4 shadow-xs sm:px-5">
       <p className="text-sm font-semibold text-ink-soft">{label}</p>
-      <p className="mt-1 text-2xl font-semibold sm:text-3xl">{value}</p>
+      <p className="mt-1 text-2xl font-bold tracking-tight tabular-nums sm:text-3xl">
+        {count !== undefined ? (
+          <>
+            {prefix}
+            <CountUp value={count} decimals={decimals} />
+            {suffix}
+          </>
+        ) : (
+          value
+        )}
+      </p>
       {hint && <p className="mt-1 text-sm text-ink-soft">{hint}</p>}
+      {trend && (
+        <div className="mt-auto pt-3">
+          <Sparkline values={trend} className={trendClass} />
+        </div>
+      )}
+      {children}
     </div>
   )
 }
@@ -31,8 +52,8 @@ export function StatCard({ label, value, hint }) {
 // One clear "nothing here" box, optionally with a short explanation and a button
 export function EmptyState({ title, text, action }) {
   return (
-    <div className="rounded-xl border border-line bg-info px-5 py-5">
-      <p className="text-base text-ink">{title}</p>
+    <div className="rounded-2xl border border-dashed border-line bg-surface px-5 py-6">
+      <p className="text-base font-semibold text-ink">{title}</p>
       {text && <p className="mt-1 text-sm text-ink-soft">{text}</p>}
       {action && <div className="mt-3">{action}</div>}
     </div>
