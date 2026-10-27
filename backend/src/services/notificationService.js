@@ -15,6 +15,7 @@
 //     as it was: "Retry" issues a NEW code instead (adminService.retryEmail). in_app = false.
 // The unique event_key (e.g. "alert:12") means the same event is never queued twice for a person.
 const { Op } = require('sequelize');
+const { waitUntil } = require('@vercel/functions');
 const { Notification, User } = require('../models');
 const { isTest } = require('../config/env');
 const { sendEmail, maskEmail } = require('./emailService');
@@ -101,9 +102,14 @@ async function dispatchPending({ limit = 50 } = {}) {
 }
 
 // Fire-and-forget dispatch after a request finished (not in tests, where tests call it directly).
+// On Vercel the function may be paused as soon as the answer is sent, so waitUntil keeps it
+// running until the emails are sent. Elsewhere (local, Render) the server keeps running anyway.
 function dispatchSoon() {
   if (isTest) return;
-  setImmediate(() => dispatchPending().catch((e) => console.error('Notification dispatch failed:', e.message)));
+  const work = new Promise((resolve) => setImmediate(resolve))
+    .then(dispatchPending)
+    .catch((e) => console.error('Notification dispatch failed:', e.message));
+  if (process.env.VERCEL) waitUntil(work);
 }
 
 // ---- In-app notifications (only rows with in_app = true) ----
