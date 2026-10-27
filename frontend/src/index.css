@@ -1,5 +1,27 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 @import "leaflet/dist/leaflet.css";
+/* Manrope, self-hosted (works offline in the PWA; SIL Open Font License, src/assets/fonts).
+   Only the Latin files: they cover English and Kinyarwanda (40 KB instead of 5 alphabets). */
+@font-face {
+  font-family: "Manrope Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 200 800;
+  src: url("./assets/fonts/manrope-latin-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Manrope Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 200 800;
+  src: url("./assets/fonts/manrope-latin-ext-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* Dark mode is <html data-theme="dark"> (src/theme/ThemeProvider.jsx), also for shadcn's dark: classes */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 /* Design tokens from CLAUDE.md / design/. Use them as Tailwind classes,
    e.g. bg-surface, text-ink, bg-leaf, text-leaf-text, bg-risk-high.
@@ -29,7 +51,98 @@
   --color-risk-high: #FBE8E6;
   --color-risk-high-text: #A12A1F;
 
-  --font-sans: "Inter", "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+  --font-sans: "Manrope Variable", "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+
+  /* Animations used by the Magic UI components (marquee, shimmer button) */
+  --animate-marquee: marquee var(--duration) infinite linear;
+  --animate-marquee-vertical: marquee-vertical var(--duration) linear infinite;
+  --animate-shimmer-slide: shimmer-slide var(--speed) ease-in-out infinite alternate;
+  --animate-spin-around: spin-around calc(var(--speed) * 2) infinite linear;
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to { transform: translateX(calc(-100% - var(--gap))); }
+  }
+  @keyframes marquee-vertical {
+    from { transform: translateY(0); }
+    to { transform: translateY(calc(-100% - var(--gap))); }
+  }
+  @keyframes shimmer-slide {
+    to { transform: translate(calc(100cqw - 100%), 0); }
+  }
+  @keyframes spin-around {
+    0% { transform: translateZ(0) rotate(0); }
+    15%, 35% { transform: translateZ(0) rotate(90deg); }
+    65%, 85% { transform: translateZ(0) rotate(270deg); }
+    100% { transform: translateZ(0) rotate(360deg); }
+  }
+}
+
+/* shadcn/ui reads its own variable names. They point at the SAME palette above (no new colours),
+   so light and dark mode switch together. */
+:root {
+  --radius: 0.75rem;
+  --background: var(--color-canvas);
+  --foreground: var(--color-ink);
+  --card: var(--color-surface);
+  --card-foreground: var(--color-ink);
+  --popover: var(--color-surface);
+  --popover-foreground: var(--color-ink);
+  --primary: var(--color-leaf);
+  --primary-foreground: #FFFFFF;
+  --secondary: var(--color-leaf-light);
+  --secondary-foreground: var(--color-leaf-text);
+  --muted: var(--color-info);
+  --muted-foreground: var(--color-ink-soft);
+  --accent: var(--color-teal-light);
+  --accent-foreground: var(--color-teal-text);
+  --destructive: var(--color-risk-high-text);
+  --border: var(--color-line);
+  --input: var(--color-line);
+  --ring: var(--color-teal);
+  --chart-1: var(--color-leaf);
+  --chart-2: var(--color-teal);
+  --chart-3: var(--color-navy);
+  --chart-4: var(--color-risk-medium-text);
+  --chart-5: var(--color-ink-soft);
+  --sidebar: var(--color-surface);
+  --sidebar-foreground: var(--color-ink);
+
+  /* Glass: the surface colour with transparency (section 2.2 of UI.md) */
+  --glass-blur: 14px;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
 }
 
 /* Dark mode: chosen in Settings -> Appearance (saved on this device).
@@ -67,10 +180,89 @@
   body {
     @apply bg-canvas text-ink antialiased;
   }
+  /* Borders without a colour class use the line colour (shadcn components rely on this) */
+  *,
+  ::before,
+  ::after {
+    border-color: var(--color-line);
+  }
+  /* Phones with a notch: keep content out of the rounded corners and the home indicator */
+  body {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
   /* A clear keyboard focus ring everywhere (NFR04) */
   :focus-visible {
     outline: 3px solid var(--color-teal);
     outline-offset: 2px;
+  }
+}
+
+/* ---- Glass components (UI.md section 2.2) ----
+   Only over photos and gradients, never behind tables or forms.
+   1. a nearly solid surface first (old browsers without color-mix / backdrop-filter)
+   2. the see-through version where the browser supports it
+   3. solid again for people who ask for less transparency or more contrast */
+@layer components {
+  .glass,
+  .glass-strong {
+    background: var(--color-surface);
+    border: 1px solid var(--color-line);
+  }
+  @supports (backdrop-filter: blur(1px)) {
+    .glass {
+      background: color-mix(in srgb, var(--color-surface) 62%, transparent);
+      border-color: color-mix(in srgb, var(--color-surface) 45%, transparent);
+      backdrop-filter: blur(var(--glass-blur)) saturate(140%);
+    }
+    .glass-strong {
+      background: color-mix(in srgb, var(--color-surface) 82%, transparent);
+      border-color: color-mix(in srgb, var(--color-line) 70%, transparent);
+      backdrop-filter: blur(var(--glass-blur)) saturate(140%);
+    }
+  }
+  @media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+    .glass,
+    .glass-strong {
+      background: var(--color-surface);
+      backdrop-filter: none;
+    }
+  }
+  /* Long page parts below the first screen: the browser lays them out only when they come near */
+  .below-fold > section {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 600px;
+  }
+  /* A light dot texture (decorative), in the line colour */
+  .dot-pattern {
+    background-image: radial-gradient(var(--color-line) 1.2px, transparent 1.2px);
+    background-size: 22px 22px;
+  }
+  /* Dark shade at the bottom of a photo, so white text on it stays readable */
+  .hero-shade {
+    background: linear-gradient(180deg, transparent 35%, color-mix(in srgb, var(--color-ink) 72%, transparent));
+  }
+  /* Even darkening over a whole photo (white text on top), dark in both light and dark mode */
+  .photo-dim {
+    background: color-mix(in srgb, var(--color-ink) 58%, transparent);
+  }
+  [data-theme="dark"] .photo-dim {
+    background: color-mix(in srgb, var(--color-canvas) 62%, transparent);
+  }
+  [data-theme="dark"] .hero-shade {
+    background: linear-gradient(180deg, transparent 35%, color-mix(in srgb, var(--color-canvas) 80%, transparent));
+  }
+}
+
+/* People who turn off animations in their phone settings get none (Magic UI, marquee, toasts) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 
