@@ -61,9 +61,20 @@ test('phone: bottom bar, menu drawer with the same groups, no horizontal scrolli
   expect(scrollWidth).toBeLessThanOrEqual(390)
 })
 
-test('user menu: profile and settings, sign out', async () => {
+test('search (Ctrl+K) finds a page and opens it', async () => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto('/admin')
+  await expect(page.getByRole('heading', { name: 'Administrator dashboard' })).toBeVisible()
+  await page.keyboard.press('Control+k')
+  const search = page.getByRole('dialog', { name: 'Search' })
+  await search.getByRole('combobox').fill('audit')
+  await search.getByRole('option', { name: 'Audit log' }).click()
+  await expect(page.getByRole('heading', { level: 1, name: 'Audit log' })).toBeVisible()
+})
+
+test('user menu (shadcn dropdown): profile and settings, sign out', async () => {
   await page.getByRole('button', { name: /account menu/ }).click()
-  await expect(page.getByRole('link', { name: 'Profile and settings' })).toBeVisible()
-  await page.getByRole('button', { name: 'Sign out' }).click()
+  await expect(page.getByRole('menuitem', { name: 'Profile and settings' })).toBeVisible()
+  await page.getByRole('menuitem', { name: 'Sign out' }).click()
   await expect(page).toHaveURL(/\/login$/)
 })
