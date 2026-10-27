@@ -6,6 +6,7 @@
 import { useI18n } from '../../i18n/I18nProvider'
 import { formatNumber } from '../../utils/format'
 import useMediaQuery from './useMediaQuery'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/shadcn/table'
 
 const WIDE = '(min-width: 768px)' // tables from tablet width up
 const FILTER_PANEL = '(min-width: 1280px)' // room for the table AND the filter panel
@@ -24,7 +25,7 @@ export function SearchBox({ value, onChange, label }) {
       onChange={(e) => onChange(e.target.value)}
       placeholder={text}
       aria-label={text}
-      className="min-h-12 w-full rounded-lg border border-line bg-surface px-3 text-base text-ink placeholder:text-ink-soft focus:border-teal focus:outline-none sm:w-auto sm:min-w-64 sm:flex-1 lg:max-w-md"
+      className="min-h-12 w-full rounded-xl border border-line bg-surface px-3 text-base text-ink shadow-xs placeholder:text-ink-soft focus:border-teal focus:outline-none sm:w-auto sm:min-w-64 sm:flex-1 lg:max-w-md"
     />
   )
 }
@@ -36,7 +37,7 @@ export function FilterSelect({ label, value, onChange, options }) {
       aria-label={label}
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="min-h-12 rounded-lg border border-line bg-surface px-3 text-base font-medium text-ink focus:border-teal focus:outline-none"
+      className="min-h-12 rounded-xl border border-line bg-surface px-3 text-base font-medium text-ink shadow-xs focus:border-teal focus:outline-none"
     >
       {options.map((o) => (
         <option key={o.value} value={o.value}>
@@ -54,7 +55,7 @@ export function ViewToggle({ value, onChange, options, always = false }) {
   const wide = useMediaQuery(WIDE)
   if (!wide && !always) return null
   return (
-    <div role="group" aria-label={t('table.view')} className="inline-flex self-start overflow-hidden rounded-lg border border-line bg-surface sm:ml-auto sm:self-auto">
+    <div role="group" aria-label={t('table.view')} className="inline-flex self-start overflow-hidden rounded-xl border border-line bg-surface shadow-xs sm:ml-auto sm:self-auto">
       {options.map((o) => (
         <button
           key={o.value}
@@ -96,7 +97,7 @@ export function TabBar({ label, value, onChange, options }) {
 export function FilterPanel({ groups }) {
   const { t } = useI18n()
   return (
-    <aside aria-label={t('table.filter')} className="overflow-hidden rounded-xl border border-line bg-surface">
+    <aside aria-label={t('table.filter')} className="sticky top-20 overflow-hidden rounded-2xl border border-line bg-surface shadow-xs">
       <h2 className="bg-navy px-5 py-3 text-sm font-bold uppercase tracking-wider text-white">{t('table.filter')}</h2>
       {groups.map((group) => (
         <div key={group.label} className="border-b border-line px-3 py-4 last:border-b-0">
@@ -148,37 +149,37 @@ export function DataTable({ columns, rows, rowKey, empty, view = 'table', render
 
   if (wide && view === 'table') {
     return (
-      <div className="overflow-x-auto rounded-xl border border-line bg-surface">
-        <table className="w-full text-left text-sm">
+      <div className="overflow-x-auto rounded-2xl border border-line bg-surface shadow-xs">
+        <Table className="text-left">
           {caption && <caption className="sr-only">{caption}</caption>}
-          <thead className="border-b border-line">
-            <tr>
+          <TableHeader>
+            <TableRow className="hover:bg-transparent">
               {columns.map((c) => (
-                <th key={c.key} scope="col" className={`whitespace-nowrap px-4 py-4 text-xs font-semibold uppercase tracking-wider text-ink-soft ${c.align === 'right' ? 'text-right' : ''}`}>
+                <TableHead key={c.key} scope="col" className={`h-auto px-4 py-4 text-xs font-semibold uppercase tracking-wider text-ink-soft ${c.align === 'right' ? 'text-right' : ''}`}>
                   {c.header}
-                </th>
+                </TableHead>
               ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-line">
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {rows.length === 0 && (
-              <tr>
-                <td colSpan={columns.length} className="bg-info px-5 py-5 text-base text-ink">
+              <TableRow className="hover:bg-transparent">
+                <TableCell colSpan={columns.length} className="bg-info px-5 py-5 text-base whitespace-normal text-ink">
                   {empty}
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             )}
             {rows.map((row) => (
-              <tr key={rowKey(row)}>
+              <TableRow key={rowKey(row)} className="hover:bg-canvas/70">
                 {columns.map((c) => (
-                  <td key={c.key} className={`px-4 py-4 align-middle ${c.align === 'right' ? 'whitespace-nowrap text-right tabular-nums' : ''} ${c.primary ? 'min-w-48 font-semibold' : ''}`}>
+                  <TableCell key={c.key} className={`px-4 py-4 whitespace-normal ${c.align === 'right' ? 'whitespace-nowrap text-right tabular-nums' : ''} ${c.primary ? 'min-w-48 font-semibold' : ''}`}>
                     {c.render(row)}
-                  </td>
+                  </TableCell>
                 ))}
-              </tr>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
     )
   }
@@ -198,7 +199,7 @@ export function DataTable({ columns, rows, rowKey, empty, view = 'table', render
 function StackedCard({ columns, row }) {
   const main = columns.find((c) => c.primary)
   return (
-    <div className="h-full rounded-xl border border-line bg-surface p-4">
+    <div className="h-full rounded-2xl border border-line bg-surface p-4 shadow-xs">
       {main && <div className="mb-3 font-semibold">{main.render(row)}</div>}
       <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
         {columns
@@ -221,5 +222,5 @@ function StackedCard({ columns, row }) {
 
 // The one clear "nothing here" line
 export function EmptyBox({ children }) {
-  return <p className="rounded-xl border border-line bg-info px-5 py-5 text-base text-ink">{children}</p>
+  return <p className="rounded-2xl border border-dashed border-line bg-surface px-5 py-6 text-base font-semibold text-ink">{children}</p>
 }
