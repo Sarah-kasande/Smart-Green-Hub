@@ -143,10 +143,13 @@ test('7. approval and a two-sided hand-over; impact appears for everyone', async
 
 test('8. dark mode can be switched on in Settings and stays after reload', async () => {
   await institution.goto('/institution/settings')
+  // Settings sections are tabs: open "Appearance" first
+  await institution.getByRole('tab', { name: 'Appearance' }).click()
   await institution.getByText('Dark', { exact: true }).click()
   await expect(institution.locator('html')).toHaveAttribute('data-theme', 'dark')
   await institution.reload()
   await expect(institution.locator('html')).toHaveAttribute('data-theme', 'dark')
+  await institution.getByRole('tab', { name: 'Appearance' }).click()
   await institution.getByText('Light', { exact: true }).click()
   await expect(institution.locator('html')).toHaveAttribute('data-theme', 'light')
 })
