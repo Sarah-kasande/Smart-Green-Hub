@@ -4,6 +4,7 @@ import { useState } from 'react'
 import api, { errorCode, fieldErrors } from '../../api/client'
 import { useApi } from '../../api/useApi'
 import { useI18n } from '../../i18n/I18nProvider'
+import { useAsk } from '../../components/ui/AskDialog'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
 import Notice from '../../components/ui/Notice'
@@ -148,9 +149,10 @@ export default function RulesSpecies() {
   const [editing, setEditing] = useState(null) // species id, 'new' or null
   const [notice, setNotice] = useState(null)
   const [search, setSearch] = useState('')
+  const [askElement, ask] = useAsk()
 
   async function archive(s) {
-    const reason = window.prompt(t('species.archiveConfirm'))
+    const reason = await ask({ title: `${t('species.archive')}: ${s.common_name}`, label: t('species.archiveConfirm'), confirmLabel: t('species.archive') })
     if (reason === null) return
     await api.delete(`/admin/species/${s.id}`, { data: { reason } })
     setNotice('species.archived')
@@ -234,6 +236,7 @@ export default function RulesSpecies() {
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
+      {askElement}
       <PageHeader title={t('rules.title')} />
       {notice && <Notice type="success">{t(notice)}</Notice>}
 
