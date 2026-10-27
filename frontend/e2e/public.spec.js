@@ -8,6 +8,9 @@ test('landing page in English and Kinyarwanda, with impact figures from real rec
   await expect(page.getByRole('heading', { name: 'Greening impact so far' })).toBeVisible()
   await expect(page.getByText('Plants redirected')).toBeVisible()
   await expect(page.getByText('…')).toHaveCount(0) // the numbers have loaded
+  // The hero photo (free licence) has a text description, and the photo credits are in the footer
+  await expect(page.getByRole('img', { name: /tea plantation/i })).toBeVisible()
+  await expect(page.getByText('Photo credits')).toBeVisible()
 
   await page.getByRole('button', { name: 'Kinyarwanda' }).click()
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Ibimera bike bipfa ubusa.')
