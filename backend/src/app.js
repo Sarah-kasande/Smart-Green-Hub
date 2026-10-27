@@ -35,14 +35,14 @@ app.use(cookieParser());
 app.get('/api/health', async (req, res) => {
   try {
     await sequelize.authenticate();
-    // version: the git commit Render deployed (RENDER_GIT_COMMIT), so the app can see whether
-    // the API runs the same version as the frontend. 'local' on your computer.
+    // version: the git commit that was deployed (RENDER_GIT_COMMIT on Render, VERCEL_GIT_COMMIT_SHA
+    // on Vercel), so you can check the API runs the same version as the frontend. 'local' on your computer.
     // email: 'configured' or 'not configured' (no key or no valid sender). Never shows a secret.
     res.json({
       status: 'ok',
       database: 'connected',
       email: emailConfig().configured ? 'configured' : 'not configured',
-      version: (process.env.RENDER_GIT_COMMIT || 'local').slice(0, 7),
+      version: (process.env.RENDER_GIT_COMMIT || process.env.VERCEL_GIT_COMMIT_SHA || 'local').slice(0, 7),
     });
   } catch (e) {
     res.status(500).json({ status: 'error', database: e.message });
