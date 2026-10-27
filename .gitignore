@@ -3,3 +3,6 @@ node_modules/
 dist
 .DS_Store
 ca.pem
+
+# Private design notes (not published)
+UI.md
