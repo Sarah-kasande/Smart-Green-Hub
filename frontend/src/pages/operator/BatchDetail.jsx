@@ -2,10 +2,12 @@
 // its sales and its history.
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import { toast } from 'sonner'
 import api, { errorCode, fieldErrors } from '../../api/client'
 import { useApi } from '../../api/useApi'
 import { useI18n } from '../../i18n/I18nProvider'
 import { record } from '../../offline/sync'
+import { useAsk } from '../../components/ui/AskDialog'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
 import Notice from '../../components/ui/Notice'
@@ -110,6 +112,7 @@ export default function BatchDetail() {
   const navigate = useNavigate()
   const { data, error, reload } = useApi(`/operator/batches/${id}`)
   const [notice, setNotice] = useState(null)
+  const [askElement, ask] = useAsk()
 
   if (error && !data) return <ErrorState code={error} onRetry={reload} />
   if (!data) return <PageLoader />
@@ -121,19 +124,20 @@ export default function BatchDetail() {
   }
 
   async function archive() {
-    const reason = window.prompt(t('batches.archiveConfirm'))
+    const reason = await ask({ title: t('batches.archive'), label: t('batches.archiveConfirm'), confirmLabel: t('batches.archive'), danger: true })
     if (reason === null) return
     try {
       await api.delete(`/operator/batches/${batch.id}`, { data: { reason } })
       navigate('/operator/batches', { state: { notice: { type: 'success', text: 'batches.archived' } } })
     } catch (err) {
       setNotice(null)
-      window.alert(t(`errors.${errorCode(err)}`))
+      toast.error(t(`errors.${errorCode(err)}`))
     }
   }
 
   return (
     <div className="mx-auto max-w-7xl space-y-5">
+      {askElement}
       {/* Breadcrumb back to the list */}
       <nav aria-label={t('common.back')} className="text-sm">
         <Link to="/operator/batches" className="inline-flex min-h-12 items-center font-semibold text-teal-text underline">
