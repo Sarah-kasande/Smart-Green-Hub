@@ -1,0 +1,11 @@
+{
+  "name": "smart-green-hub",
+  "private": true,
+  "description": "Starts the backend API and the frontend app together for local development",
+  "scripts": {
+    "dev": "node scripts/dev.js",
+    "setup": "npm install --prefix backend && npm install --prefix frontend",
+    "test": "npm test --prefix backend && npm run test:e2e --prefix frontend",
+    "lint": "npm run lint --prefix frontend"
+  }
+}
