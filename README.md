@@ -113,6 +113,23 @@ Local development and tests use a **local MySQL 8.4** in Docker, never the produ
    notifications) are printed in the API terminal and marked "skipped". In development a code email that Brevo
    refuses is also printed there, so you can still test; its status stays "failed".
 
+## User interface
+
+- **shadcn/ui** components (dialogs, bottom sheets, menus, Ctrl+K search, tabs, table, form fields, badges,
+  toasts, charts with Recharts) live in `frontend/src/components/shadcn/` as our own code; `components.json`
+  configures the `npx shadcn@latest add <name>` tool (JavaScript, alias `@/` = `src/`). Two **Magic UI** effects
+  are used on the landing page (shimmer button, marquee). App-specific components are in `src/components/ui/`.
+- **Colours** are the CLAUDE.md palette only: shadcn's colour names (`--primary`, `--card`, ...) point at the
+  palette tokens in `src/index.css`; dark mode is `<html data-theme="dark">`. Glass panels (`.glass`,
+  `.glass-strong`) are the surface colour with transparency and fall back to solid colours.
+- **Font**: Manrope (self-hosted, Latin only, `src/assets/fonts/`, SIL Open Font License).
+- **Photos**: Wikimedia Commons, free licences, WebP in phone and desktop sizes in `public/photos/`;
+  authors and licences in `src/content/photos.js` and in the footer ("Photo credits").
+- **Phones / PWA**: bottom bar + side menu, bottom sheets for forms, "Install app" in the user menu,
+  home-screen shortcuts, safe areas for notched phones. Photos are cached after the first visit.
+- **Demo data** for presentations (local database only): `cd backend` then
+  `DEMO_PASSWORD=<password> node scripts/seed-demo.js [--fill=<operator email>]`. Everything is labelled "[DEMO]".
+
 ## Email and one-time codes
 
 - Registration and password reset send a **6-digit code** (valid 10 minutes, single use, 5 tries, a new code
@@ -130,8 +147,8 @@ Local development and tests use a **local MySQL 8.4** in Docker, never the produ
 
 | Command | What runs |
 |---------|-----------|
-| `cd backend && npm test` | 231 Jest unit, API, one-time-code, outbox and frontend-backend contract tests on `smart_green_hub_test` |
-| `cd frontend && npm run test:e2e` | 23 Playwright tests in Microsoft Edge (starts its own API and app) |
+| `cd backend && npm test` | 233 Jest unit, API, one-time-code, outbox and frontend-backend contract tests on `smart_green_hub_test` |
+| `cd frontend && npm run test:e2e` | 24 Playwright tests in Microsoft Edge (starts its own API and app) |
 | `cd frontend && npm run lint` | ESLint |
 | `cd backend && node scripts/load-test.js <url> 50 10` | 50-user load test (NFR01) |
 
