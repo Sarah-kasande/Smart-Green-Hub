@@ -79,6 +79,18 @@ export const NAVIGATION = {
   ],
 }
 
+// Shortcuts offered in the search box (Ctrl+K), besides every page of the menu
+export const QUICK_ACTIONS = {
+  operator: [
+    { to: '/operator/batches/new', label: 'dashboard.addBatch' },
+    { to: '/operator/sales?tab=sale', label: 'dashboard.recordSale' },
+    { to: '/operator/sales?tab=expense', label: 'dashboard.recordExpense' },
+    { to: '/operator/surplus?new=1', label: 'dashboard.postSurplus' },
+  ],
+  institution: [{ to: '/institution/board', label: 'institutionHome.findTitle' }],
+  admin: [{ to: '/admin/verification', label: 'nav.verification' }],
+}
+
 // The items of the phone's bottom bar, in order
 export function bottomItems(groups) {
   return groups
