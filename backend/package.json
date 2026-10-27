@@ -9,6 +9,7 @@
     "migrate": "sequelize-cli db:migrate",
     "migrate:undo": "sequelize-cli db:migrate:undo",
     "seed:admin": "node scripts/seed-admin.js",
+    "vercel-build": "node scripts/vercel-build.js",
     "test": "jest --runInBand"
   },
   "keywords": [],
@@ -16,6 +17,7 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@vercel/functions": "^3.10.4",
     "bcryptjs": "^3.0.3",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
