@@ -6,6 +6,7 @@ import api, { errorCode, fieldErrors } from '../../api/client'
 import { useApi } from '../../api/useApi'
 import { useI18n } from '../../i18n/I18nProvider'
 import { useBatches } from '../../offline/useOfflineData'
+import { useAsk } from '../../components/ui/AskDialog'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
 import Notice from '../../components/ui/Notice'
@@ -158,9 +159,10 @@ export default function SurplusListings() {
   const [status, setStatus] = useState('all')
   const [search, setSearch] = useState('')
   const [view, setView] = useViewMode('operator-listings')
+  const [askElement, ask] = useAsk()
 
   async function withdraw(listing) {
-    const reason = window.prompt(t('listings.withdrawReason'))
+    const reason = await ask({ title: t('listings.withdraw'), label: t('listings.withdrawReason'), confirmLabel: t('listings.withdraw'), danger: true })
     if (reason === null) return
     try {
       await api.post(`/operator/listings/${listing.id}/withdraw`, { reason: reason || null })
@@ -222,6 +224,7 @@ export default function SurplusListings() {
 
   return (
     <div className="mx-auto max-w-7xl space-y-5">
+      {askElement}
       <PageHeader
         title={t('listings.title')}
         meta={data && countLabel(t, rows.length)}
