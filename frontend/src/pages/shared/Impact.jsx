@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useAuth } from '../../auth/AuthContext'
 import { useApi } from '../../api/useApi'
 import { useI18n } from '../../i18n/I18nProvider'
-import BarChart from '../../components/ui/BarChart'
+import { SimpleBarChart } from '../../components/charts'
 import Card from '../../components/ui/Card'
 import ErrorState from '../../components/ui/ErrorState'
 import PageLoader from '../../components/ui/PageLoader'
@@ -17,10 +17,10 @@ export function ImpactCards({ summary }) {
   const { t } = useI18n()
   return (
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-      <StatCard label={t('impact.plants')} value={formatNumber(summary.plants_redirected || 0)} />
-      <StatCard label={t('impact.handovers')} value={formatNumber(summary.handovers || 0)} />
-      <StatCard label={t('impact.land')} value={`${formatNumber(summary.land_cleared_sqm || 0, 1)} m²`} />
-      <StatCard label={t('impact.sites')} value={formatNumber(summary.planting_sites || 0)} />
+      <StatCard label={t('impact.plants')} count={summary.plants_redirected || 0} />
+      <StatCard label={t('impact.handovers')} count={summary.handovers || 0} />
+      <StatCard label={t('impact.land')} count={summary.land_cleared_sqm || 0} decimals={1} suffix=" m²" />
+      <StatCard label={t('impact.sites')} count={summary.planting_sites || 0} />
     </div>
   )
 }
@@ -60,11 +60,11 @@ export default function Impact() {
           <div className="grid gap-5 lg:grid-cols-2">
             <Card>
               <h2 className="mb-3 font-semibold">{t('impact.monthly')}</h2>
-              <BarChart title={t('impact.monthly')} data={(summary.monthly || []).map((m) => ({ label: formatMonth(m.month), value: m.plants }))} colorClass="fill-teal" />
+              <SimpleBarChart title={t('impact.monthly')} valueLabel={t('impact.plants')} data={(summary.monthly || []).map((m) => ({ label: formatMonth(m.month), value: m.plants }))} format={(v) => formatNumber(v)} color="var(--chart-2)" />
             </Card>
             <Card>
               <h2 className="mb-3 font-semibold">{t('impact.byDistrict')}</h2>
-              <BarChart title={t('impact.byDistrict')} data={(summary.by_district || []).map((d) => ({ label: d.district, value: d.plants }))} />
+              <SimpleBarChart title={t('impact.byDistrict')} valueLabel={t('impact.plants')} data={(summary.by_district || []).map((d) => ({ label: d.district, value: d.plants }))} format={(v) => formatNumber(v)} />
             </Card>
           </div>
           <section className="space-y-4">
