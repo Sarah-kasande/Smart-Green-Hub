@@ -4,7 +4,12 @@ import { lazy, Suspense } from 'react'
 import { Route, Routes } from 'react-router-dom'
 import PageLoader from './components/ui/PageLoader'
 import PublicLayout from './layouts/PublicLayout'
-import AppLayout from './layouts/AppLayout'
+// The signed-in layout (menus, dialogs, search) is loaded only after signing in, so the public
+// pages stay light on phones. When a signed-in page is opened directly (bookmark, installed app),
+// loading starts at once, in parallel with the sign-in check, instead of one step after another.
+const loadAppLayout = () => import('./layouts/AppLayout')
+const AppLayout = lazy(loadAppLayout)
+if (/^\/(operator|institution|admin)/.test(window.location.pathname)) loadAppLayout()
 import RequireRole from './auth/RequireRole'
 import { UpdateOnNavigate } from './pwa'
 const Landing = lazy(() => import('./pages/public/Landing'))
