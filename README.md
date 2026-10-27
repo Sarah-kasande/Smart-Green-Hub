@@ -219,23 +219,27 @@ Lists of batches and species are kept on the phone, so they also show offline. S
 
 | Part | Technology | Hosted on |
 |------|------------|-----------|
-| Frontend | React, Vite, Tailwind CSS v4, shadcn/ui, React Router, Axios, Dexie (IndexedDB), Leaflet + OpenStreetMap, vite-plugin-pwa (Workbox) | Vercel |
-| Backend | Node.js, Express, Sequelize, JWT, bcryptjs, helmet, node-cron, Brevo (email) | Render |
+| Frontend | React, Vite, Tailwind CSS v4, shadcn/ui, React Router, Axios, Dexie (IndexedDB), Leaflet + OpenStreetMap, vite-plugin-pwa (Workbox) | Vercel (service `frontend`) |
+| Backend | Node.js, Express, Sequelize, JWT, bcryptjs, helmet, Brevo (email) | Vercel (service `backend`); Render also supported |
 | Database | MySQL 8.4 with SSL | Aiven |
 | Tests | Jest, Supertest, Playwright, Lighthouse | — |
 
 ```
 Browser (React PWA, IndexedDB offline store, service worker)
-   │  calls /api on its own domain
+   │  one domain: https://<project>.vercel.app
    ▼
-Vercel (static app + rewrite /api/* → Render)      ← so the sign-in cookie is first-party
-   ▼
-Render: Node.js / Express API ── Sequelize ── Aiven MySQL
-          ├─ risk engine + planting planner (backend/src/services/riskRules.js)
-          ├─ nightly job 02:00 Kigali time (node-cron): expire listings, run the risk check
-          ├─ notification outbox, sent every 5 minutes
-          └─ Brevo HTTP API for email
+Vercel project (root vercel.json, two services)
+   ├─ /api/*      → service "backend"  : Express API as a Vercel Function ── Sequelize ── Aiven MySQL
+   │                  ├─ risk engine + planting planner (backend/src/services/riskRules.js)
+   │                  ├─ emails through the Brevo HTTP API, sent right after each action
+   │                  └─ /api/cron/nightly, called by Vercel Cron at 02:00 Kigali time:
+   │                     expire listings, run the risk check, retry waiting emails
+   └─ everything else → service "frontend": the built React app (static files)
 ```
+
+The app and the API share one domain, so the sign-in cookie is first-party and the app simply calls `/api`.
+The API can also run as a normal server (`backend/src/server.js`, with node-cron for the scheduled jobs): that is
+what `npm run dev` does locally, and what the earlier Render deployment used.
 
 The database has the 15 entities of the proposal (users, institutions, nurseries, plant species, batches, sales,
 expenses, risk alerts, surplus listings, surplus requests, impact records, rule settings, planting
@@ -350,12 +354,12 @@ All tests pass. Results, including Lighthouse scores, are in `docs/TEST_REPORT.m
 
 ## 12. Environment variables
 
-**Render (API):**
+**Vercel (one project, both services).** Set these in *Project → Settings → Environment Variables*, for the
+**Production** environment (Vercel gives them to every service):
 
 | Name | Value |
 |------|-------|
 | `NODE_ENV` | `production` |
-| `PORT` | set by Render |
 | `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` | Aiven connection |
 | `DB_CA_CERT` | Aiven CA certificate text |
 | `JWT_SECRET` | long random text |
@@ -363,34 +367,72 @@ All tests pass. Results, including Lighthouse scores, are in `docs/TEST_REPORT.m
 | `BREVO_API_KEY` | Brevo key allowed to send transactional email |
 | `MAIL_FROM` | `Smart Green Hub <address verified in Brevo>` |
 | `OTP_SECRET` | optional: secret for hashing codes (default: `JWT_SECRET`) |
-| `APP_URL` | `https://smart-green-hub.vercel.app` (no trailing slash) |
-| `CORS_ORIGIN` | `https://smart-green-hub.vercel.app` |
-| `TRUST_PROXY` | `2` (Vercel and Render in front of the API) |
+| `APP_URL` | the project's address, e.g. `https://smart-green-hub.vercel.app` (no trailing slash) |
+| `CORS_ORIGIN` | the same address |
+| `TRUST_PROXY` | `1` (only Vercel in front of the API) |
+| `CRON_SECRET` | random text of at least 16 characters; Vercel sends it to the nightly job |
+| `VITE_API_URL` | `/api` |
 
-**Vercel (frontend):** `VITE_API_URL` = `/api` (Production and Preview); project root directory `frontend`.
+`PORT` is not needed on Vercel. Never set `DB_CA_PATH`, `ENV_FILE` or `EMAIL_OUTBOX_FILE` there.
+
+**Render (only if the API runs on Render instead):** the same names without `CRON_SECRET` and `VITE_API_URL`,
+with `PORT` set by Render and `TRUST_PROXY` = `2`.
 
 ## 13. Deployment
 
-The live API and app are two services that run all the time; **one `git push` to `main` deploys both**
-(Render builds the API from `backend/`, Vercel builds the app from `frontend/`). The root `package.json` and
-`scripts/dev.js` are for local development only and are not used by Render or Vercel.
+### On Vercel (frontend and API in one project)
 
-- **Render**: build command `npm install`, start command `npm start` (runs the migrations, then starts the API).
-  Auto-Deploy *On Commit* for branch `main`.
-- **Vercel**: builds `frontend/` on every push to `main`; `frontend/vercel.json` sends `/api/*` to Render.
-- After changing a `VITE_` variable on Vercel, redeploy (it is read at build time).
+The root `vercel.json` defines two **services** in one Vercel project. **One `git push` to `main` builds and
+deploys both together**, so the app and the API are always the same version.
+
+| Service | Folder | Public path | What Vercel does |
+|---------|--------|-------------|------------------|
+| `backend` | `backend/` | `/api/*` | Runs `npm run vercel-build` (database migrations, production only), then runs the Express API from `src/vercel.js` as a function |
+| `frontend` | `frontend/` | everything else | Builds the React app with Vite; unknown paths return `index.html` so React Router can show the page |
+
+No service calls another service from the server side (the browser calls `/api` itself), so there are no
+service bindings.
+
+**Setting it up (once):**
+1. Vercel → *Add New → Project* → import the GitHub repository. Leave **Root Directory empty** (the repository
+   root): Vercel reads `vercel.json` and shows the two services.
+2. Add the environment variables from section 12 (Production).
+3. Deploy. Then open `https://<project>.vercel.app/api/health`: it must show `database: connected` and the
+   `version` of the latest commit.
+4. In *Settings → Cron Jobs* you should see `/api/cron/nightly`. Vercel's schedule is in UTC: `0 0 * * *` is
+   02:00 in Kigali. On the free (Hobby) plan a cron job runs once a day, sometime within that hour.
+5. Aiven must accept connections from Vercel: in the Aiven console, check *Allowed IP addresses*
+   (`0.0.0.0/0` if it was opened for Render).
+6. When everything works, the old Render service and the old frontend-only Vercel project can be switched off.
+
+**Good to know:**
+- Migrations run during the production build. If one fails, the deployment fails and the old version stays live.
+  Preview deployments never run migrations.
+- Emails are sent right after each action; Vercel keeps the function running until they are sent
+  (`waitUntil`). Emails that failed are retried by the nightly job (or with *Retry* in Admin → Email problems).
+- On Vercel there is no sleeping server: the first request after a quiet period takes a second or two, not 50.
+- After changing a `VITE_` variable, redeploy (it is read at build time).
 - After a deploy the new app version downloads in the background and switches on at the next page change.
-- `https://smart-green-hub.onrender.com/api/health` shows the deployed `version` (first 7 characters of the
-  commit) and whether the database and email are connected. Push changes to the app and the API in one commit
-  so both deploy the same version.
-- Free-plan note: Render sleeps when unused, so the first request can take up to about 50 seconds. The nightly
-  risk check only runs if the API is awake at 02:00; operators can always press **Check now**.
+
+### On Render (the earlier setup, still supported)
+
+- **Render** (API): root directory `backend`, build command `npm install`, start command `npm start` (runs the
+  migrations, then starts `src/server.js` with node-cron). Auto-Deploy *On Commit* for branch `main`.
+- **Vercel** (app only): a project with root directory `frontend`; `frontend/vercel.json` sends `/api/*` to Render.
+- Free-plan note: Render sleeps when unused, so the first request can take up to about 50 seconds.
+
+The root `package.json` and `scripts/dev.js` are for local development only.
 
 ## 14. Troubleshooting
 
-- **"This part of the app is not available right now"**: the app and the API are on different versions. Live:
-  redeploy the API on Render (*Manual Deploy → Deploy latest commit*). Locally: restart `npm run dev` in
-  `backend`.
+- **"This part of the app is not available right now"**: the app and the API are on different versions. On
+  Vercel (one project) this cannot happen after a full deploy; redeploy the latest commit. With Render: *Manual
+  Deploy → Deploy latest commit*. Locally: stop and run `npm run dev` again.
+- **Vercel deployment failed during the build of `backend`**: open the build log. "Build: running database
+  migrations" followed by an error means the database is not reachable (check the `DB_` variables and Aiven's
+  allowed IP addresses) or a migration failed.
+- **The nightly job does not run on Vercel**: check that `CRON_SECRET` is set, then open *Settings → Cron Jobs →
+  View Logs*. A `401` answer means the secret is missing or different.
 - **An old screen after a deploy**: reload with Ctrl+Shift+R.
 - **Database up to date?** `cd backend && npx sequelize-cli db:migrate:status` (every line should say `up`).
 - **Local database not reachable?** Start Docker Desktop, then `docker start sgh-mysql`.
