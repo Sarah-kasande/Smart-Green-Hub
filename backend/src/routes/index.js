@@ -9,6 +9,7 @@ router.use('/uploads', require('./uploads.routes'));
 router.use('/operator', require('./operator.routes'));
 router.use('/institution', require('./institution.routes'));
 router.use('/admin', require('./admin.routes'));
+router.use('/cron', require('./cron.routes'));
 // species, board, notifications (signed-in users of any role)
 router.use('/', require('./shared.routes'));
 
