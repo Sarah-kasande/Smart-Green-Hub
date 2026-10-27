@@ -21,6 +21,7 @@ const rw = {
     skipToContent: 'Jya ku bikubiye mu ipaji',
     all: 'Byose',
     plants: 'ingemwe',
+    confirm: 'Emeza',
   },
   connection: { online: 'Kuri interineti', offline: 'Nta interineti' },
   roles: { operator: "Nyir'ipepiniyeri", institution: 'Ikigo cyakira ibimera', admin: 'Umuyobozi' }, // TODO: unsure
@@ -90,8 +91,19 @@ const rw = {
     find: 'Gushaka ibimera', // TODO: unsure
   },
   userMenu: {
-    label: '{name}: ibijyanye na konti', // TODO: unsure
+    suffix: 'ibijyanye na konti', // TODO: unsure
     profile: "Umwirondoro n'igenamiterere", // TODO: unsure
+  },
+  shell: {
+    search: 'Shakisha',
+    searchPlaceholder: 'Jya ku ipaji cyangwa igikorwa…', // TODO: unsure
+    searchEmpty: 'Nta cyabonetse.', // TODO: unsure
+    actions: 'Ibikorwa byihuse', // TODO: unsure
+    more: 'Ibindi',
+    hideMenu: 'Hisha urutonde', // TODO: unsure
+    showMenu: 'Erekana urutonde', // TODO: unsure
+    install: 'Shyiraho porogaramu', // TODO: unsure
+    installIos: 'Kuri iPhone cyangwa iPad: kanda "Share", hanyuma "Add to Home Screen".', // TODO: unsure
   },
   table: {
     count: '{n} byanditswe', // TODO: unsure
@@ -160,6 +172,7 @@ const rw = {
       batch: 'Icyiciro gishya cy\'ingemwe {n}',
       stock_adjustment: 'Impinduka mu bubiko {n}: {reason}',
     },
+    toastSent: 'Impinduka {n} zabitswe zoherejwe.',  // TODO: unsure
   },
   landing: {
     title1: 'Ibimera bike bipfa ubusa.',
@@ -183,6 +196,47 @@ const rw = {
     directoryTitle: 'Urutonde rwa pepiniyeri',
     directoryIntro: "Pepiniyeri zemejwe muri Kigali zemeye kugaragara. Muvugane nazo.",
     directoryEmpty: 'Nta pepiniyeri iragaragazwa.',
+    badge: "Ni ubuntu ku bapepiniyeri n'ibigo · Si iduka rya interineti",  // TODO: unsure
+    ctaNeed: 'Dukeneye ibimera',  // TODO: unsure
+    heroCaption: 'Ibimera birenze muri pepiniyeri, Kigali itoshye kurushaho.',  // TODO: unsure
+    heroLink: 'Shaka pepiniyeri ziri hafi yawe',  // TODO: unsure
+    navHow: 'Uko bikora',
+    navDirectory: 'Urutonde',  // TODO: unsure
+    navImpact: 'Umusaruro',  // TODO: unsure
+    problemLabel: 'Impamvu ya Smart Green Hub',  // TODO: unsure
+    problemText: "Ibimera bizima byo muri pepiniyeri za Kigali akenshi bikura birenze igihe cyiza bikajugunywa, mu gihe amashuri n'imiryango bishaka ibimera byo gutera.",  // TODO: unsure
+    forNurseries: 'Pepiniyeri',
+    forNurseriesText: "Imiburo hakiri kare, gahunda yo gutera n'ahantu h'ubuntu ho gutanga ibimera birenze, ndetse nta interineti.",  // TODO: unsure
+    forInstitutions: 'Ibigo',
+    forInstitutionsText: "Shaka ibimera bikuze hafi yawe, ubisabe ugaragaza icyo bizakora, hanyuma wemeze ko wabyakiriye.",  // TODO: unsure
+    forCity: 'Kigali',
+    forCityText: "Buri ihererekanya ryemejwe rirabarwa: ibimera byoherejwe, ubutaka bwakuweho n'ahatewe.",  // TODO: unsure
+    receiversTitle: 'Ibimera bijya ku',  // TODO: unsure
+    howTitle: 'Uko bikora',
+    step1: 'Iyandikishe wemezwe',  // TODO: unsure
+    step1Text: "Pepiniyeri n'ibigo biriyandikisha; umuyobozi agenzura buri konti.",  // TODO: unsure
+    step2: 'Andika uburirwe hakiri kare',  // TODO: unsure
+    step2Text: "Pepiniyeri zandika ibyiciro n'ibyagurishijwe, ndetse nta interineti. Ibyiciro biri mu kaga bimenyeshwa hakiri kare.",  // TODO: unsure
+    step3: 'Tanga kandi usabe',  // TODO: unsure
+    step3Text: 'Ibimera birenze bishyirwa ku Kibaho; ibigo byemejwe birabisaba.',  // TODO: unsure
+    step4: 'Hererekanya upime umusaruro',  // TODO: unsure
+    step4Text: 'Impande zombi zemeza ihererekanya, hanyuma umusaruro ukabarwa.',  // TODO: unsure
+    ctaTitle: 'Ifatanye natwe gutoshya Kigali',  // TODO: unsure
+    ctaText: "Ni ubuntu ku bapepiniyeri n'ibigo bya Gasabo, Kicukiro na Nyarugenge.",  // TODO: unsure
+    footerPlatform: 'Urubuga',  // TODO: unsure
+    footerAccount: 'Konti',
+    footerDistricts: 'Uturere',
+    footerCredits: "Abafotoye amafoto",  // TODO: unsure
+    footerCreditsText: 'Amafoto yo kuri Wikimedia Commons, akoreshwa hakurikijwe uburenganzira bwayo bwa rusange:',  // TODO: unsure
+    directoryCount: 'Pepiniyeri {n} ziri ku rutonde',  // TODO: unsure
+    photoAlt: {
+      hero: "Umurima w'icyayi ku misozi y'Iburengerazuba bw'u Rwanda",  // TODO: unsure
+      hills: "Imisozi itoshye n'amazu bya Nyamagabe, u Rwanda",  // TODO: unsure
+      sunset: "Imisozi ya Kigali izuba rirenga",  // TODO: unsure
+      planting: "Umusore utera ingemwe y'igiti hafi y'ikiyaga mu Rwanda",  // TODO: unsure
+      labelled: "Imirongo y'ingemwe z'ibiti muri pepiniyeri ifite icyapa",  // TODO: unsure
+      bags: "Ingemwe nto z'ibiti mu masashe",  // TODO: unsure
+    },
   },
   auth: {
     loginTitle: 'Injira',
@@ -270,6 +324,24 @@ const rw = {
     recordExpense: 'Andika ikoreshwa',
     postSurplus: 'Shyira ibirenze',
     offlineNote: "Ibyiciro, ibyagurishijwe n'ibyakoreshejwe bishobora kwandikwa nta interineti. Byoherezwa ugarutse kuri interineti.",
+    greetMorning: 'Mwaramutse, {name}',
+    greetAfternoon: 'Mwiriwe, {name}',
+    greetEvening: 'Muraho, {name}',  // TODO: unsure
+    salesMonth: "Ibyagurishijwe uku kwezi",  // TODO: unsure
+    vsLastMonth: "{p} ugereranyije n'ukwezi gushize",  // TODO: unsure
+    actNow: 'Kora nonaha',  // TODO: unsure
+    requestsWaiting: 'Ubusabe bugutegereje',  // TODO: unsure
+    riskOverview: 'Ibyiciro ukurikije ibyago',  // TODO: unsure
+    batchesLabel: 'ibyiciro',  // TODO: unsure
+    lowOrNone: 'Bike (nta muburo)',  // TODO: unsure
+    timeline: 'Igihe cyiza cyo kugurisha',  // TODO: unsure
+    incomeExpenses: "Amafaranga yinjiye n'ayasohotse (amezi 6)",  // TODO: unsure
+    primeEnds: 'Igihe cyiza kirangira {date}',  // TODO: unsure
+    primeOver: 'igihe cyiza cyarangiye',  // TODO: unsure
+    primeToday: 'kirangira uyu munsi', // TODO: unsure
+    legendGrowing: 'Birakura',  // TODO: unsure
+    legendPrime: 'Igihe cyiza (cyo kugurisha)',  // TODO: unsure
+    legendToday: 'Uyu munsi',
   },
   batches: {
     title: "Ibyiciro by'ingemwe",
@@ -314,6 +386,7 @@ const rw = {
     archive: 'Bika mu mateka', // TODO: unsure
     archiveConfirm: 'Kuki ubika iki cyiciro mu mateka? (Kiguma mu nyandiko, ntigisibwa.)',
     promisedHint: "Ingemwe {n} zasezeranyijwe ku rubuga rw'ibirenze ntizishobora kugurishwa.",
+    primeProgress: 'Aho bigeze ugana ku iherezo ry\'igihe cyiza',  // TODO: unsure
   },
   sales: {
     title: "Ibyagurishijwe n'ibyakoreshejwe",
@@ -518,6 +591,17 @@ const rw = {
     approvedHint: 'Emeza ko wakiriye umaze gufata',
     findTitle: 'Shaka ingemwe z\'umushinga wawe utaha wo gutoshya',
     findText: 'Reba ingemwe z\'ubuntu n\'izigabanyirijwe igiciro za pepiniyeri zemejwe hafi yawe.',
+    tracker: 'Ubusabe bwawe',
+    noOpen: 'Nta busabe buri gukurikiranwa.',  // TODO: unsure
+    browse: 'Reba Ikibaho cy\'ibimera birenze',  // TODO: unsure
+    stepRequested: 'Byasabwe',  // TODO: unsure
+    stepApproved: 'Byemejwe',
+    stepHandedOver: 'Byatanzwe',  // TODO: unsure
+    stepReceived: 'Byakiriwe',
+    seeAll: 'Reba byose',
+    nearYou: 'Biboneka muri {district}',  // TODO: unsure
+    inProgress: 'Ubusabe buri gukurikiranwa',  // TODO: unsure
+    inProgressHint: '{pending} bitegereje, {approved} byemejwe',  // TODO: unsure
   },
   notifications: {
     title: 'Amatangazo', // TODO: unsure ("Notifications")
@@ -578,6 +662,10 @@ const rw = {
     openRequests: 'Ubusabe bufunguye',
     pendingVerification: 'Bitegereje kugenzurwa',
     failedEmails: 'Imeri zitagezeyo',
+    todoTitle: 'Bikeneye ko ubyitaho',  // TODO: unsure
+    todoVerify: 'konti zitegereje kwemezwa',  // TODO: unsure
+    todoEmails: 'imeri zitageze ku bo zagenewe',  // TODO: unsure
+    todoNone: 'Nta kintu gikeneye ko ucyitaho ubu.',  // TODO: unsure
   },
   rules: {
     title: "Amategeko n'amoko",
