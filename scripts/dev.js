@@ -20,6 +20,7 @@ const path = require('node:path');
 
 const root = path.resolve(__dirname, '..');
 const CONTAINER = 'sgh-mysql';
+const DB_PORT = 3307; // the local MySQL as seen from this computer (README, section 10)
 const isWindows = process.platform === 'win32';
 const skipDb = process.argv.includes('--no-db');
 
@@ -133,6 +134,14 @@ async function main() {
       if (!ready) await wait(1000);
     }
     if (!ready) stopWith('MySQL did not become ready within 60 seconds. Check Docker Desktop.');
+    // Sometimes Docker Desktop starts the container before its port link (3307 on this computer)
+    // works. MySQL then runs, but the API cannot reach it. Restarting the container repairs the link.
+    if (!(await portInUse(DB_PORT))) {
+      say(`Port ${DB_PORT} is not reachable yet; restarting the database container once...`);
+      run(`docker restart ${CONTAINER}`, root, true);
+      for (let i = 0; i < 30 && !(await portInUse(DB_PORT)); i++) await wait(1000);
+      if (!(await portInUse(DB_PORT))) stopWith(`MySQL runs, but port ${DB_PORT} cannot be reached. Restart Docker Desktop and try again.`);
+    }
     say('Database is ready.');
   }
 

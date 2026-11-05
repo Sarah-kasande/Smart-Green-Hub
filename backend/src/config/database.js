@@ -25,6 +25,9 @@ function buildDbConfig() {
     host: process.env.DB_HOST,
     port: Number(process.env.DB_PORT),
     dialect: 'mysql',
+    // Sequelize normally loads the mysql2 driver by name at runtime, which Vercel's bundler cannot
+    // see, so the driver was left out and the API crashed on Vercel. Passing it here includes it.
+    dialectModule: require('mysql2'),
     logging: false,
     // Store and read all dates in UTC.
     timezone: '+00:00',

@@ -7,26 +7,28 @@ const common = { underscored: true, timestamps: true, createdAt: 'created_at', u
 // Archivable models: Sequelize "paranoid" mode sets archived_at instead of deleting the row (FR16).
 const archivable = { ...common, paranoid: true, deletedAt: 'archived_at' };
 
-const define = (file) => require(file)(sequelize, DataTypes, { common, archivable });
+// Each model file exports a function that defines the model. The require('./name') calls below
+// are written out in full (not built from a variable) so Vercel's bundler can see and include every file.
+const define = (factory) => factory(sequelize, DataTypes, { common, archivable });
 
-const User = define('./user');
-const Institution = define('./institution');
-const Nursery = define('./nursery');
-const PlantSpecies = define('./plantSpecies');
-const Batch = define('./batch');
-const Sale = define('./sale');
-const Expense = define('./expense');
-const StockAdjustment = define('./stockAdjustment');
-const RiskAlert = define('./riskAlert');
-const SurplusListing = define('./surplusListing');
-const SurplusRequest = define('./surplusRequest');
-const ImpactRecord = define('./impactRecord');
-const RuleSetting = define('./ruleSetting');
-const PlantingRecommendation = define('./plantingRecommendation');
-const Notification = define('./notification');
-const AuditLog = define('./auditLog');
-const AuthToken = define('./authToken');
-const UploadedFile = define('./uploadedFile');
+const User = define(require('./user'));
+const Institution = define(require('./institution'));
+const Nursery = define(require('./nursery'));
+const PlantSpecies = define(require('./plantSpecies'));
+const Batch = define(require('./batch'));
+const Sale = define(require('./sale'));
+const Expense = define(require('./expense'));
+const StockAdjustment = define(require('./stockAdjustment'));
+const RiskAlert = define(require('./riskAlert'));
+const SurplusListing = define(require('./surplusListing'));
+const SurplusRequest = define(require('./surplusRequest'));
+const ImpactRecord = define(require('./impactRecord'));
+const RuleSetting = define(require('./ruleSetting'));
+const PlantingRecommendation = define(require('./plantingRecommendation'));
+const Notification = define(require('./notification'));
+const AuditLog = define(require('./auditLog'));
+const AuthToken = define(require('./authToken'));
+const UploadedFile = define(require('./uploadedFile'));
 
 // Identity
 User.hasOne(Institution, { foreignKey: 'user_id', as: 'institution' });
