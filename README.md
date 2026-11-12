@@ -256,7 +256,7 @@ backend/src/
   services/      business logic, one file per area (inventory, finance, sync, risk, planning, surplus, impact, ...)
   jobs/          scheduler (nightly risk check, email sending)
 backend/tests/   Jest unit and Supertest API tests
-backend/scripts/ seed-admin.js, seed-demo.js, start-e2e.js, load-test.js
+backend/scripts/ seed-admin.js, seed-demo.js, seed-species.js, start-e2e.js, load-test.js
 scripts/dev.js   starts the database, API and app together (npm run dev in the root folder)
 
 frontend/src/
@@ -340,6 +340,18 @@ Local development and tests use a **local MySQL 8.4 in Docker**, never the produ
    It creates sample nurseries, institutions, batches, sales and hand-overs. Every demo name starts with
    **[DEMO]** so it can never be mistaken for real data. The script refuses to run against the production
    database unless `--allow-production` is given.
+
+5. **Kigali starter species** (replaces the six DEMO species with 35 plants commonly grown around Kigali):
+
+   ```
+   cd backend
+   node scripts/seed-species.js --dry-run --archive-demo   # preview only
+   node scripts/seed-species.js --archive-demo             # add the plants, archive the DEMO species
+   ```
+
+   The days-to-ready and prime-window values are **estimates** to confirm with nursery operators and correct in
+   Admin > Rules and species. Plants that already exist are skipped, so running it twice is safe. For the live
+   database, run it with `ENV_FILE=.env` (only the Aiven settings) and add `--allow-production`.
 
 ## 11. Tests
 
