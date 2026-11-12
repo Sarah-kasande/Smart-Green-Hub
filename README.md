@@ -13,7 +13,7 @@ ALU BSc Software Engineering capstone project.
 
 | | |
 |---|---|
-| **Live app** | https://smart-green-hub.vercel.app |
+| **Live app** | https://smart-green-hub-113q.vercel.app |
 | **Live API** | https://smart-green-hub.onrender.com (health check: `/api/health`) |
 | **Languages** | English and Kinyarwanda |
 | **Works on** | Any modern phone or computer browser; can be installed like an app; records work offline |
