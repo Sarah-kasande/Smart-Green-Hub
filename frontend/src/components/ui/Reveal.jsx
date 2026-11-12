@@ -9,8 +9,11 @@ export default function Reveal({ children, delay = 0, className = '' }) {
   // 'shown' = visible without animation, 'waiting' = below the fold, 'animate' = scrolled into view
   const [state, setState] = useState(() => (typeof IntersectionObserver === 'undefined' ? 'shown' : 'initial'))
 
+  // One observer for the whole life of the block. It must not depend on `state`: if it did, the
+  // switch to 'waiting' would re-run the effect, disconnect the observer, and the block would stay
+  // invisible forever (this happened to the "What the platform does" tiles below the fold).
   useEffect(() => {
-    if (state !== 'initial') return undefined
+    if (typeof IntersectionObserver === 'undefined') return undefined
     let first = true
     const observer = new IntersectionObserver(([entry]) => {
       if (first) {
@@ -28,7 +31,7 @@ export default function Reveal({ children, delay = 0, className = '' }) {
     })
     observer.observe(ref.current)
     return () => observer.disconnect()
-  }, [state])
+  }, [])
 
   const look = {
     initial: '',
