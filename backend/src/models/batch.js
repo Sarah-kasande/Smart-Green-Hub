@@ -16,6 +16,9 @@ module.exports = (sequelize, DataTypes, { archivable }) =>
       unit_price: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
       // "Show to institutions" (W43): when ready, the free plants appear as "Available plants"
       show_to_institutions: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
+      // Public homepage (W48): published by the administrator (NULL = not published) and its "Featured" position
+      published_at: { type: DataTypes.DATE },
+      featured_rank: { type: DataTypes.INTEGER },
       client_uuid: { type: DataTypes.CHAR(36), allowNull: false, unique: true },
     },
     { ...archivable, tableName: 'batches' }

@@ -27,4 +27,6 @@ module.exports = {
   codeLimiter: limiter({ windowMinutes: 15, limit: 20 }),
   registerLimiter: limiter({ windowMinutes: 60, limit: 10 }),
   uploadLimiter: limiter({ windowMinutes: 60, limit: 30 }),
+  // Public homepage plants (W48): enough for people browsing and filtering, not for scraping
+  publicPlantsLimiter: limiter({ windowMinutes: 1, limit: 30 }),
 };

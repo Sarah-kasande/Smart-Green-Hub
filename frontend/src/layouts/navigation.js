@@ -69,6 +69,10 @@ export const NAVIGATION = {
       items: [
         { to: '/admin', label: 'nav.dashboard', end: true, bottom: 1, icon: 'home' },
         { to: '/admin/rules', label: 'nav.rules' },
+        // The main records (W47): archive, unarchive, safe edits, homepage publishing for batches (W48)
+        { to: '/admin/nurseries', label: 'nav.nurseries' },
+        { to: '/admin/batches', label: 'nav.batches' },
+        { to: '/admin/institutions', label: 'nav.institutions' },
         // Every sale recorded by every nursery (docs/DEVIATIONS.md W45)
         { to: '/admin/sales', label: 'nav.sales' },
         { to: '/admin/impact', label: 'nav.impact' },

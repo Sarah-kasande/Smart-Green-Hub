@@ -139,7 +139,8 @@ async function listOwnListings(nursery) {
 }
 
 // Cancels the open requests of a listing and tells each institution.
-async function cancelOpenRequests(listing, reason, actorId, transaction) {
+// decision: what the institution is told ('declined' when withdrawn or expired, 'cancelled' when archived)
+async function cancelOpenRequests(listing, reason, actorId, transaction, decision = 'declined') {
   const open = await SurplusRequest.findAll({
     where: { listing_id: listing.id, status: { [Op.in]: OPEN_REQUEST } },
     include: [{ model: Institution, as: 'institution' }],
@@ -153,7 +154,7 @@ async function cancelOpenRequests(listing, reason, actorId, transaction) {
         userId: request.institution.user_id,
         type: 'request_decided',
         eventKey: `audit:${logRow.id}:user:${request.institution.user_id}`,
-        payload: { request_id: request.id, decision: 'declined', reason, species: listing.batch?.species?.common_name, quantity: request.quantity_requested, nursery: listing.nursery?.name },
+        payload: { request_id: request.id, decision, reason, species: listing.batch?.species?.common_name, quantity: request.quantity_requested, nursery: listing.nursery?.name },
       },
       { transaction }
     );
@@ -174,6 +175,78 @@ async function withdrawListing({ nursery = null, user, listingId, reason }) {
     await audit.log({ actorId: user.id, action: user.role === 'admin' ? 'listing.moderated' : 'listing.withdrawn', entityType: 'surplus_listing', entityId: listing.id, reason }, { transaction });
   });
   dispatchSoon();
+}
+
+// The administrator archives a nursery, a batch or an institution (docs/DEVIATIONS.md W47).
+// Everything still promised is released in the SAME transaction as the archive, and the other side is told:
+//   - active or reserved listings of the nursery / batch -> withdrawn, their open requests cancelled
+//   - open requests (pending or approved) made straight to its batches ("Available plants") -> cancelled
+//   - for an institution: its own open requests -> cancelled, and the nursery is told
+// Stock is reduced only when BOTH sides confirm a hand-over, so an open request never took plants out of
+// stock: cancelling it simply makes those plants free again (no stock change is needed).
+// Returns how many listings were withdrawn and requests cancelled.
+async function releaseForArchive({ nurseryId = null, batchId = null, institutionId = null }, reason, actor, transaction) {
+  let listingsWithdrawn = 0;
+  let requestsCancelled = 0;
+
+  if (nurseryId || batchId) {
+    const listingWhere = { status: { [Op.in]: ['active', 'reserved'] } };
+    if (nurseryId) listingWhere.nursery_id = nurseryId;
+    if (batchId) listingWhere.batch_id = batchId;
+    const listings = await SurplusListing.findAll({ where: listingWhere, include: listingInclude(), transaction, lock: transaction.LOCK.UPDATE });
+    for (const listing of listings) {
+      requestsCancelled += await cancelOpenRequests(listing, reason, actor.id, transaction, 'cancelled');
+      await listing.update({ status: 'withdrawn' }, { transaction });
+      await audit.log({ actorId: actor.id, action: 'listing.moderated', entityType: 'surplus_listing', entityId: listing.id, reason }, { transaction });
+      listingsWithdrawn++;
+    }
+
+    // Requests made straight to the batch (or to any batch of the nursery, archived ones included)
+    const batchIds = batchId ? [batchId] : (await Batch.findAll({ where: { nursery_id: nurseryId }, attributes: ['id'], paranoid: false, transaction })).map((b) => b.id);
+    const direct = batchIds.length
+      ? await SurplusRequest.findAll({ where: { batch_id: { [Op.in]: batchIds }, status: { [Op.in]: OPEN_REQUEST } }, include: requestInclude(), transaction })
+      : [];
+    for (const request of direct) {
+      await request.update({ status: 'cancelled', decision_reason: reason, decided_at: new Date() }, { transaction });
+      const logRow = await audit.log({ actorId: actor.id, action: 'request.cancelled', entityType: 'surplus_request', entityId: request.id, reason }, { transaction });
+      const userId = request.institution?.user_id;
+      if (userId) {
+        await notify(
+          {
+            userId,
+            type: 'request_decided',
+            eventKey: `audit:${logRow.id}:user:${userId}`,
+            payload: { request_id: request.id, decision: 'cancelled', reason, species: requestBatch(request)?.species?.common_name, quantity: request.quantity_requested, nursery: requestNursery(request)?.name },
+          },
+          { transaction }
+        );
+      }
+      requestsCancelled++;
+    }
+  }
+
+  if (institutionId) {
+    const open = await SurplusRequest.findAll({ where: { institution_id: institutionId, status: { [Op.in]: OPEN_REQUEST } }, include: requestInclude(), transaction });
+    for (const request of open) {
+      await request.update({ status: 'cancelled', decision_reason: reason, decided_at: new Date() }, { transaction });
+      await refreshAfter(request, transaction); // a reserved listing becomes active again
+      const logRow = await audit.log({ actorId: actor.id, action: 'request.cancelled', entityType: 'surplus_request', entityId: request.id, reason }, { transaction });
+      const ownerId = requestNursery(request)?.owner_id;
+      if (ownerId) {
+        await notify(
+          {
+            userId: ownerId,
+            type: 'request_cancelled',
+            eventKey: `audit:${logRow.id}:user:${ownerId}`,
+            payload: { request_id: request.id, institution: request.institution?.org_name, species: requestBatch(request)?.species?.common_name, quantity: request.quantity_requested, reason },
+          },
+          { transaction }
+        );
+      }
+      requestsCancelled++;
+    }
+  }
+  return { listingsWithdrawn, requestsCancelled };
 }
 
 // Nightly: listings past their expiry date close, and their open requests are cancelled (F6).
@@ -589,4 +662,5 @@ module.exports = {
   requestSource,
   listingJson,
   listingInclude,
+  releaseForArchive,
 };

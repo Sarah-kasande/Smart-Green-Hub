@@ -122,7 +122,7 @@ async function verifyEmail(emailInput, code) {
     await user.update({ email_verified_at: new Date() }, { transaction });
     await audit.log({ actorId: user.id, action: 'user.email_verified', entityType: 'user', entityId: user.id }, { transaction });
   });
-  if (user.status !== 'active') return { user: toSafeUser(user), sessionToken: null };
+  if (user.status !== 'active' || (await isArchivedAccount(user))) return { user: toSafeUser(user), sessionToken: null };
   await audit.log({ actorId: user.id, action: 'user.login', entityType: 'user', entityId: user.id, reason: 'after email confirmation' });
   return { user: toSafeUser(user), sessionToken: signSession(user) };
 }
@@ -135,12 +135,28 @@ async function resendVerification(emailInput) {
   await otp.issueAndSend(user, 'verify_email');
 }
 
+// An account whose nursery or institution the administrator archived cannot sign in (docs/DEVIATIONS.md W47).
+// (Its sessions were already ended when it was archived: token_version + 1.)
+async function isArchivedAccount(user) {
+  if (user.role === 'operator') {
+    const all = await Nursery.count({ where: { owner_id: user.id }, paranoid: false });
+    return all > 0 && (await Nursery.count({ where: { owner_id: user.id } })) === 0;
+  }
+  if (user.role === 'institution') {
+    const institution = await Institution.findOne({ where: { user_id: user.id }, paranoid: false });
+    return Boolean(institution?.archived_at);
+  }
+  return false;
+}
+
 async function login(emailInput, password) {
   const user = await User.scope('withPassword').findOne({ where: { email: normaliseEmail(emailInput) } });
   const passwordOk = await bcrypt.compare(String(password), user ? user.password_hash : DUMMY_HASH);
   if (!user || !passwordOk) throw new HttpError(401, 'INVALID_CREDENTIALS', 'Email or password is incorrect');
   if (user.status !== 'active') throw new HttpError(403, 'ACCOUNT_SUSPENDED', 'This account is suspended');
   if (!user.email_verified_at) throw new HttpError(403, 'EMAIL_NOT_VERIFIED', 'Please confirm your email first');
+  // Checked only after the password is right, so it reveals nothing to someone guessing
+  if (await isArchivedAccount(user)) throw new HttpError(403, 'ACCOUNT_ARCHIVED', 'This account was archived by the administrator');
 
   await audit.log({ actorId: user.id, action: 'user.login', entityType: 'user', entityId: user.id });
   return { user: toSafeUser(user), sessionToken: signSession(user) };
@@ -149,7 +165,7 @@ async function login(emailInput, password) {
 // Sends a reset code. Always finishes quietly (neutral response, FR17).
 async function forgotPassword(emailInput) {
   const user = await User.findOne({ where: { email: normaliseEmail(emailInput) } });
-  if (!user || user.status !== 'active') return;
+  if (!user || user.status !== 'active' || (await isArchivedAccount(user))) return;
   await otp.issueAndSend(user, 'reset_password');
 }
 
@@ -171,6 +187,7 @@ async function resetPassword(emailInput, code, newPassword) {
 }
 
 module.exports = {
+  isArchivedAccount,
   BCRYPT_ROUNDS,
   SESSION_DAYS,
   normaliseEmail,

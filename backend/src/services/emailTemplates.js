@@ -141,17 +141,24 @@ const notificationTexts = {
   },
   request_decided: {
     en: (p) => ({
-      subject: p.decision === 'approved' ? `Request approved: ${p.species}` : `Request declined: ${p.species}`,
-      text: `${p.nursery} ${p.decision === 'approved' ? 'approved' : 'declined'} your request for ${p.quantity} ${p.species}.${p.reason ? `\nReason: ${p.reason}` : ''}\n${appUrl()}/institution/requests`,
+      subject: p.decision === 'approved' ? `Request approved: ${p.species}` : p.decision === 'cancelled' ? `Request cancelled: ${p.species}` : `Request declined: ${p.species}`,
+      text:
+        p.decision === 'cancelled'
+          ? `Your request for ${p.quantity} ${p.species} from ${p.nursery} was cancelled by the administrator.${p.reason ? `\nReason: ${p.reason}` : ''}\n${appUrl()}/institution/requests`
+          : `${p.nursery} ${p.decision === 'approved' ? 'approved' : 'declined'} your request for ${p.quantity} ${p.species}.${p.reason ? `\nReason: ${p.reason}` : ''}\n${appUrl()}/institution/requests`,
     }),
     rw: (p) => ({
-      subject: p.decision === 'approved' ? `Ubusabe bwemejwe: ${p.species}` : `Ubusabe bwanzwe: ${p.species}`,
-      text: `${p.nursery} ${p.decision === 'approved' ? 'yemeje' : 'yanze'} ubusabe bwawe bwa ${p.quantity} ${p.species}.${p.reason ? `\nImpamvu: ${p.reason}` : ''}\n${appUrl()}/institution/requests`,
+      subject: p.decision === 'approved' ? `Ubusabe bwemejwe: ${p.species}` : p.decision === 'cancelled' ? `Ubusabe bwahagaritswe: ${p.species}` : `Ubusabe bwanzwe: ${p.species}`,
+      // TODO(translation review): the "cancelled" sentence
+      text:
+        p.decision === 'cancelled'
+          ? `Ubusabe bwawe bwa ${p.quantity} ${p.species} kuri ${p.nursery} bwahagaritswe n'umuyobozi.${p.reason ? `\nImpamvu: ${p.reason}` : ''}\n${appUrl()}/institution/requests`
+          : `${p.nursery} ${p.decision === 'approved' ? 'yemeje' : 'yanze'} ubusabe bwawe bwa ${p.quantity} ${p.species}.${p.reason ? `\nImpamvu: ${p.reason}` : ''}\n${appUrl()}/institution/requests`,
     }),
   },
   request_cancelled: {
-    en: (p) => ({ subject: `Request cancelled: ${p.species}`, text: `The request for ${p.quantity} ${p.species} by ${p.institution} was cancelled. The plants are free again.\n${appUrl()}/operator/requests` }),
-    rw: (p) => ({ subject: `Ubusabe bwahagaritswe: ${p.species}`, text: `Ubusabe bwa ${p.quantity} ${p.species} bwa ${p.institution} bwahagaritswe. Ibimera byongeye kuboneka.\n${appUrl()}/operator/requests` }),
+    en: (p) => ({ subject: `Request cancelled: ${p.species}`, text: `The request for ${p.quantity} ${p.species} by ${p.institution} was cancelled. The plants are free again.${p.reason ? `\nReason: ${p.reason}` : ''}\n${appUrl()}/operator/requests` }),
+    rw: (p) => ({ subject: `Ubusabe bwahagaritswe: ${p.species}`, text: `Ubusabe bwa ${p.quantity} ${p.species} bwa ${p.institution} bwahagaritswe. Ibimera byongeye kuboneka.${p.reason ? `\nImpamvu: ${p.reason}` : ''}\n${appUrl()}/operator/requests` }),
   },
   handover_confirmed: {
     en: (p) => ({ subject: `Please confirm the hand-over: ${p.species}`, text: `The other party confirmed the hand-over of ${p.quantity} ${p.species}. Please confirm it too, so it can be completed.\n${appUrl()}/login` }),
@@ -204,6 +211,34 @@ const notificationTexts = {
     rw: (p) => ({
       subject: `Ubwoko bwahujwe: ${p.species} ubu ni ${p.into}`,
       text: `"${p.species}" ni igihingwa kimwe na "${p.into}" gisanzwe ku rutonde. Ibyiciro byawe ubu bikoresha "${p.into}" n'amategeko yacyo.\n${appUrl()}/operator/batches`,
+    }),
+  },
+  // The administrator archived or restored a nursery, an institution or a batch (docs/DEVIATIONS.md W47).
+  // TODO(translation review): Kinyarwanda.
+  record_archived: {
+    en: (p) => ({
+      subject: p.kind === 'batch' ? `Batch archived: ${p.name}` : 'Your account was archived - Smart Green Hub',
+      text:
+        p.kind === 'batch'
+          ? `The administrator archived your batch ${p.name}. It no longer appears in stock, alerts, listings or the homepage; its sales and requests stay in your history.\nReason: ${p.reason}\nOpen requests for it were cancelled.`
+          : `The administrator archived "${p.name}". You cannot sign in while it is archived. Your history is kept.\nReason: ${p.reason}\nOpen requests were cancelled. Contact the administrator if you think this is a mistake.`,
+    }),
+    rw: (p) => ({
+      subject: p.kind === 'batch' ? `Icyiciro cyabitswe: ${p.name}` : 'Konti yawe yabitswe - Smart Green Hub',
+      text:
+        p.kind === 'batch'
+          ? `Umuyobozi yabitse icyiciro cyawe ${p.name}. Ntikikigaragara mu bubiko, mu miburo, mu matangazo cyangwa ku rubuga rw'imbere; ibyagurishijwe n'ubusabe biguma mu mateka yawe.\nImpamvu: ${p.reason}\nUbusabe bwari bufunguye bwahagaritswe.`
+          : `Umuyobozi yabitse "${p.name}". Ntushobora kwinjira igihe ibitswe. Amateka yawe arabikwa.\nImpamvu: ${p.reason}\nUbusabe bwari bufunguye bwahagaritswe. Vugana n'umuyobozi niba ari ikosa.`,
+    }),
+  },
+  record_restored: {
+    en: (p) => ({
+      subject: p.kind === 'batch' ? `Batch restored: ${p.name}` : 'Your account was restored - Smart Green Hub',
+      text: p.kind === 'batch' ? `The administrator restored your batch ${p.name}.\n${appUrl()}/operator/batches` : `The administrator restored "${p.name}". You can sign in again.\n${appUrl()}/login`,
+    }),
+    rw: (p) => ({
+      subject: p.kind === 'batch' ? `Icyiciro cyagaruwe: ${p.name}` : 'Konti yawe yagaruwe - Smart Green Hub',
+      text: p.kind === 'batch' ? `Umuyobozi yagaruye icyiciro cyawe ${p.name}.\n${appUrl()}/operator/batches` : `Umuyobozi yagaruye "${p.name}". Ushobora kongera kwinjira.\n${appUrl()}/login`,
     }),
   },
   verification_approved: { en: (p) => render('verificationApproved', 'en', p), rw: (p) => render('verificationApproved', 'rw', p) },

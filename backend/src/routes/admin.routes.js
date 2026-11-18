@@ -11,7 +11,9 @@ const impact = require('../services/impactService');
 const speciesService = require('../services/speciesService');
 const salesReport = require('../services/salesReportService');
 const auditService = require('../services/auditService');
-const { SPECIES_CATEGORIES, SPECIES_STATUSES, LISTING_STATUSES, BATCH_STAGES } = require('../utils/constants');
+const records = require('../services/adminRecordsService');
+const v = require('./validators');
+const { SPECIES_CATEGORIES, SPECIES_STATUSES, LISTING_STATUSES, BATCH_STAGES, KIGALI_DISTRICTS, ORG_TYPES } = require('../utils/constants');
 
 const router = express.Router();
 router.use(requireAuth, requireRole('admin'));
@@ -231,6 +233,126 @@ router.post(
     res.json({ ok: true });
   })
 );
+
+// ---- Records: nurseries, institutions, batches (docs/DEVIATIONS.md W47) ----
+// Archive = soft delete (reason required). Delete = permanent, only when nothing is linked (reason
+// required; otherwise 409 HAS_HISTORY with what is linked). Every action is in the audit log.
+const recordId = param('id').isInt({ min: 1 }).withMessage('invalid').toInt();
+const recordStatus = query('status').optional().isIn(['active', 'archived', 'all']).withMessage('invalid_choice');
+const searchText = query('q').optional().isString().isLength({ max: 100 }).withMessage('too_long');
+const requiredReason = body('reason').isString().withMessage('required').trim().notEmpty().withMessage('required').isLength({ max: 500 }).withMessage('too_long');
+const optionalReason = body('reason').optional({ values: 'null' }).isString().trim().isLength({ max: 500 }).withMessage('too_long');
+const optionalDistrict = (field) => body(field).optional().isIn(KIGALI_DISTRICTS).withMessage('invalid_choice');
+const optionalRequired = (field, max) => body(field).optional().isString().withMessage('invalid').trim().notEmpty().withMessage('required').isLength({ max }).withMessage('too_long');
+
+// Archive, unarchive and delete routes are the same for the three kinds
+function recordActions(path, { archive, unarchive, remove }) {
+  router.post(`/${path}/:id/archive`, [recordId, requiredReason], validate, handle(async (req, res) => {
+    res.json({ ok: true, released: await archive(req.user, req.params.id, req.body.reason) });
+  }));
+  router.post(`/${path}/:id/unarchive`, [recordId, optionalReason], validate, handle(async (req, res) => {
+    await unarchive(req.user, req.params.id, req.body.reason || null);
+    res.json({ ok: true });
+  }));
+  router.delete(`/${path}/:id`, [recordId, requiredReason], validate, handle(async (req, res) => {
+    await remove(req.user, req.params.id, req.body.reason);
+    res.json({ ok: true });
+  }));
+}
+
+// Nurseries
+router.get('/nurseries', [recordStatus, searchText, query('district').optional({ values: 'falsy' }).isIn(KIGALI_DISTRICTS)], validate, handle(async (req, res) => {
+  res.json(await records.listNurseries({ status: req.query.status, q: req.query.q, district: req.query.district }));
+}));
+router.get('/nurseries/:id', [recordId], validate, handle(async (req, res) => res.json({ item: await records.getNursery(req.params.id) })));
+router.patch(
+  '/nurseries/:id',
+  [recordId, optionalRequired('name', 160), optionalDistrict('district'), optionalRequired('sector', 60), v.optionalText('address_text', 255), optionalRequired('owner_full_name', 120), v.phone('owner_phone'), optionalReason],
+  validate,
+  handle(async (req, res) => res.json({ item: await records.updateNursery(req.user, req.params.id, req.body) }))
+);
+recordActions('nurseries', { archive: records.archiveNursery, unarchive: records.unarchiveNursery, remove: records.deleteNursery });
+
+// Institutions
+router.get(
+  '/institutions',
+  [recordStatus, searchText, query('district').optional({ values: 'falsy' }).isIn(KIGALI_DISTRICTS), query('org_type').optional({ values: 'falsy' }).isIn(ORG_TYPES)],
+  validate,
+  handle(async (req, res) => res.json(await records.listInstitutions({ status: req.query.status, q: req.query.q, district: req.query.district, orgType: req.query.org_type })))
+);
+router.get('/institutions/:id', [recordId], validate, handle(async (req, res) => res.json({ item: await records.getInstitution(req.params.id) })));
+router.patch(
+  '/institutions/:id',
+  [
+    recordId,
+    optionalRequired('name', 160),
+    body('org_type').optional().isIn(ORG_TYPES).withMessage('invalid_choice'),
+    optionalDistrict('district'),
+    optionalRequired('sector', 60),
+    v.phone('contact_phone'),
+    optionalRequired('user_full_name', 120),
+    v.phone('user_phone'),
+    optionalReason,
+  ],
+  validate,
+  handle(async (req, res) => res.json({ item: await records.updateInstitution(req.user, req.params.id, req.body) }))
+);
+recordActions('institutions', { archive: records.archiveInstitution, unarchive: records.unarchiveInstitution, remove: records.deleteInstitution });
+
+// Batches, and publishing them on the public homepage (W48)
+const batchIds = body('ids')
+  .isArray({ min: 1, max: 100 })
+  .withMessage('required')
+  .custom((ids) => ids.every((x) => Number.isInteger(x) && x > 0))
+  .withMessage('invalid');
+router.get(
+  '/batches',
+  [
+    recordStatus,
+    searchText,
+    optionalId('nursery_id'),
+    optionalId('species_id'),
+    query('stage').optional().isIn([...BATCH_STAGES, 'all']).withMessage('invalid_choice'),
+    query('published').optional({ values: 'falsy' }).isIn(['yes', 'shown', 'no']).withMessage('invalid_choice'),
+  ],
+  validate,
+  handle(async (req, res) => {
+    res.json(
+      await records.listBatches({ status: req.query.status, q: req.query.q, nurseryId: req.query.nursery_id, speciesId: req.query.species_id, stage: req.query.stage, published: req.query.published })
+    );
+  })
+);
+router.post('/batches/publish', [batchIds], validate, handle(async (req, res) => res.json(await records.publishBatches(req.user, req.body.ids))));
+router.post('/batches/unpublish', [batchIds], validate, handle(async (req, res) => res.json(await records.unpublishBatches(req.user, req.body.ids))));
+router.get('/batches/:id', [recordId], validate, handle(async (req, res) => res.json({ item: await records.getBatch(req.params.id) })));
+router.put(
+  '/batches/:id/featured',
+  [recordId, body('featured_rank').optional({ values: 'null' }).isInt({ min: 1, max: 99 }).withMessage('invalid').toInt()],
+  validate,
+  handle(async (req, res) => res.json({ item: await records.setFeatured(req.user, req.params.id, req.body.featured_rank ?? null) }))
+);
+// A quantity correction needs a reason; it is saved as a stock change (never below what is promised)
+router.patch(
+  '/batches/:id',
+  [
+    recordId,
+    body('unit_price').optional().isInt({ min: 0, max: 1000000000 }).withMessage('invalid_amount').toInt(),
+    body('quantity_change').optional({ values: 'falsy' }).isInt({ min: -10000000, max: 10000000 }).withMessage('invalid_quantity').toInt(),
+    body('reason')
+      .if((value, { req }) => Boolean(req.body.quantity_change))
+      .isString()
+      .withMessage('required')
+      .trim()
+      .notEmpty()
+      .withMessage('required')
+      .isLength({ max: 500 })
+      .withMessage('too_long'),
+    optionalReason,
+  ],
+  validate,
+  handle(async (req, res) => res.json({ item: await records.updateBatch(req.user, req.params.id, req.body) }))
+);
+recordActions('batches', { archive: records.archiveBatch, unarchive: records.unarchiveBatch, remove: records.deleteBatch });
 
 // ---- Risk job on demand for every nursery ----
 router.post('/risk/run', handle(async (req, res) => {

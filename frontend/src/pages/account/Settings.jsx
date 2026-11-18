@@ -141,6 +141,48 @@ function PlantVisibility() {
   )
 }
 
+// Nurseries: consent to appear on the public homepage (W48). OFF by default; the administrator can only
+// publish batches of nurseries that switched it on. Switching it off removes them from the homepage at once.
+function HomepageConsent() {
+  const { t } = useI18n()
+  const { organisation, refresh } = useAuth()
+  const [busy, setBusy] = useState(false)
+  const [message, setMessage] = useState(null)
+
+  async function toggle(event) {
+    const value = event.target.checked
+    setBusy(true)
+    setMessage(null)
+    try {
+      await api.put('/operator/homepage', { show_on_homepage: value })
+      await refresh()
+      setMessage({ type: 'success', text: value ? 'homepage.consentOn' : 'homepage.consentOff' })
+    } catch (err) {
+      setMessage({ type: 'error', text: `errors.${errorCode(err)}` })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Card>
+      <h2 className="mb-3 text-lg font-semibold">{t('homepage.consentTitle')}</h2>
+      {message && (
+        <Notice type={message.type} className="mb-3">
+          {t(message.text)}
+        </Notice>
+      )}
+      <label className="flex min-h-12 items-start gap-3 rounded-xl bg-canvas p-3">
+        <input type="checkbox" checked={organisation.show_on_homepage === true} onChange={toggle} disabled={busy} className="mt-1 h-5 w-5 accent-leaf" />
+        <span>
+          {t('homepage.consentLabel')}
+          <span className="block text-sm text-ink-soft">{t('homepage.consentText')}</span>
+        </span>
+      </label>
+    </Card>
+  )
+}
+
 function Organisation() {
   const { t } = useI18n()
   const { organisation, refresh } = useAuth()
@@ -175,6 +217,7 @@ function Organisation() {
         />
       </Card>
       {organisation.type === 'nursery' && organisation.verification_status === 'approved' && <PlantVisibility />}
+      {organisation.type === 'nursery' && organisation.verification_status === 'approved' && <HomepageConsent />}
       <Card>
         <h2 className="mb-3 text-lg font-semibold">{t('account.documentsTitle')}</h2>
         <Documents />

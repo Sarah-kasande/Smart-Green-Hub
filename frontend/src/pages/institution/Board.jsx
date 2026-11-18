@@ -153,7 +153,8 @@ function ItemCard({ item, onRequested }) {
 
 export default function Board() {
   const { t } = useI18n()
-  const [kind, setKind] = useState('offer') // 'offer' = Surplus offers, 'available' = Available plants
+  // 'offer' = Surplus offers, 'available' = Available plants. ?view=available (the homepage "Request" button) opens the second.
+  const [kind, setKind] = useState(() => (new URLSearchParams(window.location.search).get('view') === 'available' ? 'available' : 'offer'))
   const [district, setDistrict] = useState('')
   const [category, setCategory] = useState('')
   const [speciesId, setSpeciesId] = useState('')

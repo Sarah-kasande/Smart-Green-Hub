@@ -15,6 +15,8 @@ module.exports = (sequelize, DataTypes, { archivable }) =>
       is_listed: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
       // Whole-nursery switch for "Available plants" (W43). Separate from is_listed (public directory).
       show_available_plants: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
+      // Consent: "Allow my plants to appear on the public homepage" (W48). OFF by default.
+      show_on_homepage: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
       review_note: { type: DataTypes.STRING(500) },
     },
     { ...archivable, tableName: 'nurseries' }

@@ -1,6 +1,6 @@
 // Public landing page (UI.md 5.1), inspired by modern agriculture sites: calm heading, a full-width
 // photo, a band of impact numbers, the four jobs as photo tiles, how it works, the nursery directory
-// and a green call to action.
+// and a green call to action. "Plants available now" shows batches the administrator published (W48).
 // Rules kept from before: the impact numbers come ONLY from confirmed hand-overs (never invented),
 // and the directory lists only approved nurseries that agreed to be listed (FR03).
 // Photos: free licences from Wikimedia Commons (src/content/photos.js, credits in the footer).
@@ -8,6 +8,7 @@ import { lazy, Suspense, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ArrowRight, Check, MapPin, Phone } from 'lucide-react'
 import { qs, useApi } from '../../api/useApi'
+import { useAuth } from '../../auth/AuthContext'
 import { useI18n } from '../../i18n/I18nProvider'
 import ErrorState from '../../components/ui/ErrorState'
 import PageLoader from '../../components/ui/PageLoader'
@@ -23,7 +24,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/shadcn/ta
 import { ToggleGroup, ToggleGroupItem } from '@/components/shadcn/toggle-group'
 import { PHOTOS } from '../../content/photos'
 import { DISTRICTS } from '../../utils/options'
-import { formatNumber } from '../../utils/format'
+import { formatDate, formatNumber, formatRWF } from '../../utils/format'
 
 // The map library is large: load it only when a map is shown
 const PointsMap = lazy(() => import('../../components/map/Maps').then((m) => ({ default: m.PointsMap })))
@@ -232,6 +233,127 @@ function Steps() {
   )
 }
 
+// "Plants available now" (docs/DEVIATIONS.md W48): ready batches the administrator published, from
+// nurseries that agreed. Request-and-approve only: visitors sign in and send a request that the
+// nursery approves; no payment or delivery step exists. The API sends only species, plant type, quantity, price, prime-window
+// end, nursery name and district.
+const CATEGORIES = ['tree', 'flower', 'shrub', 'other']
+
+function PlantCard({ plant, user }) {
+  const { t } = useI18n()
+  const progress = plant.prime_progress ?? 0
+  return (
+    <li className="flex h-full flex-col gap-4 rounded-3xl border border-line bg-surface p-5 shadow-xs">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-lg font-bold leading-snug">{plant.species.name}</p>
+          {plant.species.kinyarwanda_name && <p className="text-sm text-ink-soft">{plant.species.kinyarwanda_name}</p>}
+          <p className="text-sm text-ink-soft">{t(`categories.${plant.category}`)}</p>
+        </div>
+        <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-leaf-light px-2.5 py-1 text-sm font-semibold text-leaf-text">
+          <Check className="size-4" aria-hidden="true" />
+          {t('stages.ready')}
+        </span>
+      </div>
+      <dl className="grid grid-cols-2 gap-3">
+        <div>
+          <dt className="text-sm text-ink-soft">{t('landing.plantsAvailable')}</dt>
+          <dd className="text-xl font-bold tabular-nums">{formatNumber(plant.available)}</dd>
+        </div>
+        {plant.unit_price && (
+          <div>
+            <dt className="text-sm text-ink-soft">{t('landing.plantsPrice')}</dt>
+            <dd className="text-xl font-bold tabular-nums">{formatRWF(plant.unit_price)}</dd>
+          </div>
+        )}
+      </dl>
+      {plant.prime_end_date && (
+        <div>
+          <p className="text-sm text-ink-soft">{t('landing.plantsPrimeEnd', { date: formatDate(plant.prime_end_date) })}</p>
+          {/* How much of the best time to plant has passed (text above says the date) */}
+          <div
+            role="progressbar"
+            aria-valuenow={progress}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label={t('landing.plantsPrimeProgress', { n: progress })}
+            className="mt-1.5 h-2 overflow-hidden rounded-full bg-line"
+          >
+            <div className="h-full rounded-full bg-leaf" style={{ width: `${progress}%` }} />
+          </div>
+        </div>
+      )}
+      <p className="flex items-start gap-1.5 text-sm text-ink-soft">
+        <MapPin className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+        <span>
+          {plant.nursery.name} · {t(`districts.${plant.nursery.district}`)}
+        </span>
+      </p>
+      <div className="mt-auto">
+        {!user && (
+          <Link to="/login" className={buttonClasses('primary', true)}>
+            {t('landing.plantsSignIn')}
+          </Link>
+        )}
+        {user?.role === 'institution' && (
+          <Link to="/institution/board?view=available" className={buttonClasses('primary', true)}>
+            {t('landing.plantsRequest')}
+          </Link>
+        )}
+      </div>
+    </li>
+  )
+}
+
+function PlantsNow() {
+  const { t } = useI18n()
+  const { user } = useAuth()
+  const [category, setCategory] = useState('')
+  const [district, setDistrict] = useState('')
+  const { data, error, reload } = useApi(`/public/plants${qs({ category, district })}`)
+  const plants = data?.plants || []
+
+  return (
+    <section id="plants" className="mx-auto max-w-6xl scroll-mt-24 px-4 py-10" aria-labelledby="plants-title">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h2 id="plants-title" className="text-3xl font-bold tracking-tight sm:text-4xl">
+            {t('landing.plantsTitle')}
+          </h2>
+          <p className="mt-2 max-w-xl text-ink-soft">{t('landing.plantsIntro')}</p>
+        </div>
+        <div className="grid grid-cols-2 gap-3 sm:flex">
+          <div className="sm:w-48">
+            <SelectField label={t('species.category')} value={category} onChange={(e) => setCategory(e.target.value)} placeholder={t('common.all')} options={CATEGORIES.map((c) => ({ value: c, label: t(`categories.${c}`) }))} />
+          </div>
+          <div className="sm:w-48">
+            <SelectField label={t('auth.district')} value={district} onChange={(e) => setDistrict(e.target.value)} placeholder={t('common.all')} options={DISTRICTS.map((d) => ({ value: d, label: t(`districts.${d}`) }))} />
+          </div>
+        </div>
+      </div>
+      <div className="mt-6">
+        {error && <ErrorState code={error} onRetry={reload} retryIcon="clock" />}
+        {!data && !error && (
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3" aria-hidden="true">
+            {[0, 1, 2].map((i) => (
+              <Skeleton key={i} className="h-64 rounded-3xl" />
+            ))}
+          </div>
+        )}
+        {data && plants.length === 0 && <p className="rounded-3xl border border-dashed border-line bg-surface p-6 text-ink-soft">{t('landing.plantsEmpty')}</p>}
+        {plants.length > 0 && (
+          <ul className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+            {plants.map((plant, index) => (
+              // The public answer has no ids on purpose (only the allowed fields), so the position is the key
+              <PlantCard key={`${index}-${plant.species.name}-${plant.nursery.name}`} plant={plant} user={user} />
+            ))}
+          </ul>
+        )}
+      </div>
+    </section>
+  )
+}
+
 function Directory() {
   const { t } = useI18n()
   const [district, setDistrict] = useState('')
@@ -348,6 +470,7 @@ export default function Landing() {
       {rest ? (
         // "below-fold": the browser skips drawing these until they come near the screen
         <div className="below-fold">
+          <PlantsNow />
           <Why />
           <Jobs />
           <Receivers />

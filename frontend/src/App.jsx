@@ -39,6 +39,9 @@ const RulesSpecies = lazy(() => import('./pages/admin/RulesSpecies'))
 const SpeciesRequests = lazy(() => import('./pages/admin/SpeciesRequests'))
 const AdminListings = lazy(() => import('./pages/admin/AdminListings'))
 const AdminSales = lazy(() => import('./pages/admin/AdminSales'))
+const AdminNurseries = lazy(() => import('./pages/admin/AdminNurseries'))
+const AdminInstitutions = lazy(() => import('./pages/admin/AdminInstitutions'))
+const AdminBatches = lazy(() => import('./pages/admin/AdminBatches'))
 const AuditLog = lazy(() => import('./pages/admin/AuditLog'))
 const EmailProblems = lazy(() => import('./pages/admin/EmailProblems'))
 import RequireApproved from './auth/RequireApproved'
@@ -104,6 +107,9 @@ export default function App() {
           <Route path="species-requests" element={<SpeciesRequests />} />
           <Route path="listings" element={<AdminListings />} />
           <Route path="sales" element={<AdminSales />} />
+          <Route path="nurseries" element={<AdminNurseries />} />
+          <Route path="institutions" element={<AdminInstitutions />} />
+          <Route path="batches" element={<AdminBatches />} />
           <Route path="impact" element={<Impact />} />
           <Route path="audit" element={<AuditLog />} />
           <Route path="notifications-failed" element={<EmailProblems />} />

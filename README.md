@@ -116,6 +116,8 @@ Forgot your password? Use **Forgot password** on the sign-in page: you receive a
 | **Rules & Species** | Change the risk rule values (section 5) and the approved plant species (growing time, prime window). Only the administrator sets species rules. The page also shows how many species requests wait. |
 | **Listings and plants** | Two views. *Surplus listings*: every Surplus Board listing (all statuses), with *Withdraw*. *Available plants*: every batch of every approved nursery with stage, stock, free quantity, price per plant and whether institutions see it. Search and filter by nursery, species, stage and status. |
 | **Sales** | Every sale recorded by every nursery, including sales synced from offline: totals (RWF, number of sales, plants sold) for today, this week, this month, this year or custom dates, the sales table, a breakdown by nursery and by species, and **Export CSV** (each export is written to the audit log). Totals are calculated on the server over all matching sales; a sale the nursery removes is no longer counted. |
+| **Nurseries, Batches, Institutions** | The main records, each as a table (cards on phones) with search, *Active / Archived / All* with counts, and a detail view. **Edit** changes only safe fields (names, contact details, district, sector; for a batch the price per plant and a quantity correction with a reason). **Archive** (reason required) hides the record from use but keeps all history; **Unarchive** restores it. **Delete** is permanent and only works when nothing is linked; otherwise the page explains why and offers Archive. Everything is in the audit log (section 4.9). |
+| **Batches → Publish** | Put ready batches on the public homepage, one at a time or several together, and choose a *Featured* position. Only batches with free plants, from approved nurseries that agreed, can be published (section 4.9). |
 | **Audit log** | Who changed what and when. |
 | **Email problems** | Emails that failed or were skipped, with the exact reason and a *Retry* button. |
 
@@ -184,6 +186,42 @@ checkout, no payment, no price comparison, no delivery tracking.
 - **Impact stays honest:** a hand-over from a surplus offer, or of a batch that was overgrown or had an open
   risk alert, counts as **surplus redirected**; plants from healthy stock count as **supplied for
   greening** and are never called saved from waste.
+
+### 4.9 Managing records and the public homepage
+
+**Archive, unarchive, delete** (administrator: Nurseries, Batches, Institutions)
+
+- **Archive** is the soft delete (`archived_at`, FR16). A reason is required, and the person is told by email and
+  in-app notification.
+  - **Archived nursery:** cannot sign in or post, and disappears from the directory, the Surplus Board,
+    Available plants, the homepage and the risk job.
+  - **Archived institution:** cannot sign in or request.
+  - **Archived batch:** leaves stock, alerts, listings and the homepage.
+  - **History stays:** sales, requests and impact are kept for reports and for the other side's history.
+- **What is still promised is released in the same transaction:** open requests are cancelled and open listings
+  withdrawn, with a notification to the other side. Stock was never reduced for an open request (only after both
+  sides confirm), so those plants are simply free again.
+- **Unarchive** restores the record. Cancelled requests stay cancelled: the other side was already told, and the
+  plants may have been promised elsewhere since.
+- **Delete** is permanent and only allowed when nothing is linked (no batches, sales, expenses, listings, requests,
+  species requests, stock changes or alerts). Otherwise it is refused and the page offers Archive.
+- **The audit log is never deleted.** Every account is in it from the day it registered, so for a deleted
+  nursery or institution the account row stays only as an anonymous placeholder: name, email and phone erased,
+  signed out, archived.
+
+**Plants available now** (public homepage)
+
+- **Nursery consent:** a nursery switches on *Settings → Nursery details → Allow my plants to appear on the public
+  homepage* (off by default). Switching it off removes all its batches from the homepage at once.
+- **Publishing:** the administrator publishes ready batches with free plants from approved, non-archived nurseries
+  that agreed, and chooses a *Featured* position (1 first).
+- **The public card shows only:** species, plant type, quantity available, price per plant (if set), end of the
+  prime window (with a progress bar), nursery name and district. Never phone, email, sales, risk, alerts, total
+  stock or exact location.
+- **Cards disappear by themselves** when the batch is sold out, archived, unpublished or no longer ready. The
+  endpoint is rate-limited and cached for 60 seconds.
+- **Request and approve only:** visitors see *Sign in to request*, and signed-in institutions see *Request*, which
+  opens Available plants. There is no payment or delivery step.
 
 ## 5. How the risk rules work
 
@@ -255,6 +293,9 @@ Lists of batches and species are kept on the phone, so they also show offline. S
 - Email codes are single-use, expire after 10 minutes and are stored only as a hash.
 - Every role sees only its own data; important actions are written to the audit log.
 - The public sees only nurseries that agreed to be listed, and only total impact figures.
+- The public homepage shows a batch only when its nursery agreed (off by default), and only species, plant
+  type, quantity, price, prime-window end, nursery name and district. That endpoint is rate-limited.
+- An archived nursery or institution is signed out at once and cannot sign in until it is unarchived.
 - The administrator can see every nursery's sales records and totals (to measure impact and support small
   nurseries). Nurseries are told this on the registration form and in Settings; every CSV export is audited.
 - No secrets are in the repository; `.env` files and certificates are ignored by git.
@@ -445,7 +486,7 @@ Local development and tests use a **local MySQL Server 8** installed on your com
 The tests need the local MySQL (section 10). They **refuse** to run when the database is remote or `defaultdb`, and
 they create their own `[TEST]` species in the local test databases only. The species-request flow is covered by
 `backend/tests/api/speciesRequests.test.js`, `backend/tests/unit/speciesNames.test.js` and
-`frontend/e2e/species-requests.spec.js`; Available plants by `backend/tests/api/availablePlants.test.js` and `frontend/e2e/available-plants.spec.js`; the Requests lists with both kinds of request (surplus offer and available plant) and their history by `backend/tests/api/requestLists.test.js`; the admin Sales page by `backend/tests/api/adminSales.test.js` and `backend/tests/unit/salesReport.test.js`; admin history (species requests, listings and plants) by `backend/tests/api/adminHistory.test.js`. To run them safely, use the local MySQL (section 10) so that
+`frontend/e2e/species-requests.spec.js`; Available plants by `backend/tests/api/availablePlants.test.js` and `frontend/e2e/available-plants.spec.js`; the Requests lists with both kinds of request (surplus offer and available plant) and their history by `backend/tests/api/requestLists.test.js`; the admin Sales page by `backend/tests/api/adminSales.test.js` and `backend/tests/unit/salesReport.test.js`; admin history (species requests, listings and plants) by `backend/tests/api/adminHistory.test.js`; archive, unarchive, delete rules and permissions by `backend/tests/api/adminRecords.test.js`; the homepage (consent, data exposure, disappearing batches, featured position, rate limit) by `backend/tests/api/homepage.test.js`, `backend/tests/unit/homepage.test.js` and `frontend/e2e/admin-homepage.spec.js`. To run them safely, use the local MySQL (section 10) so that
 `backend/.env.test` and `.env.e2e` point to `127.0.0.1` with `_test` / `_e2e` database names; never point them at
 Aiven. Results, including Lighthouse scores,
 are in `docs/TEST_REPORT.md`.

@@ -15,6 +15,7 @@ const surplus = require('../services/surplusService');
 const impact = require('../services/impactService');
 const speciesService = require('../services/speciesService');
 const audit = require('../services/auditService');
+const { sequelize, Batch } = require('../models');
 const { operatorDashboard } = require('../services/dashboardService');
 const { BATCH_STAGES, OFFER_TYPES, ALERT_STATUSES, REQUEST_STATUSES, SPECIES_CATEGORIES } = require('../utils/constants');
 
@@ -42,6 +43,21 @@ router.put('/visibility', [body('show_available_plants').isBoolean({ strict: tru
     reason: req.body.show_available_plants ? 'available plants shown' : 'available plants hidden',
   });
   res.json({ show_available_plants: req.nursery.show_available_plants });
+}));
+
+// ---- Consent: "Allow my plants to appear on the public homepage" (W48), OFF by default ----
+// Switching it off also takes every batch of the nursery off the homepage at once.
+router.put('/homepage', [body('show_on_homepage').isBoolean({ strict: true }).withMessage('invalid')], validate, handle(async (req, res) => {
+  const allow = req.body.show_on_homepage;
+  await sequelize.transaction(async (transaction) => {
+    await req.nursery.update({ show_on_homepage: allow }, { transaction });
+    if (!allow) await Batch.update({ published_at: null, featured_rank: null }, { where: { nursery_id: req.nursery.id }, paranoid: false, transaction });
+    await audit.log(
+      { actorId: req.user.id, action: 'nursery.homepage_consent', entityType: 'nursery', entityId: req.nursery.id, reason: allow ? 'allowed on the public homepage' : 'not allowed on the public homepage' },
+      { transaction }
+    );
+  });
+  res.json({ show_on_homepage: req.nursery.show_on_homepage });
 }));
 
 // ---- Dashboard ----

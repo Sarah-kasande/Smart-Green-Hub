@@ -27,6 +27,10 @@ module.exports = {
   IMPACT_TYPES: ['surplus_redirected', 'greening_supply'],
   // Batch stages shown to institutions as "Available plants"
   AVAILABLE_STAGES: ['ready', 'overgrown'],
+  // Batch stages that can be published on the public homepage (W48)
+  HOMEPAGE_STAGES: ['ready'],
+  // What the administrator manages on the record pages (W47)
+  RECORD_KINDS: ['nursery', 'institution', 'batch'],
   RECOMMENDATION_STATUSES: ['suggested', 'accepted', 'dismissed'],
   // queued = waiting to be sent; skipped = printed to the console (development) instead of sent
   NOTIFICATION_STATUSES: ['queued', 'sent', 'failed', 'skipped'],
