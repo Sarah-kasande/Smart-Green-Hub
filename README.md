@@ -87,7 +87,7 @@ Forgot your password? Use **Forgot password** on the sign-in page: you receive a
 
 | Step | Page | What to do |
 |------|------|------------|
-| 1 | **Batches → Add batch** | Record each group of plants of one species sown together: quantity, sowing date, stage (seedling, growing, ready, overgrown) and the dates of its prime window. |
+| 1 | **Batches → Add batch** | Record each group of plants of one species sown together: species, quantity, sowing date and price. The ready date and prime window are calculated from the administrator's species rules; nurseries cannot change them. A plant that is not in the list: choose **My species is not listed** and give its name, plant type and (optional) local name. If a similar species exists, the app asks *Did you mean ...?* first. The batch is saved at once and shows **Waiting for species approval** until the administrator decides (see 4.7). |
 | 2 | **Sales & Expenses** | Record each sale (batch, quantity, price) and each expense. The *Profit* tab shows income minus expenses per month. Mistakes can be undone. |
 | 3 | **Dashboard** | See the batch most at risk in the **Act now** card, the number of batches per risk level, a timeline of prime windows, requests waiting for you and income vs expenses. |
 | 4 | **Alerts** | Every batch at Medium or High risk, with the numbers behind it and a suggested action. Mark an alert acknowledged, resolved or dismissed. Use **Check now** to recalculate immediately. |
@@ -110,9 +110,10 @@ Forgot your password? Use **Forgot password** on the sign-in page: you receive a
 
 | Page | What to do |
 |------|------------|
-| **Dashboard** | A *Needs your attention* list (organisations to verify, email problems) and the total impact. |
+| **Dashboard** | A *Needs your attention* list (organisations to verify, species requests, email problems) and the total impact. |
 | **Verification** | Approve or reject new nurseries and institutions after checking their details and documents. |
-| **Rules & Species** | Change the risk rule values (section 5) and the plant species list (growing time, prime window). |
+| **Species requests** | Species proposed by nurseries (the menu shows how many wait). Approve with the growing time and prime window, reject with a reason, or merge a spelling duplicate into an existing species (see 4.7). |
+| **Rules & Species** | Change the risk rule values (section 5) and the approved plant species (growing time, prime window). Only the administrator sets species rules. The page also shows how many species requests wait. |
 | **Listings** | See and moderate every Surplus Board listing. |
 | **Audit log** | Who changed what and when. |
 | **Email problems** | Emails that failed or were skipped, with the exact reason and a *Retry* button. |
@@ -142,6 +143,25 @@ Nightly job: listings past their end date                    listing: expired
 - **Language switch**: EN | Kinyarwanda on every screen.
 - **Install the app**: user menu → *Install app* (Android / Chrome / Edge). On an iPhone: Share → *Add to Home
   Screen*. Long-press the installed icon for shortcuts: Add batch, Record sale, Surplus Board.
+
+### 4.7 A species that is not in the list
+
+1. **Nursery:** *Add batch → My species is not listed* → name, plant type (Flowers, Trees, Shrubs, Other plants),
+   optional local or Kinyarwanda name. No growing time or prime window: only the administrator sets those.
+   Names are compared ignoring capital letters, spaces and accents: the same name reuses the existing species,
+   a close name asks *Did you mean ...?*. The species request and the batch are saved together.
+2. **While waiting:** the batch counts in stock and appears in *Batches* as *Waiting for species approval*, but it
+   has no ready date yet, so it gets no alerts, no planting suggestion and cannot go on the Surplus Board. The
+   species shows only in this nursery's dropdown, marked *waiting for approval*. The administrator gets an
+   in-app notification and an email.
+3. **Administrator (Species requests):**
+   - *Approve:* confirm the name and plant type, enter days to ready and prime-window days. Every batch of the
+     species gets its dates from its planting date; a batch planted long ago can become *ready* or *overgrown*
+     at once and then gets alerts normally. The species is now in every nursery's list.
+   - *Reject:* a reason is required. The nursery is notified; its batch shows *Species rejected: choose another
+     species* and keeps its stock.
+   - *Merge:* for a spelling duplicate. The batches move to the existing species and get its dates.
+   Every decision is in the audit log, and the nursery is notified (in-app and email).
 
 ## 5. How the risk rules work
 
@@ -244,7 +264,8 @@ what `npm run dev` does locally, and what the earlier Render deployment used.
 The database has the 15 entities of the proposal (users, institutions, nurseries, plant species, batches, sales,
 expenses, risk alerts, surplus listings, surplus requests, impact records, rule settings, planting
 recommendations, notifications, audit logs) plus three supporting tables (sign-in tokens, stock adjustments,
-uploaded files).
+uploaded files). Species proposed by nurseries are ordinary plant-species rows with a `status`
+(approved, pending, rejected, merged) and who requested and decided them (docs/DEVIATIONS.md W39); no extra table.
 
 ```
 backend/src/
@@ -279,7 +300,8 @@ frontend/e2e/    Playwright end-to-end tests
 > or sample batches. It contains only (1) the tables created by the migrations, (2) the default risk rule
 > (Table 5: lookback 28 days, Medium from 20 %, High from 50 %, safety margin 10 %, far 28 days, near 7 days) and
 > (3) the administrator created from `ADMIN_EMAIL` / `ADMIN_PASSWORD`. The administrator adds the real plant
-> species in *Rules & Species*; until then *Add batch* and *Planting plan* say "No species yet".
+> species in *Rules & Species* (or approves the ones nurseries propose); until then *Planting plan* says
+> "No species yet" and *Add batch* offers only "My species is not listed".
 >
 > The code enforces this (`backend/src/utils/dbSafety.js`): a database counts as **live** when its host is not
 > this computer, or when its name is `defaultdb`. Against a live database, `npm test`, the Playwright tests,
@@ -386,12 +408,16 @@ Local development and tests use a **local MySQL 8.4 in Docker**, never the live 
 | Command | What runs |
 |---------|-----------|
 | `cd backend && npm test` | Jest unit and API tests (risk rules, planting, sync, surplus, codes, email outbox, ...) on the LOCAL test database |
-| `cd frontend && npm run test:e2e` | 24 Playwright tests in Microsoft Edge at phone and desktop size (starts its own API and app on the LOCAL e2e database) |
+| `cd frontend && npm run test:e2e` | 29 Playwright tests in Microsoft Edge at phone and desktop size (starts its own API and app on the LOCAL e2e database) |
 | `cd frontend && npm run lint` | ESLint |
 | `cd backend && node scripts/load-test.js http://localhost:5000 50 10` | 50-user load test (NFR01), local API only |
 
 The tests need the local Docker MySQL. They **refuse** to run when the database is remote or `defaultdb`, and
-they create their own `[TEST]` species in the local test databases only. Results, including Lighthouse scores,
+they create their own `[TEST]` species in the local test databases only. The species-request flow is covered by
+`backend/tests/api/speciesRequests.test.js`, `backend/tests/unit/speciesNames.test.js` and
+`frontend/e2e/species-requests.spec.js`. To run them safely, start the local Docker MySQL (section 10) so that
+`backend/.env.test` and `.env.e2e` point to `127.0.0.1` with `_test` / `_e2e` database names; never point them at
+Aiven. Results, including Lighthouse scores,
 are in `docs/TEST_REPORT.md`.
 
 ## 12. Environment variables
@@ -510,7 +536,9 @@ The root `package.json` and `scripts/dev.js` are for local development only.
   probably powered off after a period without use. Aiven console → the MySQL service → *Power on*, wait until
   it shows *Running*.
 - **"No species yet" on Add batch / Planting plan**: expected on a new database. The administrator adds the
-  species in *Rules & Species*.
+  species in *Rules & Species*, or a nursery proposes one with *My species is not listed*.
+- **A batch shows "Waiting for species approval"**: its species was proposed by the nursery. The administrator
+  decides it in *Species requests*; until then the batch has no dates and no alerts (by design).
 - **Local database not reachable?** Start Docker Desktop, then `docker start sgh-mysql`.
 - **`npm` says ENOENT / package.json not found**: you are in the wrong folder. Run `npm run dev` from the
   project root (`Smart-Green-Hub`).

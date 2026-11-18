@@ -91,6 +91,8 @@ async function createListing(nursery, user, data) {
   return sequelize.transaction(async (transaction) => {
     const batch = await findOwnBatch(nursery, data.batch_id, { transaction, lock: true });
     if (batch.stage === 'cleared') throw new HttpError(409, 'BATCH_CLEARED', 'This batch is cleared');
+    // A batch whose species is not approved yet (or was rejected) cannot be offered (W39)
+    if (batch.species?.status !== 'approved') throw new HttpError(409, 'SPECIES_NOT_APPROVED', 'The species of this batch is not approved yet');
     const available = batch.quantity_current - (await committedQuantity(batch.id, { transaction }));
     // The server refuses a listing larger than the available stock (FR09)
     if (data.quantity > available) {

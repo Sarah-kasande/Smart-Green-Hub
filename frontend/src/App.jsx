@@ -36,6 +36,7 @@ const Notifications = lazy(() => import('./pages/shared/Notifications'))
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'))
 const VerificationQueue = lazy(() => import('./pages/admin/VerificationQueue'))
 const RulesSpecies = lazy(() => import('./pages/admin/RulesSpecies'))
+const SpeciesRequests = lazy(() => import('./pages/admin/SpeciesRequests'))
 const AdminListings = lazy(() => import('./pages/admin/AdminListings'))
 const AuditLog = lazy(() => import('./pages/admin/AuditLog'))
 const EmailProblems = lazy(() => import('./pages/admin/EmailProblems'))
@@ -99,6 +100,7 @@ export default function App() {
           <Route index element={<AdminDashboard />} />
           <Route path="verification" element={<VerificationQueue />} />
           <Route path="rules" element={<RulesSpecies />} />
+          <Route path="species-requests" element={<SpeciesRequests />} />
           <Route path="listings" element={<AdminListings />} />
           <Route path="impact" element={<Impact />} />
           <Route path="audit" element={<AuditLog />} />

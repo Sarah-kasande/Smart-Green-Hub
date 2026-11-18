@@ -34,14 +34,16 @@ async function unitsSold(nurseryId, speciesId, lookback, today) {
 const LEVEL_ORDER = { low: 0, medium: 1, high: 2 };
 
 // Evaluates all active batches (optionally of one nursery). Returns a summary.
+// Batches whose species waits for the administrator's approval (or was rejected) have no
+// prime-window dates yet, so they are left out until the species is approved (docs/DEVIATIONS.md W39).
 async function runEvaluation({ nurseryId = null, today = todayKigali(), actorId = null } = {}) {
   const settings = await defaultRule();
-  const where = { stage: { [Op.in]: ACTIVE_STAGES } };
+  const where = { stage: { [Op.in]: ACTIVE_STAGES }, prime_end_date: { [Op.ne]: null } };
   if (nurseryId) where.nursery_id = nurseryId;
   const batches = await Batch.findAll({
     where,
     include: [
-      { model: PlantSpecies, as: 'species', paranoid: false },
+      { model: PlantSpecies, as: 'species', paranoid: false, where: { status: 'approved' }, required: true },
       { model: Nursery, as: 'nursery', where: { verification_status: 'approved' } },
     ],
   });

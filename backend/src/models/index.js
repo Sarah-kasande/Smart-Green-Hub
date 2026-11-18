@@ -43,6 +43,10 @@ Nursery.hasMany(Batch, { foreignKey: 'nursery_id', as: 'batches' });
 Batch.belongsTo(Nursery, { foreignKey: 'nursery_id', as: 'nursery' });
 PlantSpecies.hasMany(Batch, { foreignKey: 'species_id', as: 'batches' });
 Batch.belongsTo(PlantSpecies, { foreignKey: 'species_id', as: 'species' });
+// Species proposed by a nursery and decided by the administrator (docs/DEVIATIONS.md W39)
+PlantSpecies.belongsTo(Nursery, { foreignKey: 'requested_by_nursery_id', as: 'requestedBy' });
+PlantSpecies.belongsTo(User, { foreignKey: 'decided_by', as: 'decidedBy' });
+PlantSpecies.belongsTo(PlantSpecies, { foreignKey: 'merged_into_id', as: 'mergedInto' });
 Batch.hasMany(Sale, { foreignKey: 'batch_id', as: 'sales' });
 Sale.belongsTo(Batch, { foreignKey: 'batch_id', as: 'batch' });
 Nursery.hasMany(Sale, { foreignKey: 'nursery_id', as: 'sales' });

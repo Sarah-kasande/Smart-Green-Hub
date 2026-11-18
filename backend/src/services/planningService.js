@@ -69,7 +69,8 @@ async function relevantSpecies(nursery) {
   );
   const ids = rows.map((r) => r.species_id);
   if (!ids.length) return [];
-  return PlantSpecies.findAll({ where: { id: { [Op.in]: ids } }, paranoid: false, order: [['common_name', 'ASC']] });
+  // Species waiting for approval have no growing time yet, so no suggestion (docs/DEVIATIONS.md W39)
+  return PlantSpecies.findAll({ where: { id: { [Op.in]: ids }, status: 'approved' }, paranoid: false, order: [['common_name', 'ASC']] });
 }
 
 async function listRecommendations(nursery, { today = todayKigali() } = {}) {
@@ -89,7 +90,7 @@ async function listRecommendations(nursery, { today = todayKigali() } = {}) {
 // The operator accepts or dismisses a suggestion; the numbers at that moment are saved.
 async function saveDecision(nursery, user, speciesId, status) {
   const species = await PlantSpecies.findByPk(speciesId, { paranoid: false });
-  if (!species) throw new HttpError(404, 'NOT_FOUND', 'Species not found');
+  if (!species || species.status !== 'approved') throw new HttpError(404, 'NOT_FOUND', 'Species not found');
   const rec = await recommendFor(nursery, species);
   const row = await PlantingRecommendation.create({
     nursery_id: nursery.id,

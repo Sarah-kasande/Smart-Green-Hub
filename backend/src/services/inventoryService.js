@@ -1,36 +1,28 @@
 // InventoryService (Figure 7): plant batches and stock adjustments (FR04).
+// Batch dates always come from the administrator's species rules (services/batchDates.js);
+// nurseries cannot change growing times or prime windows (docs/DEVIATIONS.md W39).
 const crypto = require('crypto');
 const { Op } = require('sequelize');
-const { sequelize, Batch, PlantSpecies, RuleSetting, StockAdjustment } = require('../models');
+const { sequelize, Batch, PlantSpecies, StockAdjustment } = require('../models');
 const HttpError = require('../utils/httpError');
-const { todayKigali, addDays, daysBetween } = require('../utils/dates');
 const audit = require('./auditService');
 const { committedQuantity, availableQuantity } = require('./stockService');
+const { primeDaysFor, datesFor, suggestStage, stageAfterDates } = require('./batchDates');
+const speciesService = require('./speciesService');
+const { dispatchSoon } = require('./notificationService');
 
 const ACTIVE_STAGES = ['seedling', 'growing', 'ready', 'overgrown'];
 
-// Prime-window length for a species: a species row in RULE_SETTINGS overrides the
-// species default (docs/DEVIATIONS.md D8).
-async function primeDaysFor(species, transaction) {
-  const rule = await RuleSetting.findOne({ where: { species_id: species.id }, transaction });
-  return rule?.prime_window_days ?? species.default_prime_days;
-}
-
-// The stage the dates suggest. The operator decides the real stage (FR07: the system never
-// changes a batch by itself), so this is only shown as a hint and used when a batch is created.
-//   before the ready date: "seedling" during the first third of the growing time, then "growing"
-//   from the ready date to the prime-window end: "ready"
-//   after the prime-window end: "overgrown"
-function suggestStage({ planting_date, expected_ready_date, prime_end_date }, today = todayKigali()) {
-  if (today > prime_end_date) return 'overgrown';
-  if (today >= expected_ready_date) return 'ready';
-  const growingDays = Math.max(1, daysBetween(planting_date, expected_ready_date));
-  return daysBetween(planting_date, today) < growingDays / 3 ? 'seedling' : 'growing';
-}
-
+// species_status: "approved", or "pending" (the batch waits for species approval: no dates, no
+// alerts, no Surplus Board) or "rejected" (the nursery must choose another species).
 function toBatchJson(batch, extra = {}) {
   const json = batch.toJSON ? batch.toJSON() : batch;
-  return { ...json, suggested_stage: json.stage === 'cleared' ? 'cleared' : suggestStage(json), ...extra };
+  return {
+    ...json,
+    suggested_stage: json.stage === 'cleared' ? 'cleared' : suggestStage(json),
+    species_status: json.species?.status || null,
+    ...extra,
+  };
 }
 
 async function findOwnBatch(nursery, batchId, { transaction, lock } = {}) {
@@ -53,23 +45,33 @@ async function existingByUuid(Model, clientUuid, nursery, transaction) {
   return row;
 }
 
+// Which species a new batch uses:
+//   species_id   an approved species, or a waiting one (the nursery's own, or one shown to it as
+//                "Did you mean ...?"). A species merged meanwhile (e.g. chosen offline) leads to
+//                the approved species it was merged into.
+//   new_species  "My species is not listed": { common_name, category, kinyarwanda_name, confirmed }
+async function speciesForNewBatch(nursery, user, data, transaction) {
+  if (data.new_species) return speciesService.speciesForProposal(nursery, user, data.new_species, transaction);
+  let species = await PlantSpecies.findByPk(data.species_id, { transaction, paranoid: false });
+  if (species?.status === 'merged') species = await PlantSpecies.findByPk(species.merged_into_id, { transaction });
+  if (species?.status === 'rejected') {
+    throw new HttpError(409, 'SPECIES_REJECTED', 'This species was rejected', { fields: { species_id: 'invalid_choice' } });
+  }
+  if (!species || species.archived_at || !['approved', 'pending'].includes(species.status)) {
+    throw new HttpError(400, 'VALIDATION_FAILED', 'Unknown species', { fields: { species_id: 'invalid_choice' } });
+  }
+  return { species, created: false };
+}
+
 async function createBatch(nursery, user, data) {
-  return sequelize.transaction(async (transaction) => {
+  const result = await sequelize.transaction(async (transaction) => {
     const existing = await existingByUuid(Batch, data.client_uuid, nursery, transaction);
     if (existing) return { batch: existing, duplicate: true };
 
-    const species = await PlantSpecies.findByPk(data.species_id, { transaction });
-    if (!species) throw new HttpError(400, 'VALIDATION_FAILED', 'Unknown species', { fields: { species_id: 'invalid_choice' } });
-
-    // Expected ready date and prime-window end come from species defaults the operator may adjust (FR04)
-    const daysToReady = data.days_to_ready ?? species.default_days_to_ready;
-    const primeDays = data.prime_days ?? (await primeDaysFor(species, transaction));
-    const expectedReady = addDays(data.planting_date, daysToReady);
-    const dates = {
-      planting_date: data.planting_date,
-      expected_ready_date: expectedReady,
-      prime_end_date: addDays(expectedReady, primeDays),
-    };
+    // The species request (if any) and the batch are saved together: both or neither
+    const { species, created } = await speciesForNewBatch(nursery, user, data, transaction);
+    // Approved species: dates from the administrator's rules. Waiting species: no dates yet.
+    const dates = await datesFor(species, data.planting_date, transaction);
 
     const batch = await Batch.create(
       {
@@ -78,15 +80,18 @@ async function createBatch(nursery, user, data) {
         quantity_initial: data.quantity,
         quantity_current: data.quantity,
         ...dates,
-        stage: data.stage || suggestStage(dates),
+        stage: data.stage || suggestStage(dates) || 'seedling',
         unit_price: data.unit_price ?? 0,
         client_uuid: data.client_uuid || crypto.randomUUID(),
       },
       { transaction }
     );
     await audit.log({ actorId: user.id, action: 'batch.created', entityType: 'batch', entityId: batch.id }, { transaction });
-    return { batch, duplicate: false };
+    batch.setDataValue('species', species);
+    return { batch, duplicate: false, speciesRequested: created };
   });
+  if (result.speciesRequested) dispatchSoon(); // email the administrator
+  return result;
 }
 
 async function listBatches(nursery, { stage, includeCleared = false } = {}) {
@@ -105,19 +110,15 @@ async function listBatches(nursery, { stage, includeCleared = false } = {}) {
   return result;
 }
 
-// Operator edits: stage, price and the two dates (the operator may adjust species defaults).
+// Operator edits: stage and price only. The dates follow the administrator's species rules
+// (docs/DEVIATIONS.md W39), so they cannot be edited here.
 // Quantity is never edited directly; it changes through sales, stock adjustments or hand-overs.
 async function updateBatch(nursery, user, batchId, data) {
   return sequelize.transaction(async (transaction) => {
     const batch = await findOwnBatch(nursery, batchId, { transaction, lock: true });
     const changes = {};
-    for (const field of ['stage', 'unit_price', 'expected_ready_date', 'prime_end_date']) {
+    for (const field of ['stage', 'unit_price']) {
       if (data[field] !== undefined) changes[field] = data[field];
-    }
-    const ready = changes.expected_ready_date || batch.expected_ready_date;
-    const primeEnd = changes.prime_end_date || batch.prime_end_date;
-    if (primeEnd < ready) {
-      throw new HttpError(400, 'VALIDATION_FAILED', 'Prime-window end is before the ready date', { fields: { prime_end_date: 'before_ready' } });
     }
     const stageChanged = changes.stage && changes.stage !== batch.stage;
     await batch.update(changes, { transaction });
@@ -131,6 +132,31 @@ async function updateBatch(nursery, user, batchId, data) {
       },
       { transaction }
     );
+    return batch;
+  });
+}
+
+// The species of a batch was rejected (or is still waiting): the nursery chooses another one.
+// Stock, sales and history stay; with an approved species the batch gets its dates at once.
+async function changeSpecies(nursery, user, batchId, speciesId) {
+  return sequelize.transaction(async (transaction) => {
+    const batch = await findOwnBatch(nursery, batchId, { transaction, lock: true });
+    if (batch.species?.status === 'approved') {
+      throw new HttpError(409, 'SPECIES_LOCKED', 'The species of this batch is already approved');
+    }
+    const species = await PlantSpecies.findByPk(speciesId, { transaction });
+    const allowed = species && (species.status === 'approved' || (species.status === 'pending' && species.requested_by_nursery_id === nursery.id));
+    if (!allowed || species.id === batch.species_id) {
+      throw new HttpError(400, 'VALIDATION_FAILED', 'Choose another species', { fields: { species_id: 'invalid_choice' } });
+    }
+    const dates = await datesFor(species, batch.planting_date, transaction);
+    const before = batch.species_id;
+    await batch.update({ species_id: species.id, ...dates, stage: stageAfterDates(batch.stage, dates) }, { transaction });
+    await audit.log(
+      { actorId: user.id, action: 'batch.species_changed', entityType: 'batch', entityId: batch.id, reason: `species #${before} -> #${species.id}` },
+      { transaction }
+    );
+    batch.setDataValue('species', species);
     return batch;
   });
 }
@@ -199,6 +225,7 @@ module.exports = {
   createBatch,
   listBatches,
   updateBatch,
+  changeSpecies,
   adjustStock,
   batchHistory,
   archiveBatch,

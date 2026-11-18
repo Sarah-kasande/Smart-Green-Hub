@@ -7,7 +7,7 @@ import Card from '../../components/ui/Card'
 import { Progress } from '@/components/shadcn/progress'
 import Notice from '../../components/ui/Notice'
 import PageLoader from '../../components/ui/PageLoader'
-import { Pill, StatusBadge } from '../../components/ui/Badges'
+import { Pill, SpeciesStatusPill, StatusBadge } from '../../components/ui/Badges'
 import { EmptyState, PageHeader } from '../../components/ui/Layout'
 import { DataTable, FilterPanel, FilterSelect, SearchBox, Toolbar, ViewToggle, WithFilters } from '../../components/ui/DataView'
 import { countLabel, matches, useViewMode } from '../../components/ui/dataViewTools'
@@ -67,6 +67,7 @@ export function BatchCard({ batch }) {
         </div>
       </dl>
       {batch.prime_end_date && batch.stage !== 'cleared' && <PrimeProgress batch={batch} />}
+      <SpeciesStatusPill status={batch.species?.status} />
       {batch.pending && (
         <Pill tone="amber" icon="clock">
           {t('sync.waitingOne')}
@@ -120,12 +121,16 @@ export default function Batches() {
     {
       key: 'sync',
       header: t('table.status'),
-      render: (b) =>
-        b.pending && (
-          <Pill tone="amber" icon="clock">
-            {t('sync.waitingOne')}
-          </Pill>
-        ),
+      render: (b) => (
+        <div className="flex flex-wrap gap-1.5">
+          <SpeciesStatusPill status={b.species?.status} />
+          {b.pending && (
+            <Pill tone="amber" icon="clock">
+              {t('sync.waitingOne')}
+            </Pill>
+          )}
+        </div>
+      ),
     },
   ]
 

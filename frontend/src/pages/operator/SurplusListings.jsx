@@ -22,7 +22,8 @@ import { addDaysIso, formatDate, formatNumber, formatRWF, todayIso } from '../..
 function NewListingForm({ initialBatch, onCreated, onCancel }) {
   const { t } = useI18n()
   const { batches } = useBatches()
-  const options = (batches || []).filter((b) => b.id && b.stage !== 'cleared' && (b.available ?? 0) > 0)
+  // A batch waiting for species approval (or with a rejected species) cannot be offered yet
+  const options = (batches || []).filter((b) => b.id && b.stage !== 'cleared' && (b.available ?? 0) > 0 && b.species?.status !== 'pending' && b.species?.status !== 'rejected')
   const [form, setForm] = useState({
     batch_id: initialBatch || '',
     quantity: '',

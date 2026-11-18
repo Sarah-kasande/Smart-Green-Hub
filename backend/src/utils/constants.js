@@ -10,6 +10,9 @@ module.exports = {
   KIGALI_DISTRICTS: ['Gasabo', 'Kicukiro', 'Nyarugenge'],
   ORG_TYPES: ['school', 'sector_office', 'church', 'hotel', 'community_group'],
   SPECIES_CATEGORIES: ['flower', 'tree', 'shrub', 'other'],
+  // approved = in everyone's list; pending = proposed by a nursery, waiting for the administrator;
+  // rejected = refused (with a reason); merged = a spelling duplicate joined to an approved species
+  SPECIES_STATUSES: ['approved', 'pending', 'rejected', 'merged'],
   BATCH_STAGES: ['seedling', 'growing', 'ready', 'overgrown', 'cleared'],
   RISK_LEVELS: ['low', 'medium', 'high'],
   SUGGESTED_ACTIONS: ['reduce_or_discount', 'discount_or_transplant', 'surplus_board_or_donate'],

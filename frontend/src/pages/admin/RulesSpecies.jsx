@@ -1,6 +1,8 @@
 // Rules and species settings (FR15, design/admin dashbord.png "Surplus Algorithm & Species
-// Configuration"): the Table 5 thresholds and the plant species with their default growing times.
+// Configuration"): the Table 5 thresholds and the APPROVED plant species with their growing times.
+// Species proposed by nurseries wait in the Species requests queue (the count is shown here).
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import api, { errorCode, fieldErrors } from '../../api/client'
 import { useApi } from '../../api/useApi'
 import { useI18n } from '../../i18n/I18nProvider'
@@ -15,6 +17,7 @@ import { PageHeader, SectionTitle } from '../../components/ui/Layout'
 import { DataTable, SearchBox, Toolbar } from '../../components/ui/DataView'
 import { countLabel, matches } from '../../components/ui/dataViewTools'
 import { SelectField, TextField } from '../../components/ui/Fields'
+import { buttonClasses } from '../../components/ui/buttonStyles'
 
 const CATEGORIES = ['flower', 'tree', 'shrub', 'other']
 
@@ -172,6 +175,7 @@ export default function RulesSpecies() {
   }
 
   const list = species.data?.species || []
+  const pendingRequests = species.data?.pending_requests || 0
   const rows = list.filter((s) => matches(search, s.common_name, s.kinyarwanda_name))
   const editedSpecies = list.find((s) => s.id === editing)
   const columns = [
@@ -271,6 +275,16 @@ export default function RulesSpecies() {
             <Button onClick={() => setEditing('new')}>{t('species.add')}</Button>
           </span>
         </Toolbar>
+        {pendingRequests > 0 && (
+          <Notice type="warning">
+            <span className="flex flex-wrap items-center justify-between gap-3">
+              <span>{t('species.pendingRequests', { n: pendingRequests })}</span>
+              <Link to="/admin/species-requests" className={buttonClasses('secondary')}>
+                {t('species.openRequests')}
+              </Link>
+            </span>
+          </Notice>
+        )}
         {/* Adding or editing a species opens the form above the table */}
         {(editing === 'new' || editedSpecies) && (
           <SpeciesForm key={editing} species={editedSpecies} onSaved={saved} onCancel={() => setEditing(null)} />

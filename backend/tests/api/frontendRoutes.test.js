@@ -29,6 +29,8 @@ describe('administrator pages', () => {
     ['Verification Queue', '/api/admin/verifications'],
     ['Rules & Species: rules', '/api/admin/rules'],
     ['Rules & Species: species', '/api/admin/species?archived=false'],
+    ['Species requests', '/api/admin/species-requests'],
+    ['Species requests: menu count', '/api/admin/species-requests/count'],
     ['Listings', '/api/admin/listings?status=active'],
     ['Impact', '/api/admin/impact'],
     ['Audit log', '/api/admin/audit'],

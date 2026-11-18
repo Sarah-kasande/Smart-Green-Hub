@@ -5,7 +5,7 @@ const validate = require('../middleware/validate');
 const { requireAuth } = require('../middleware/auth');
 const { loadInstitution } = require('../middleware/organisation');
 const HttpError = require('../utils/httpError');
-const { PlantSpecies } = require('../models');
+const speciesService = require('../services/speciesService');
 const surplus = require('../services/surplusService');
 const notifications = require('../services/notificationService');
 const { KIGALI_DISTRICTS, SPECIES_CATEGORIES } = require('../utils/constants');
@@ -14,8 +14,10 @@ const router = express.Router();
 // requireAuth is added per route (not router.use) so unknown /api paths still answer 404
 const handle = (fn) => (req, res, next) => Promise.resolve(fn(req, res)).catch(next);
 
+// Approved species for everyone; an operator also sees the species their nursery proposed that
+// still wait for approval (status "pending"; docs/DEVIATIONS.md W39)
 router.get('/species', requireAuth, handle(async (req, res) => {
-  res.json({ species: await PlantSpecies.findAll({ order: [['common_name', 'ASC']] }) });
+  res.json({ species: await speciesService.listForUser(req.user) });
 }));
 
 // Surplus Board (FR10). Institutions must be approved to browse; operators and the administrator can look too.

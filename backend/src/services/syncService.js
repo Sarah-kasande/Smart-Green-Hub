@@ -13,11 +13,11 @@
 //
 // The answer also contains "server_changes": the current batches and species, so the phone's
 // offline copy is up to date.
-const { PlantSpecies } = require('../models');
 const HttpError = require('../utils/httpError');
 const inventory = require('./inventoryService');
 const finance = require('./financeService');
-const { BATCH_STAGES } = require('../utils/constants');
+const speciesService = require('./speciesService');
+const { BATCH_STAGES, SPECIES_CATEGORIES } = require('../utils/constants');
 
 const { EXPENSE_CATEGORIES } = finance;
 
@@ -30,14 +30,23 @@ const isText = (v, max) => typeof v === 'string' && v.length <= max;
 const optional = (v, check) => v === undefined || v === null || v === '' || check(v);
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+// "My species is not listed" recorded offline: a name and a plant type, never any rules
+const isNewSpecies = (n) =>
+  n !== null &&
+  typeof n === 'object' &&
+  isText(n.common_name, 120) &&
+  n.common_name.trim().length >= 2 &&
+  SPECIES_CATEGORIES.includes(n.category) &&
+  optional(n.kinyarwanda_name, (v) => isText(v, 120));
+
+// Growing time and prime window are never taken from a nursery (docs/DEVIATIONS.md W39); an old
+// phone that still sends days_to_ready / prime_days is accepted, and those values are ignored.
 const RULES = {
   batch: (d) =>
-    isInt(d.species_id, 1, 2147483647) &&
+    (d.new_species ? isNewSpecies(d.new_species) : isInt(d.species_id, 1, 2147483647)) &&
     isInt(d.quantity, 1, 10000000) &&
     isDate(d.planting_date) &&
     optional(d.unit_price, (v) => isInt(v, 0, 1000000000)) &&
-    optional(d.days_to_ready, (v) => isInt(v, 1, 3650)) &&
-    optional(d.prime_days, (v) => isInt(v, 1, 3650)) &&
     optional(d.stage, (v) => BATCH_STAGES.includes(v)),
   sale: (d) =>
     (isInt(d.batch_id, 1, 2147483647) || UUID.test(String(d.batch_client_uuid || ''))) &&
@@ -62,11 +71,22 @@ const RULES = {
 // Numbers may arrive as text from a form; store them as numbers
 function normalise(data) {
   const out = { ...data };
-  for (const key of ['species_id', 'quantity', 'unit_price', 'days_to_ready', 'prime_days', 'batch_id', 'amount', 'quantity_change']) {
+  delete out.days_to_ready;
+  delete out.prime_days;
+  for (const key of ['species_id', 'quantity', 'unit_price', 'batch_id', 'amount', 'quantity_change']) {
     if (out[key] !== undefined && out[key] !== null && out[key] !== '') out[key] = Number(out[key]);
     else delete out[key];
   }
   if (typeof out.reason === 'string') out.reason = out.reason.trim();
+  if (out.new_species) {
+    // Only these fields are kept. The phone already asked "Did you mean ...?" against its saved
+    // species list, so a similar name is accepted (confirmed); an IDENTICAL name (ignoring case,
+    // spaces and accents) still reuses the existing species, so a repeated upload or two phones
+    // proposing the same plant never create two species requests.
+    const n = out.new_species;
+    out.new_species = { common_name: n.common_name.trim(), category: n.category, kinyarwanda_name: n.kinyarwanda_name || null, confirmed: true };
+    delete out.species_id;
+  }
   return out;
 }
 
@@ -107,8 +127,8 @@ async function applyChanges(nursery, user, changes) {
 
 async function serverChanges(nursery) {
   const batches = await inventory.listBatches(nursery);
-  // Archived species are left out automatically (paranoid model)
-  const species = await PlantSpecies.findAll({ order: [['common_name', 'ASC']] });
+  // Approved species plus this nursery's waiting ones (archived species are left out automatically)
+  const species = await speciesService.listForNursery(nursery);
   return { batches, species };
 }
 

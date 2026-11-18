@@ -36,9 +36,17 @@ describe('batches (FR04)', () => {
     expect(res.body.batch).toMatchObject({ quantity_initial: 100, quantity_current: 100, expected_ready_date: '2026-06-30', prime_end_date: '2026-08-29' });
   });
 
-  test('the operator can adjust the defaults', async () => {
+  test('a nursery cannot set the growing time or prime window: the species rules are always used (W39)', async () => {
     const res = await newBatch({ days_to_ready: 30, prime_days: 10 });
-    expect(res.body.batch).toMatchObject({ expected_ready_date: '2026-01-31', prime_end_date: '2026-02-10' });
+    expect(res.status).toBe(201);
+    expect(res.body.batch).toMatchObject({ expected_ready_date: '2026-06-30', prime_end_date: '2026-08-29' });
+  });
+
+  test('the dates of a batch cannot be edited by the nursery (W39)', async () => {
+    const { body } = await newBatch();
+    const res = await op.patch(`/api/operator/batches/${body.batch.id}`).send({ expected_ready_date: '2027-01-01', prime_end_date: '2027-02-01' });
+    expect(res.status).toBe(200);
+    expect(res.body.batch).toMatchObject({ expected_ready_date: '2026-06-30', prime_end_date: '2026-08-29' });
   });
 
   test('the same client_uuid twice creates one batch (idempotent)', async () => {
@@ -188,7 +196,8 @@ describe('risk alerts (FR06, FR07)', () => {
   let batch;
 
   test('an unsold batch whose prime window ended creates one High alert and a notification', async () => {
-    batch = (await newBatch({ quantity: 40, planting_date: addDays(todayKigali(), -300), days_to_ready: 100, prime_days: 30 })).body.batch;
+    // TEST species: ready after 180 days, 60-day prime window -> planted 300 days ago, the window ended 60 days ago
+    batch = (await newBatch({ quantity: 40, planting_date: addDays(todayKigali(), -300) })).body.batch;
     const res = await op.post('/api/operator/alerts/evaluate');
     expect(res.status).toBe(200);
     const alerts = await RiskAlert.findAll({ where: { batch_id: batch.id } });

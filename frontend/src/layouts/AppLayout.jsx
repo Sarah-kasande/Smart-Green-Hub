@@ -39,8 +39,9 @@ import { NAVIGATION, QUICK_ACTIONS, bottomItems, isActive } from './navigation'
 
 const SIDEBAR_KEY = 'sgh_sidebar'
 
-// The grouped menu (sidebar and phone menu): text links, the open page highlighted
-function MenuGroups({ groups, onNavigate }) {
+// The grouped menu (sidebar and phone menu): text links, the open page highlighted.
+// badges: numbers shown next to some items, e.g. { speciesRequests: 2 }
+function MenuGroups({ groups, onNavigate, badges = {} }) {
   const { t } = useI18n()
   const location = useLocation()
   return (
@@ -61,7 +62,13 @@ function MenuGroups({ groups, onNavigate }) {
                       active ? 'border-leaf bg-leaf-light font-semibold text-leaf-text' : 'border-transparent text-ink hover:bg-canvas'
                     }`}
                   >
-                    {t(item.label)}
+                    <span className="flex-1">{t(item.label)}</span>
+                    {badges[item.badge] > 0 && (
+                      <span className="ml-2 min-w-7 rounded-full bg-risk-medium px-2 text-center text-sm font-bold text-risk-medium-text">
+                        <span aria-hidden="true">{badges[item.badge] > 99 ? '99+' : badges[item.badge]}</span>
+                        <span className="sr-only">{t('nav.waitingCount', { n: badges[item.badge] })}</span>
+                      </span>
+                    )}
                   </Link>
                 </li>
               )
@@ -71,6 +78,23 @@ function MenuGroups({ groups, onNavigate }) {
       ))}
     </div>
   )
+}
+
+// Numbers on menu items, read again on every page change. Administrator: species requests waiting.
+function useMenuBadges(role, pathname) {
+  const [badges, setBadges] = useState({})
+  useEffect(() => {
+    if (role !== 'admin') return undefined
+    let cancelled = false
+    api
+      .get('/admin/species-requests/count')
+      .then((res) => !cancelled && setBadges({ speciesRequests: res.data.pending }))
+      .catch(() => {}) // no number is better than an error in the menu
+    return () => {
+      cancelled = true
+    }
+  }, [role, pathname])
+  return badges
 }
 
 // Bell with the number of unread in-app notifications (FR14)
@@ -234,6 +258,7 @@ export default function AppLayout() {
   const [askElement, ask] = useAsk()
   const { install, iosHint } = useInstallPrompt()
   const groups = NAVIGATION[user.role] || []
+  const badges = useMenuBadges(user.role, location.pathname)
 
   // A short message when records saved offline have been sent (only when something was sent)
   useEffect(() => {
@@ -328,7 +353,7 @@ export default function AppLayout() {
         {sidebarOpen && (
           <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] w-64 shrink-0 overflow-y-auto border-r border-line bg-surface py-6 lg:block">
             <nav aria-label={t('common.menu')}>
-              <MenuGroups groups={groups} />
+              <MenuGroups groups={groups} badges={badges} />
             </nav>
           </aside>
         )}
@@ -385,7 +410,7 @@ export default function AppLayout() {
             <SheetDescription className="sr-only">{t('common.menu')}</SheetDescription>
           </SheetHeader>
           <nav aria-label={t('common.menu')} className="mt-5 flex-1">
-            <MenuGroups groups={groups} onNavigate={() => setMenuOpen(false)} />
+            <MenuGroups groups={groups} badges={badges} onNavigate={() => setMenuOpen(false)} />
           </nav>
           <div className="mt-6 border-t border-line px-3 py-3">
             <button type="button" onClick={signOut} className="flex min-h-12 w-full items-center gap-3 rounded-xl px-3 text-left font-medium hover:bg-canvas">

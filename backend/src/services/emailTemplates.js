@@ -165,6 +165,47 @@ const notificationTexts = {
     en: (p) => ({ subject: `Listing expired: ${p.species}`, text: `Your Surplus Board listing of ${p.species} expired. Open requests were cancelled and the plants are free again.\n${appUrl()}/operator/surplus` }),
     rw: (p) => ({ subject: `Itangazo ryarangiye: ${p.species}`, text: `Itangazo ryawe rya ${p.species} ryarangiye. Ubusabe bwari butegereje bwahagaritswe.\n${appUrl()}/operator/surplus` }),
   },
+  // Species proposed by a nursery (docs/DEVIATIONS.md W39). TODO(translation review): Kinyarwanda.
+  species_requested: {
+    en: (p) => ({
+      subject: `New species request: ${p.species}`,
+      text: `${p.nursery} asked to add a plant species that is not in the list: "${p.species}".\nPlease check the name, then approve it with its growing time and prime window, merge it with an existing species, or reject it.\n${appUrl()}/admin/species-requests`,
+    }),
+    rw: (p) => ({
+      subject: `Ubusabe bushya bw'ubwoko bw'igihingwa: ${p.species}`,
+      text: `${p.nursery} yasabye kongeraho ubwoko bw'igihingwa butari ku rutonde: "${p.species}".\nGenzura izina, hanyuma ubwemeze ushyiraho igihe cyo gukura n'igihe cyiza cyo kugurisha, ubuhuze n'ubwoko busanzwe, cyangwa ubwange.\n${appUrl()}/admin/species-requests`,
+    }),
+  },
+  species_approved: {
+    en: (p) => ({
+      subject: `Species approved: ${p.species}`,
+      text: `The administrator approved "${p.species}". Your batches of this species now have a ready date and a prime window, and they are included in alerts, planting suggestions and the Surplus Board.\n${appUrl()}/operator/batches`,
+    }),
+    rw: (p) => ({
+      subject: `Ubwoko bwemejwe: ${p.species}`,
+      text: `Umuyobozi yemeje "${p.species}". Ibyiciro byawe by'ubu bwoko ubu bifite itariki yo kuba byiteguye n'igihe cyiza cyo kugurisha, kandi bigaragara mu miburo, mu nama zo gutera no ku rubuga rw'ibirenze.\n${appUrl()}/operator/batches`,
+    }),
+  },
+  species_rejected: {
+    en: (p) => ({
+      subject: `Species not approved: ${p.species}`,
+      text: `The administrator did not approve "${p.species}".\nReason: ${p.reason}\nYour plants are still in stock. Please open your batches and choose another species.\n${appUrl()}/operator/batches`,
+    }),
+    rw: (p) => ({
+      subject: `Ubwoko ntibwemejwe: ${p.species}`,
+      text: `Umuyobozi ntiyemeje "${p.species}".\nImpamvu: ${p.reason}\nIngemwe zawe ziracyari mu bubiko. Fungura ibyiciro byawe uhitemo ubundi bwoko.\n${appUrl()}/operator/batches`,
+    }),
+  },
+  species_merged: {
+    en: (p) => ({
+      subject: `Species joined: ${p.species} is now ${p.into}`,
+      text: `"${p.species}" is the same plant as "${p.into}", which is already in the list. Your batches now use "${p.into}" and its growing rules.\n${appUrl()}/operator/batches`,
+    }),
+    rw: (p) => ({
+      subject: `Ubwoko bwahujwe: ${p.species} ubu ni ${p.into}`,
+      text: `"${p.species}" ni igihingwa kimwe na "${p.into}" gisanzwe ku rutonde. Ibyiciro byawe ubu bikoresha "${p.into}" n'amategeko yacyo.\n${appUrl()}/operator/batches`,
+    }),
+  },
   verification_approved: { en: (p) => render('verificationApproved', 'en', p), rw: (p) => render('verificationApproved', 'rw', p) },
   verification_rejected: { en: (p) => render('verificationRejected', 'en', p), rw: (p) => render('verificationRejected', 'rw', p) },
 };

@@ -54,6 +54,7 @@ export default function AdminDashboard() {
   // What needs the administrator now, in order of urgency
   const todo = [
     { count: waiting, label: 'adminHome.todoVerify', to: '/admin/verification' },
+    { count: data.species_requests || 0, label: 'adminHome.todoSpecies', to: '/admin/species-requests' },
     { count: data.failed_notifications || 0, label: 'adminHome.todoEmails', to: '/admin/notifications-failed' },
   ].filter((item) => item.count > 0)
 

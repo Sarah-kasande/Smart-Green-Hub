@@ -1,5 +1,7 @@
 // One batch: details, stage and price changes, stock adjustments with a reason (FR04),
-// its sales and its history.
+// its sales and its history. The ready date and prime window follow the administrator's species
+// rules and cannot be edited here (docs/DEVIATIONS.md W39). A batch whose species waits for
+// approval has no dates yet; a batch whose species was rejected asks for another species.
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -7,13 +9,14 @@ import api, { errorCode, fieldErrors } from '../../api/client'
 import { useApi } from '../../api/useApi'
 import { useI18n } from '../../i18n/I18nProvider'
 import { record } from '../../offline/sync'
+import { useSpecies } from '../../offline/useOfflineData'
 import { useAsk } from '../../components/ui/AskDialog'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
 import Notice from '../../components/ui/Notice'
 import ErrorState from '../../components/ui/ErrorState'
 import PageLoader from '../../components/ui/PageLoader'
-import { StatusBadge } from '../../components/ui/Badges'
+import { SpeciesStatusPill, StatusBadge } from '../../components/ui/Badges'
 import { Fact, PageHeader } from '../../components/ui/Layout'
 import { SelectField, TextField } from '../../components/ui/Fields'
 import { buttonClasses } from '../../components/ui/buttonStyles'
@@ -23,7 +26,7 @@ const STAGES = ['seedling', 'growing', 'ready', 'overgrown', 'cleared']
 
 function EditForm({ batch, onSaved }) {
   const { t } = useI18n()
-  const [form, setForm] = useState({ stage: batch.stage, unit_price: batch.unit_price, expected_ready_date: batch.expected_ready_date, prime_end_date: batch.prime_end_date })
+  const [form, setForm] = useState({ stage: batch.stage, unit_price: batch.unit_price })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
   const [fields, setFields] = useState({})
@@ -51,16 +54,55 @@ function EditForm({ batch, onSaved }) {
         label={t('batches.stage')}
         value={form.stage}
         onChange={set('stage')}
-        hint={batch.suggested_stage !== form.stage ? t('batches.suggested', { stage: t(`stages.${batch.suggested_stage}`) }) : null}
+        hint={batch.suggested_stage && batch.suggested_stage !== form.stage ? t('batches.suggested', { stage: t(`stages.${batch.suggested_stage}`) }) : null}
         options={STAGES.map((s) => ({ value: s, label: t(`stages.${s}`) }))}
       />
       <TextField label={t('batches.unitPrice')} type="number" min="0" value={form.unit_price} onChange={set('unit_price')} error={fields.unit_price} />
-      <div className="grid gap-4 sm:grid-cols-2">
-        <TextField label={t('batches.readyDate')} type="date" value={form.expected_ready_date} onChange={set('expected_ready_date')} error={fields.expected_ready_date} />
-        <TextField label={t('batches.primeEnd')} type="date" value={form.prime_end_date} onChange={set('prime_end_date')} error={fields.prime_end_date} />
-      </div>
       <Button type="submit" disabled={busy}>
         {busy ? t('common.saving') : t('common.save')}
+      </Button>
+    </form>
+  )
+}
+
+// The species was rejected: choose another one. Stock, sales and history stay with the batch.
+function ChooseSpecies({ batch, onSaved }) {
+  const { t } = useI18n()
+  const { species } = useSpecies()
+  const options = species.filter((s) => s.id !== batch.species_id)
+  const [speciesId, setSpeciesId] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState(null)
+
+  async function submit(event) {
+    event.preventDefault()
+    if (!speciesId) return setError('required')
+    setBusy(true)
+    setError(null)
+    try {
+      await api.patch(`/operator/batches/${batch.id}/species`, { species_id: Number(speciesId) })
+      onSaved('batches.speciesChanged')
+    } catch (err) {
+      setError(errorCode(err))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  if (options.length === 0) return <p>{t('batches.noOtherSpecies')}</p>
+  return (
+    <form onSubmit={submit} className="space-y-3" noValidate>
+      <SelectField
+        label={t('batches.chooseSpecies')}
+        value={speciesId}
+        onChange={(e) => setSpeciesId(e.target.value)}
+        error={error === 'required' ? 'required' : null}
+        placeholder={t('auth.choose')}
+        options={options.map((s) => ({ value: s.id, label: s.status === 'pending' ? `${s.common_name} · ${t('species.waitingShort')}` : s.common_name }))}
+      />
+      {error && error !== 'required' && <Notice type="error">{t(`errors.${error}`)}</Notice>}
+      <Button type="submit" disabled={busy}>
+        {busy ? t('common.saving') : t('batches.useSpecies')}
       </Button>
     </form>
   )
@@ -117,6 +159,7 @@ export default function BatchDetail() {
   if (error && !data) return <ErrorState code={error} onRetry={reload} />
   if (!data) return <PageLoader />
   const { batch, adjustments, sales } = data
+  const speciesStatus = batch.species?.status
 
   function saved(text) {
     setNotice(text)
@@ -152,13 +195,30 @@ export default function BatchDetail() {
             <Link to={`/operator/sales?tab=sale&batch=${batch.id}`} className={buttonClasses('primary')}>
               {t('dashboard.recordSale')}
             </Link>
-            <Link to={`/operator/surplus?new=1&batch=${batch.id}`} className={buttonClasses('secondary')}>
-              {t('dashboard.postSurplus')}
-            </Link>
+            {/* The Surplus Board opens once the species is approved */}
+            {speciesStatus === 'approved' && (
+              <Link to={`/operator/surplus?new=1&batch=${batch.id}`} className={buttonClasses('secondary')}>
+                {t('dashboard.postSurplus')}
+              </Link>
+            )}
           </>
         }
       />
       {notice && <Notice type={notice === 'sync.savedOffline' ? 'warning' : 'success'}>{t(notice)}</Notice>}
+
+      {speciesStatus === 'pending' && <Notice type="info">{t('batches.waitingSpeciesText', { name: batch.species.common_name })}</Notice>}
+      {speciesStatus === 'rejected' && (
+        <Card className="space-y-3">
+          <SpeciesStatusPill status="rejected" />
+          <p>{t('batches.rejectedText', { name: batch.species.common_name })}</p>
+          {batch.species.decision_reason && (
+            <p className="text-sm">
+              <span className="font-semibold">{t('batches.reason')}:</span> {batch.species.decision_reason}
+            </p>
+          )}
+          <ChooseSpecies batch={batch} onSaved={saved} />
+        </Card>
+      )}
 
       <Card>
         <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
@@ -169,8 +229,8 @@ export default function BatchDetail() {
           <Fact label={t('batches.availableLabel')}>{formatNumber(batch.available)}</Fact>
           <Fact label={t('batches.unitPrice')}>{formatRWF(batch.unit_price)}</Fact>
           <Fact label={t('batches.plantingDate')}>{formatDate(batch.planting_date)}</Fact>
-          <Fact label={t('batches.readyDate')}>{formatDate(batch.expected_ready_date)}</Fact>
-          <Fact label={t('batches.primeEnd')}>{formatDate(batch.prime_end_date)}</Fact>
+          <Fact label={t('batches.readyDate')}>{batch.expected_ready_date ? formatDate(batch.expected_ready_date) : t('batches.afterApproval')}</Fact>
+          <Fact label={t('batches.primeEnd')}>{batch.prime_end_date ? formatDate(batch.prime_end_date) : t('batches.afterApproval')}</Fact>
         </dl>
         {batch.available < batch.quantity_current && <p className="mt-3 text-sm text-ink-soft">{t('batches.promisedHint', { n: batch.quantity_current - batch.available })}</p>}
       </Card>

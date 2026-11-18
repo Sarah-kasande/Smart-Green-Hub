@@ -42,7 +42,8 @@ async function operatorDashboard(nursery) {
       days_left: a.days_to_prime_end,
       suggested_action: a.suggested_action,
     })),
-    ready_soon: batches.filter((b) => ['seedling', 'growing'].includes(b.stage)).slice(0, 5),
+    // Batches waiting for species approval have no ready date yet, so they are not "ready soon"
+    ready_soon: batches.filter((b) => ['seedling', 'growing'].includes(b.stage) && b.prime_end_date).slice(0, 5),
   };
 }
 

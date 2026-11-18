@@ -22,6 +22,7 @@ const { defaultRule } = require('./ruleService');
 const { listingJson, listingInclude } = require('./surplusService');
 const notifications = require('./notificationService');
 const otp = require('./otpService');
+const speciesService = require('./speciesService');
 
 // Counts rows grouped by one column, e.g. { pending: 2, approved: 5 }
 async function countBy(Model, field, where = {}) {
@@ -37,6 +38,7 @@ async function dashboard() {
     open_alerts: await countBy(RiskAlert, 'risk_level', { status: { [Op.in]: ['open', 'acknowledged'] } }),
     listings: await countBy(SurplusListing, 'status'),
     requests: await countBy(SurplusRequest, 'status'),
+    species_requests: await speciesService.pendingCount(),
     failed_notifications: await Notification.count({ where: { status: 'failed' } }),
     skipped_emails: await Notification.count({ where: { status: 'skipped' } }),
     impact: await impact.summary(),
@@ -73,8 +75,9 @@ async function updateRules(admin, data) {
 
 // ---- Species ----
 
+// Approved species with their rules. Requests from nurseries are in the Species requests queue.
 async function listSpecies({ includeArchived = false } = {}) {
-  const species = await PlantSpecies.findAll({ paranoid: !includeArchived, order: [['common_name', 'ASC']] });
+  const species = await PlantSpecies.findAll({ where: { status: 'approved' }, paranoid: !includeArchived, order: [['common_name', 'ASC']] });
   const overrides = await RuleSetting.findAll({ where: { species_id: { [Op.ne]: null } } });
   const bySpecies = Object.fromEntries(overrides.map((o) => [o.species_id, o.prime_window_days]));
   return species.map((s) => ({ ...s.toJSON(), prime_window_override: bySpecies[s.id] ?? null }));
@@ -89,10 +92,13 @@ async function saveSpecies(admin, data, id = null) {
       default_days_to_ready: data.default_days_to_ready,
       default_prime_days: data.default_prime_days,
     };
+    // The same name (ignoring case, spaces and accents) may not exist twice
+    await speciesService.refuseDuplicateName(fields.common_name, id, transaction);
     let species;
     if (id) {
       species = await PlantSpecies.findByPk(id, { transaction });
-      if (!species) throw new HttpError(404, 'NOT_FOUND', 'Species not found');
+      // A nursery's request is decided in the Species requests queue, not edited here
+      if (!species || species.status !== 'approved') throw new HttpError(404, 'NOT_FOUND', 'Species not found');
       await species.update(fields, { transaction });
     } else {
       species = await PlantSpecies.create(fields, { transaction });

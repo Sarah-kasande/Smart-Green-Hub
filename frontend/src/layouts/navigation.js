@@ -60,6 +60,8 @@ export const NAVIGATION = {
       items: [
         { to: '/admin/verification', label: 'nav.verification', short: 'nav.verificationShort', bottom: 2, icon: 'shield' },
         { to: '/admin/listings', label: 'nav.listings', bottom: 3, icon: 'board' },
+        // badge: the number of species requests waiting (see AppLayout.jsx)
+        { to: '/admin/species-requests', label: 'nav.speciesRequests', badge: 'speciesRequests' },
       ],
     },
     {

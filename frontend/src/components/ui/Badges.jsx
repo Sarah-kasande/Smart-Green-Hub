@@ -60,6 +60,27 @@ const STATUS_STYLE = {
   cancelled: ['grey', 'close'],
 }
 
+// A batch whose species is not approved: "Waiting for species approval" or "Species rejected".
+// Shows nothing for an approved species. (docs/DEVIATIONS.md W39)
+export function SpeciesStatusPill({ status }) {
+  const { t } = useI18n()
+  if (status === 'pending') {
+    return (
+      <Pill tone="amber" icon="clock">
+        {t('batches.waitingSpecies')}
+      </Pill>
+    )
+  }
+  if (status === 'rejected') {
+    return (
+      <Pill tone="red" icon="close">
+        {t('batches.speciesRejected')}
+      </Pill>
+    )
+  }
+  return null
+}
+
 export function StatusBadge({ group, status }) {
   const { t } = useI18n()
   const [tone, icon] = STATUS_STYLE[status] || ['grey', 'info']

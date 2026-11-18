@@ -8,7 +8,8 @@ const admin = require('../services/adminService');
 const risk = require('../services/riskService');
 const surplus = require('../services/surplusService');
 const impact = require('../services/impactService');
-const { SPECIES_CATEGORIES, LISTING_STATUSES } = require('../utils/constants');
+const speciesService = require('../services/speciesService');
+const { SPECIES_CATEGORIES, SPECIES_STATUSES, LISTING_STATUSES } = require('../utils/constants');
 
 const router = express.Router();
 router.use(requireAuth, requireRole('admin'));
@@ -88,7 +89,7 @@ const speciesRules = [
 const speciesId = param('id').isInt({ min: 1 }).withMessage('invalid').toInt();
 
 router.get('/species', [query('archived').optional().isIn(['true', 'false'])], validate, handle(async (req, res) => {
-  res.json({ species: await admin.listSpecies({ includeArchived: req.query.archived === 'true' }) });
+  res.json({ species: await admin.listSpecies({ includeArchived: req.query.archived === 'true' }), pending_requests: await speciesService.pendingCount() });
 }));
 router.post('/species', speciesRules, validate, handle(async (req, res) => res.status(201).json({ species: await admin.saveSpecies(req.user, req.body) })));
 router.put('/species/:id', [speciesId, ...speciesRules], validate, handle(async (req, res) => res.json({ species: await admin.saveSpecies(req.user, req.body, req.params.id) })));
@@ -100,6 +101,39 @@ router.post('/species/:id/restore', [speciesId], validate, handle(async (req, re
   await admin.restoreSpecies(req.user, req.params.id);
   res.json({ ok: true });
 }));
+
+// ---- Species requests from nurseries (docs/DEVIATIONS.md W39) ----
+const requestId = param('id').isInt({ min: 1 }).withMessage('invalid').toInt();
+router.get('/species-requests', [query('status').optional().isIn([...SPECIES_STATUSES, 'all']).withMessage('invalid_choice')], validate, handle(async (req, res) => {
+  res.json(await speciesService.listRequests({ status: req.query.status || 'pending' }));
+}));
+// The number on the "Species requests" menu item
+router.get('/species-requests/count', handle(async (req, res) => res.json({ pending: await speciesService.pendingCount() })));
+// Approve: the administrator enters or confirms the name, plant type and the rules
+router.post(
+  '/species-requests/:id/approve',
+  [requestId, ...speciesRules.filter((_, i) => i < 5)],
+  validate,
+  handle(async (req, res) => res.json({ species: await speciesService.approve(req.user, req.params.id, req.body) }))
+);
+// Reject: a reason is required, so the nursery knows why
+router.post(
+  '/species-requests/:id/reject',
+  [requestId, body('reason').isString().withMessage('required').trim().notEmpty().withMessage('required').isLength({ max: 500 }).withMessage('too_long')],
+  validate,
+  handle(async (req, res) => res.json({ species: await speciesService.reject(req.user, req.params.id, req.body.reason) }))
+);
+// Merge a spelling duplicate into an approved species: its batches move to that species
+router.post(
+  '/species-requests/:id/merge',
+  [
+    requestId,
+    body('target_id').isInt({ min: 1 }).withMessage('required').toInt(),
+    body('reason').optional({ values: 'null' }).isString().trim().isLength({ max: 500 }).withMessage('too_long'),
+  ],
+  validate,
+  handle(async (req, res) => res.json({ species: await speciesService.merge(req.user, req.params.id, req.body.target_id, req.body.reason || null) }))
+);
 
 // ---- Audit log (FR16) ----
 router.get(

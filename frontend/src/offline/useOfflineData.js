@@ -6,14 +6,19 @@ import api from '../api/client'
 import { readCache, writeCache } from './db'
 import { pendingOfType, subscribe } from './sync'
 
-// Turns a batch waiting in the outbox into something a list can show
+// Turns a batch waiting in the outbox into something a list can show.
+// A batch with "My species is not listed" shows the typed name, waiting for approval.
 function pendingBatchToRow(row, speciesList) {
-  const species = speciesList.find((s) => s.id === Number(row.data.species_id))
+  const proposed = row.data.new_species
+  const species = proposed
+    ? { common_name: proposed.common_name, kinyarwanda_name: proposed.kinyarwanda_name, status: 'pending' }
+    : speciesList.find((s) => s.id === Number(row.data.species_id))
   return {
     id: null,
     client_uuid: row.client_uuid,
     pending: true,
     species: species || { common_name: '?' },
+    species_status: species?.status || null,
     quantity_current: Number(row.data.quantity),
     quantity_initial: Number(row.data.quantity),
     available: Number(row.data.quantity),

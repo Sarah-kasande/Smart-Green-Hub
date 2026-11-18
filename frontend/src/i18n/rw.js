@@ -80,6 +80,8 @@ const rw = {
     sync: 'Guhuza', // TODO: unsure
     myRequests: 'Ubusabe bwanjye',
     boardShort: 'Ibimera', // TODO: unsure
+    speciesRequests: "Ubusabe bw'amoko", // TODO: Kinyarwanda to review
+    waitingCount: '{n} bitegereje', // TODO: Kinyarwanda to review
   },
   navGroups: {
     review: 'Isuzuma', // TODO: unsure
@@ -348,15 +350,32 @@ const rw = {
     intro: "Icyiciro ni itsinda ry'ingemwe z'ubwoko bumwe zatewe umunsi umwe.",
     add: 'Ongeraho icyiciro',
     newTitle: 'Ongeraho icyiciro',
-    newIntro: "Itariki yo kwitegura n'iherezo ry'igihe cyiza cyo kugurisha bibarwa hakurikijwe ubwoko. Ushobora kubihindura.",
+    newIntro: "Itariki yo kwitegura n'iherezo ry'igihe cyiza cyo kugurisha bibarwa hakurikijwe amategeko y'ubwoko yashyizweho n'umuyobozi.", // TODO: Kinyarwanda to review
     species: 'Ubwoko',
     quantity: "Umubare w'ingemwe",
     plantingDate: 'Itariki yo gutera',
     unitPrice: "Igiciro cy'ingemwe imwe (RWF)",
-    advanced: 'Hindura ibisanzwe by\'ubwoko',
-    daysToReady: 'Iminsi kugeza yiteguye',
-    primeDays: "Iminsi y'igihe cyiza",
-    defaultsHint: "Bisanzwe: yitegura nyuma y'iminsi {days}, igurishwa neza mu minsi {prime}.",
+    rulesHint: "Byashyizweho n'umuyobozi: yitegura nyuma y'iminsi {days}, igurishwa neza mu minsi {prime}.", // TODO: Kinyarwanda to review
+    pendingHint: "Ubu bwoko butegereje kwemezwa. Amatariki azongerwaho umuyobozi nabwemeza.", // TODO: Kinyarwanda to review
+    notListed: "Ubwoko bwanjye ntiburi ku rutonde", // TODO: Kinyarwanda to review
+    newSpeciesName: "Izina ry'ubwoko", // TODO: Kinyarwanda to review
+    newSpeciesLocal: "Izina ry'ikinyarwanda cyangwa iryo mu karere", // TODO: Kinyarwanda to review
+    newSpeciesHint: "Umuyobozi agenzura ubwoko akongeraho igihe cyo gukura. Kugeza icyo gihe icyiciro kirabikwa kigategereza kwemezwa k'ubwoko.", // TODO: Kinyarwanda to review
+    noSpeciesYet: 'Nta bwoko buremezwa. Hitamo "Ubwoko bwanjye ntiburi ku rutonde" wohereze ubwawe ku muyobozi.', // TODO: Kinyarwanda to review
+    didYouMean: "Ese wavugaga kimwe muri ibi?", // TODO: Kinyarwanda to review
+    alreadyListed: "Ubu bwoko busanzwe ku rutonde:", // TODO: Kinyarwanda to review
+    useThis: "Koresha ubu bwoko", // TODO: Kinyarwanda to review
+    addAsNew: 'Oya, ongeraho "{name}" nk\'ubwoko bushya', // TODO: Kinyarwanda to review
+    createdWaiting: "Icyiciro cyabitswe. Gitegereje kwemezwa k'ubwoko.", // TODO: Kinyarwanda to review
+    waitingSpecies: "Gitegereje kwemezwa k'ubwoko", // TODO: Kinyarwanda to review
+    speciesRejected: "Ubwoko bwanzwe: hitamo ubundi bwoko", // TODO: Kinyarwanda to review
+    waitingSpeciesText: 'Gitegereje kwemezwa k\'ubwoko: "{name}". Itariki yo kwitegura, imiburo, inama zo gutera n\'urubuga rw\'ibirenze bizatangira umuyobozi nabwemeza. Ingemwe zimaze kubarirwa mu bubiko bwawe.', // TODO: Kinyarwanda to review
+    rejectedText: 'Umuyobozi ntiyemeje "{name}". Ingemwe zawe ziracyari mu bubiko: hitamo ubundi bwoko kuri iki cyiciro.', // TODO: Kinyarwanda to review
+    chooseSpecies: "Ubundi bwoko", // TODO: Kinyarwanda to review
+    useSpecies: "Koresha ubu bwoko", // TODO: Kinyarwanda to review
+    speciesChanged: "Ubwoko bwahinduwe.", // TODO: Kinyarwanda to review
+    noOtherSpecies: "Nta bundi bwoko buhari bwo guhitamo. Saba umuyobozi kubwongeraho.", // TODO: Kinyarwanda to review
+    afterApproval: "Nyuma yo kwemeza ubwoko", // TODO: Kinyarwanda to review
     save: 'Bika icyiciro',
     created: 'Icyiciro cyabitswe.',
     saved: 'Impinduka zabitswe.',
@@ -373,7 +392,7 @@ const rw = {
     allActive: 'Byose bikora',
     empty: 'Nta byiciro biraba hano',
     emptyText: "Ongeraho icyiciro cya mbere utangire gukurikirana ububiko, igurisha n'ibyago by'ibirenze.",
-    edit: "Icyiciro, igiciro n'amatariki",
+    edit: "Icyiciro n'igiciro", // TODO: Kinyarwanda to review
     adjustTitle: 'Hindura ububiko',
     change: 'Impinduka',
     changeHint: 'Koresha ikimenyetso cya minus ukuramo ingemwe (urugero -20 zapfuye kubera indwara) cyangwa umubare wongera.',
@@ -620,6 +639,10 @@ const rw = {
       listing_expired: "Itangazo ryawe rya {species} ryarangiye.",
       verification_approved: '"{orgName}" yemejwe. Serivisi zose zirafunguye.',
       verification_rejected: '"{orgName}" ikeneye gukosorwa: {reason}',
+      species_requested: '{nursery} yasabye kongeraho ubwoko "{species}".', // TODO: Kinyarwanda to review
+      species_approved: 'Ubwoko "{species}" bwemejwe. Ibyiciro byawe ubu bifite amatariki n\'imiburo.', // TODO: Kinyarwanda to review
+      species_rejected: 'Ubwoko "{species}" ntibwemejwe: {reason}. Hitamo ubundi bwoko ku byiciro byawe.', // TODO: Kinyarwanda to review
+      species_merged: '"{species}" ni igihingwa kimwe na "{into}". Ibyiciro byawe ubu bikoresha "{into}".', // TODO: Kinyarwanda to review
     },
   },
   admin: {
@@ -665,6 +688,7 @@ const rw = {
     todoTitle: 'Bikeneye ko ubyitaho',  // TODO: unsure
     todoVerify: 'konti zitegereje kwemezwa',  // TODO: unsure
     todoEmails: 'imeri zitageze ku bo zagenewe',  // TODO: unsure
+    todoSpecies: "ubusabe bw'amoko buvuye kuri pepiniyeri", // TODO: Kinyarwanda to review
     todoNone: 'Nta kintu gikeneye ko ucyitaho ubu.',  // TODO: unsure
   },
   rules: {
@@ -704,9 +728,43 @@ const rw = {
     override: "Itegeko ryihariye ry'igihe cyiza (iminsi)",
     summary: "yitegura nyuma y'iminsi {ready}, igihe cyiza iminsi {prime}",
     overridden: 'itegeko ryihariye',
-    empty: 'Nta moko arahari. Ongeraho ubwa mbere ukoresheje "Ongeraho ubwoko"; nyuma pepiniyeri zishobora kongeramo ibyiciro.', // TODO: Kinyarwanda to review
+    empty: 'Nta moko arahari. Ongeraho ubwa mbere ukoresheje "Ongeraho ubwoko", cyangwa wemeze ubusabe bwa pepiniyeri.', // TODO: Kinyarwanda to review
+    waitingShort: 'bitegereje kwemezwa', // TODO: Kinyarwanda to review
+    pendingRequests: "Ubusabe {n} bw'amoko buvuye kuri pepiniyeri butegereje icyemezo cyawe.", // TODO: Kinyarwanda to review
+    openRequests: "Fungura ubusabe bw'amoko", // TODO: Kinyarwanda to review
     noneTitle: 'Nta moko arahari', // TODO: Kinyarwanda to review
     noneText: "Umuyobozi agomba kubanza kongeramo amoko (Amategeko n'amoko). Nyuma ushobora kongeramo ibyiciro no kubona inama zo gutera.", // TODO: Kinyarwanda to review
+  },
+  speciesRequests: {
+    title: "Ubusabe bw'amoko", // TODO: Kinyarwanda to review
+    search: 'Shakisha ubwoko cyangwa pepiniyeri', // TODO: Kinyarwanda to review
+    nursery: 'Pepiniyeri', // TODO: Kinyarwanda to review
+    batches: 'Ibyiciro', // TODO: Kinyarwanda to review
+    batchCount: 'Ibyiciro {n}, ingemwe {plants}', // TODO: Kinyarwanda to review
+    date: 'Byasabwe', // TODO: Kinyarwanda to review
+    requestedOn: 'Byasabwe ku wa {date}', // TODO: Kinyarwanda to review
+    decided: 'Icyemezo', // TODO: Kinyarwanda to review
+    status: { pending: 'Bitegereje', approved: 'Byemejwe', rejected: 'Byanzwe', merged: 'Byahujwe' }, // TODO: Kinyarwanda to review
+    mergedInto: 'Byahujwe na {name}', // TODO: Kinyarwanda to review
+    approve: 'Emeza', // TODO: Kinyarwanda to review
+    reject: 'Anga', // TODO: Kinyarwanda to review
+    merge: 'Huza n\'ubwoko busanzwe', // TODO: Kinyarwanda to review
+    approveHint: "Buri cyiciro cy'ubu bwoko kizabona itariki yo kwitegura n'igihe cyiza hakurikijwe aya mategeko, kandi kizajya mu miburo.", // TODO: Kinyarwanda to review
+    confirmApprove: 'Emeza ubwoko', // TODO: Kinyarwanda to review
+    rejectReason: 'Impamvu (yoherezwa kuri pepiniyeri)', // TODO: Kinyarwanda to review
+    confirmReject: 'Anga ubwoko', // TODO: Kinyarwanda to review
+    mergeInto: 'Ni igihingwa kimwe na', // TODO: Kinyarwanda to review
+    mergeNote: 'Icyitonderwa', // TODO: Kinyarwanda to review
+    mergeHint: "Ibyiciro {n} by'ubu busabe bizimurirwa ku bwoko wahisemo bikoreshe amategeko yabwo.", // TODO: Kinyarwanda to review
+    confirmMerge: 'Huza', // TODO: Kinyarwanda to review
+    closeName: 'izina risa', // TODO: Kinyarwanda to review
+    nothingToMerge: 'Nta bwoko bwemejwe buhari bwo guhuza nabwo.', // TODO: Kinyarwanda to review
+    possibleDuplicate: 'Bishobora kuba ari kimwe na: {names}. Niba ari igihingwa kimwe, bihuze.', // TODO: Kinyarwanda to review
+    approved: 'Ubwoko bwemejwe. Pepiniyeri yamenyeshejwe.', // TODO: Kinyarwanda to review
+    rejected: 'Ubwoko bwanzwe. Pepiniyeri yamenyeshejwe.', // TODO: Kinyarwanda to review
+    merged: 'Ubwoko bwahujwe. Pepiniyeri yamenyeshejwe.', // TODO: Kinyarwanda to review
+    emptyPending: "Nta busabe bw'amoko butegereje.", // TODO: Kinyarwanda to review
+    empty: "Nta busabe bw'amoko buri hano.", // TODO: Kinyarwanda to review
   },
   adminListings: {
     title: 'Kugenzura amatangazo',
@@ -761,6 +819,10 @@ const rw = {
       listing_expired: 'Itangazo ryarangiye',
       verification_approved: 'Konti yemejwe',
       verification_rejected: 'Gukosora birasabwa',
+      species_requested: "Ubusabe bw'ubwoko", // TODO: Kinyarwanda to review
+      species_approved: 'Ubwoko bwemejwe', // TODO: Kinyarwanda to review
+      species_rejected: 'Ubwoko bwanzwe', // TODO: Kinyarwanda to review
+      species_merged: 'Ubwoko bwahujwe', // TODO: Kinyarwanda to review
     },
   },
   // TODO(translation review): whole block
@@ -827,6 +889,11 @@ const rw = {
     NOT_APPROVED_YET: 'Ubusabe bugomba kubanza kwemezwa.',
     REQUEST_CLOSED: 'Ubu busabe bwamaze gufungwa.',
     UNKNOWN_TYPE: "Ubwoko bw'inyandiko butazwi.",
+    SIMILAR_SPECIES: 'Hari ubwoko busa n\'ubu busanzwe. Buhitemo, cyangwa wemeze ko ubwawe ari bushya.', // TODO: Kinyarwanda to review
+    SPECIES_NOT_APPROVED: "Iki cyiciro gitegereje kwemezwa k'ubwoko, ntikirashobora gutangwa.", // TODO: Kinyarwanda to review
+    SPECIES_EXISTS: 'Hari ubwoko busanzwe bufite iri zina. Koresha "Huza n\'ubwoko busanzwe".', // TODO: Kinyarwanda to review
+    SPECIES_LOCKED: "Ubwoko bw'iki cyiciro bwemejwe, ntibushobora guhindurwa.", // TODO: Kinyarwanda to review
+    SPECIES_REJECTED: 'Ubu bwoko bwanzwe. Hitamo ubundi bwoko.', // TODO: Kinyarwanda to review
   },
   fieldErrors: {
     required: 'Iki gice kigomba kuzuzwa.',
@@ -845,6 +912,7 @@ const rw = {
     invalid_location: 'Ikimenyetso kigomba kuba mu Rwanda.',
     must_be_below_high: "Hagati igomba kuba munsi ya Hejuru.",
     must_be_below_far: 'Imipaka "hafi" igomba kuba munsi ya "kure".',
+    duplicate: 'Iri zina risanzwe rihari.', // TODO: Kinyarwanda to review
   },
   notFound: { title: 'Ipaji ntibonetse', text: 'Ipaji ushaka ntibaho.', home: 'Jya ahabanza' },
 }

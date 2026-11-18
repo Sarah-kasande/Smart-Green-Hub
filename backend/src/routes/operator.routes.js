@@ -13,8 +13,9 @@ const risk = require('../services/riskService');
 const planning = require('../services/planningService');
 const surplus = require('../services/surplusService');
 const impact = require('../services/impactService');
+const speciesService = require('../services/speciesService');
 const { operatorDashboard } = require('../services/dashboardService');
-const { BATCH_STAGES, OFFER_TYPES, ALERT_STATUSES, REQUEST_STATUSES } = require('../utils/constants');
+const { BATCH_STAGES, OFFER_TYPES, ALERT_STATUSES, REQUEST_STATUSES, SPECIES_CATEGORIES } = require('../utils/constants');
 
 const router = express.Router();
 router.use(requireAuth, requireRole('operator'), loadNursery, requireApprovedNursery);
@@ -33,16 +34,34 @@ const queryDate = (field) => query(field).optional({ values: 'falsy' }).isISO860
 router.get('/dashboard', handle(async (req, res) => res.json(await operatorDashboard(req.nursery))));
 
 // ---- Batches (FR04) ----
+// The species is either species_id, or new_species ("My species is not listed": name, plant type,
+// optional local name). There is no field for growing time or prime window: only the administrator
+// sets those (docs/DEVIATIONS.md W39).
+const hasNewSpecies = () => body('new_species').exists({ values: 'null' });
 const batchRules = [
-  body('species_id').isInt({ min: 1 }).withMessage('required').toInt(),
+  body('species_id').if(body('new_species').not().exists({ values: 'null' })).isInt({ min: 1 }).withMessage('required').toInt(),
+  body('new_species').optional({ values: 'null' }).isObject().withMessage('invalid'),
+  body('new_species.common_name').if(hasNewSpecies()).isString().withMessage('required').trim().isLength({ min: 2 }).withMessage('required').isLength({ max: 120 }).withMessage('too_long'),
+  body('new_species.category').if(hasNewSpecies()).isIn(SPECIES_CATEGORIES).withMessage('invalid_choice'),
+  body('new_species.kinyarwanda_name').if(hasNewSpecies()).optional({ values: 'falsy' }).isString().trim().isLength({ max: 120 }).withMessage('too_long'),
+  body('new_species.confirmed').optional().isBoolean().toBoolean(),
   body('quantity').isInt({ min: 1, max: 10000000 }).withMessage('invalid_quantity').toInt(),
   date('planting_date'),
   money('unit_price'),
-  body('days_to_ready').optional({ values: 'falsy' }).isInt({ min: 1, max: 3650 }).withMessage('invalid').toInt(),
-  body('prime_days').optional({ values: 'falsy' }).isInt({ min: 1, max: 3650 }).withMessage('invalid').toInt(),
   body('stage').optional({ values: 'falsy' }).isIn(BATCH_STAGES).withMessage('invalid_choice'),
   uuid(),
 ];
+
+// "Did you mean ...?": approved or waiting species with the same or a similar name
+router.get(
+  '/species/similar',
+  [query('name').isString().trim().isLength({ min: 2, max: 120 }).withMessage('invalid')],
+  validate,
+  handle(async (req, res) => {
+    const { exact, similar } = await speciesService.findMatches(req.query.name, { nursery: req.nursery });
+    res.json({ exact, similar });
+  })
+);
 
 router.get('/batches', [query('stage').optional().isIn([...BATCH_STAGES, 'all'])], validate, handle(async (req, res) => {
   const stage = req.query.stage === 'all' ? undefined : req.query.stage;
@@ -50,7 +69,10 @@ router.get('/batches', [query('stage').optional().isIn([...BATCH_STAGES, 'all'])
 }));
 
 router.post('/batches', batchRules, validate, handle(async (req, res) => {
-  const { batch, duplicate } = await inventory.createBatch(req.nursery, req.user, req.body);
+  // Only the allowed fields reach the service (days_to_ready / prime_days are never used)
+  const { species_id, new_species, quantity, planting_date, unit_price, stage, client_uuid } = req.body;
+  const data = { species_id, new_species: new_species || null, quantity, planting_date, unit_price, stage, client_uuid };
+  const { batch, duplicate } = await inventory.createBatch(req.nursery, req.user, data);
   res.status(duplicate ? 200 : 201).json({ batch: inventory.toBatchJson(batch), duplicate });
 }));
 
@@ -66,8 +88,6 @@ router.patch(
     id(),
     body('stage').optional().isIn(BATCH_STAGES).withMessage('invalid_choice'),
     body('unit_price').optional().isInt({ min: 0, max: 1000000000 }).withMessage('invalid_amount').toInt(),
-    optionalDate('expected_ready_date'),
-    optionalDate('prime_end_date'),
   ],
   validate,
   handle(async (req, res) => {
@@ -75,6 +95,12 @@ router.patch(
     res.json({ batch: inventory.toBatchJson(batch) });
   })
 );
+
+// Choose another species for a batch whose species was rejected (stock and history are kept)
+router.patch('/batches/:id/species', [id(), body('species_id').isInt({ min: 1 }).withMessage('required').toInt()], validate, handle(async (req, res) => {
+  const batch = await inventory.changeSpecies(req.nursery, req.user, req.params.id, req.body.species_id);
+  res.json({ batch: inventory.toBatchJson(batch) });
+}));
 
 router.delete('/batches/:id', [id(), body('reason').optional().isString().isLength({ max: 500 })], validate, handle(async (req, res) => {
   await inventory.archiveBatch(req.nursery, req.user, req.params.id, req.body?.reason || null);
