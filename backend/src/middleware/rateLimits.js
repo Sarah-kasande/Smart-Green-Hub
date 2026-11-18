@@ -29,4 +29,6 @@ module.exports = {
   uploadLimiter: limiter({ windowMinutes: 60, limit: 30 }),
   // Public homepage plants (W48): enough for people browsing and filtering, not for scraping
   publicPlantsLimiter: limiter({ windowMinutes: 1, limit: 30 }),
+  // Public contact form (W51): a few messages per hour from one address
+  contactLimiter: limiter({ windowMinutes: 60, limit: 5 }),
 };

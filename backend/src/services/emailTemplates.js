@@ -241,6 +241,28 @@ const notificationTexts = {
       text: p.kind === 'batch' ? `Umuyobozi yagaruye icyiciro cyawe ${p.name}.\n${appUrl()}/operator/batches` : `Umuyobozi yagaruye "${p.name}". Ushobora kongera kwinjira.\n${appUrl()}/login`,
     }),
   },
+  // Help requests (docs/DEVIATIONS.md W51). The message text itself is never put in the email: the person
+  // opens the app to read it. TODO(translation review): Kinyarwanda.
+  support_ticket_created: {
+    en: (p) => ({ subject: `New help request: ${p.subject}`, text: `${p.from} sent a help request (${p.category}).\nSubject: ${p.subject}\nOpen it: ${appUrl()}/admin/support` }),
+    rw: (p) => ({ subject: `Ubusabe bushya bw'ubufasha: ${p.subject}`, text: `${p.from} yohereje ubusabe bw'ubufasha (${p.category}).\nIngingo: ${p.subject}\nBufungure: ${appUrl()}/admin/support` }),
+  },
+  support_user_replied: {
+    en: (p) => ({ subject: `New reply: ${p.subject}`, text: `${p.from} replied to the help request "${p.subject}".\n${appUrl()}/admin/support` }),
+    rw: (p) => ({ subject: `Igisubizo gishya: ${p.subject}`, text: `${p.from} yasubije ku busabe bw'ubufasha "${p.subject}".\n${appUrl()}/admin/support` }),
+  },
+  support_reopened: {
+    en: (p) => ({ subject: `Help request reopened: ${p.subject}`, text: `${p.from} reopened the help request "${p.subject}".\n${appUrl()}/admin/support` }),
+    rw: (p) => ({ subject: `Ubusabe bw'ubufasha bwongeye gufungurwa: ${p.subject}`, text: `${p.from} yongeye gufungura ubusabe bw'ubufasha "${p.subject}".\n${appUrl()}/admin/support` }),
+  },
+  support_admin_replied: {
+    en: (p) => ({ subject: `The administrator answered: ${p.subject}`, text: `The administrator answered your help request "${p.subject}". Sign in and open Help to read it.\n${appUrl()}${p.path || '/login'}` }),
+    rw: (p) => ({ subject: `Umuyobozi yasubije: ${p.subject}`, text: `Umuyobozi yasubije ubusabe bwawe bw'ubufasha "${p.subject}". Injira ufungure Ubufasha kugira ngo ubisome.\n${appUrl()}${p.path || '/login'}` }),
+  },
+  support_resolved: {
+    en: (p) => ({ subject: `Help request resolved: ${p.subject}`, text: `The administrator marked your help request "${p.subject}" as resolved. If it is not solved, you can reopen it within ${p.days} days in Help.\n${appUrl()}${p.path || '/login'}` }),
+    rw: (p) => ({ subject: `Ubusabe bw'ubufasha bwakemuwe: ${p.subject}`, text: `Umuyobozi yemeje ko ubusabe bwawe bw'ubufasha "${p.subject}" bwakemuwe. Niba bitakemutse, ushobora kubwongera gufungura mu minsi ${p.days} mu Bufasha.\n${appUrl()}${p.path || '/login'}` }),
+  },
   verification_approved: { en: (p) => render('verificationApproved', 'en', p), rw: (p) => render('verificationApproved', 'rw', p) },
   verification_rejected: { en: (p) => render('verificationRejected', 'en', p), rw: (p) => render('verificationRejected', 'rw', p) },
 };

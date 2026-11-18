@@ -42,6 +42,7 @@ const {
   UploadedFile,
   AuthToken,
   Notification,
+  SupportTicket,
 } = require('../models');
 const HttpError = require('../utils/httpError');
 const audit = require('./auditService');
@@ -152,6 +153,8 @@ async function nurseryLinks(nurseryId) {
     requests: requestWhere.length ? await SurplusRequest.count({ where: { [Op.or]: requestWhere } }) : 0,
     species_requests: await PlantSpecies.count({ where: { requested_by_nursery_id: nurseryId }, paranoid: false }),
     planting_suggestions: await PlantingRecommendation.count({ where: { nursery_id: nurseryId } }),
+    // Help requests are history too: they are never deleted (W51)
+    support_tickets: await SupportTicket.count({ where: { user_id: (await Nursery.findByPk(nurseryId, { paranoid: false, attributes: ['owner_id'] }))?.owner_id ?? 0 } }),
   };
 }
 
@@ -280,7 +283,12 @@ async function findInstitution(id, transaction, lock = false) {
 }
 
 async function institutionLinks(institutionId) {
-  return { requests: await SurplusRequest.count({ where: { institution_id: institutionId } }) };
+  const institution = await Institution.findByPk(institutionId, { paranoid: false, attributes: ['user_id'] });
+  return {
+    requests: await SurplusRequest.count({ where: { institution_id: institutionId } }),
+    // Help requests are history too: they are never deleted (W51)
+    support_tickets: await SupportTicket.count({ where: { user_id: institution?.user_id ?? 0 } }),
+  };
 }
 
 async function listInstitutions({ status = 'active', q, district, orgType } = {}) {

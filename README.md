@@ -96,6 +96,7 @@ Forgot your password? Use **Forgot password** on the sign-in page: you receive a
 | 7 | **Planting** | See how many of each species to plant next. |
 | 8 | **Impact** | Plants redirected, hand-overs and planting sites from your nursery. |
 | — | **Sync** | Shows changes recorded offline that are still waiting to be sent, and any that the server refused. |
+| — | **Help** | *Contact the administrator* and follow the answers in *My messages* (section 4.10). Also in the user menu, and open before approval. |
 
 ### 4.3 Receiving institution
 
@@ -105,6 +106,7 @@ Forgot your password? Use **Forgot password** on the sign-in page: you receive a
 | 2 | **Surplus Board** | Two views: **Surplus offers** (listings posted by nurseries) and **Available plants** (ready plants nurseries can supply). Both as cards or on the map; filter by district, plant type, species and minimum quantity. Choose **Request plants**, enter the quantity, what the plants are for, and optionally a preferred pickup date and a message. |
 | 3 | **My requests** | Follow each request. When the plants arrive, **confirm receipt**. You can cancel a request before it is fulfilled. Every request stays in the list as history (filter by status). |
 | 4 | **Impact** | Plants received per month, hand-overs and planting sites. |
+| — | **Help** | *Contact the administrator* and follow the answers in *My messages* (section 4.10). |
 
 ### 4.4 Administrator
 
@@ -118,6 +120,7 @@ Forgot your password? Use **Forgot password** on the sign-in page: you receive a
 | **Sales** | Every sale recorded by every nursery, including sales synced from offline: totals (RWF, number of sales, plants sold) for today, this week, this month, this year or custom dates, the sales table, a breakdown by nursery and by species, and **Export CSV** (each export is written to the audit log). Totals are calculated on the server over all matching sales; a sale the nursery removes is no longer counted. |
 | **Nurseries, Batches, Institutions** | The main records, each as a table (cards on phones) with search, *Active / Archived / All* with counts, and a detail view. **Edit** changes only safe fields (names, contact details, district, sector; for a batch the price per plant and a quantity correction with a reason). **Archive** (reason required) hides the record from use but keeps all history; **Unarchive** restores it. **Delete** is permanent and only works when nothing is linked; otherwise the page explains why and offers Archive. Everything is in the audit log (section 4.9). |
 | **Batches → Publish** | Put ready batches on the public homepage, one at a time or several together, and choose a *Featured* position. Only batches with free plants, from approved nurseries that agreed, can be published (section 4.9). |
+| **Support** | Help requests from nurseries, institutions and the public contact form (the menu shows how many are open). Reply, add internal notes, mark *In progress* or *Resolved* (section 4.10). |
 | **Audit log** | Who changed what and when. |
 | **Email problems** | Emails that failed or were skipped, with the exact reason and a *Retry* button. |
 
@@ -222,6 +225,43 @@ checkout, no payment, no price comparison, no delivery tracking.
   endpoint is rate-limited and cached for 60 seconds.
 - **Request and approve only:** visitors see *Sign in to request*, and signed-in institutions see *Request*, which
   opens Available plants. There is no payment or delivery step.
+
+### 4.10 Help and support
+
+**For nurseries and institutions**
+
+- **Contact the administrator:** open *Help* (menu or user menu) and fill in the category (Account, Batches,
+  Requests, Sales, Technical problem, Other), subject, message, and an optional screenshot (PNG or JPEG, up to 5 MB).
+  Your name, role, organisation and email are attached automatically. *Help* also works for accounts that are
+  still waiting for approval.
+- **Works offline:** the request is saved on the phone and sent when the connection returns. A client_uuid makes
+  sure it is never sent twice.
+- **My messages:** each request with its status (*Open*, *In progress*, *Resolved*) and the conversation. You can
+  reply while it is open. A resolved request can be reopened within 14 days, and you may answer *Was this solved?*
+
+**For visitors (not signed in)**
+
+- **Public contact form:** on the landing page and the sign-in screen (*Cannot sign in? Contact the
+  administrator*), with name, email and message. No account is needed.
+- **Spam protection:** at most 5 messages per hour from one address, and a hidden honeypot field that only robots
+  fill.
+- **Replies:** the administrator answers visitors by email.
+
+**For the administrator: Support**
+
+- **The list:** newest first, with search and filters by status, category and role, and an open-count badge on
+  the menu.
+- **The detail:** the whole conversation, a reply box, internal notes that users never see, and *Mark as in
+  progress / resolved*.
+
+**Notifications and privacy**
+
+- **Notifications** use the existing in-app notifications and email outbox. The administrator hears about new
+  requests, replies and reopened requests; the user hears about answers and resolution. The email never contains
+  the message itself.
+- **Privacy:** a user only ever sees their own requests, and messages and screenshots are never public.
+- **Records:** every administrator action is in the audit log. Requests are never deleted, also when the account
+  is archived; they count as history, so such an account can be archived but not deleted.
 
 ## 5. How the risk rules work
 
@@ -329,7 +369,8 @@ what `npm run dev` does locally, and what the earlier Render deployment used.
 The database has the 15 entities of the proposal (users, institutions, nurseries, plant species, batches, sales,
 expenses, risk alerts, surplus listings, surplus requests, impact records, rule settings, planting
 recommendations, notifications, audit logs) plus three supporting tables (sign-in tokens, stock adjustments,
-uploaded files). Species proposed by nurseries are ordinary plant-species rows with a `status`
+uploaded files) and the two tables of the support module that the proposal did not list (support tickets and
+support messages, docs/DEVIATIONS.md W51). Species proposed by nurseries are ordinary plant-species rows with a `status`
 (approved, pending, rejected, merged) and who requested and decided them (docs/DEVIATIONS.md W39); no extra table.
 
 ```
@@ -486,7 +527,7 @@ Local development and tests use a **local MySQL Server 8** installed on your com
 The tests need the local MySQL (section 10). They **refuse** to run when the database is remote or `defaultdb`, and
 they create their own `[TEST]` species in the local test databases only. The species-request flow is covered by
 `backend/tests/api/speciesRequests.test.js`, `backend/tests/unit/speciesNames.test.js` and
-`frontend/e2e/species-requests.spec.js`; Available plants by `backend/tests/api/availablePlants.test.js` and `frontend/e2e/available-plants.spec.js`; the Requests lists with both kinds of request (surplus offer and available plant) and their history by `backend/tests/api/requestLists.test.js`; the admin Sales page by `backend/tests/api/adminSales.test.js` and `backend/tests/unit/salesReport.test.js`; admin history (species requests, listings and plants) by `backend/tests/api/adminHistory.test.js`; archive, unarchive, delete rules and permissions by `backend/tests/api/adminRecords.test.js`; the homepage (consent, data exposure, disappearing batches, featured position, rate limit) by `backend/tests/api/homepage.test.js`, `backend/tests/unit/homepage.test.js` and `frontend/e2e/admin-homepage.spec.js`. To run them safely, use the local MySQL (section 10) so that
+`frontend/e2e/species-requests.spec.js`; Available plants by `backend/tests/api/availablePlants.test.js` and `frontend/e2e/available-plants.spec.js`; the Requests lists with both kinds of request (surplus offer and available plant) and their history by `backend/tests/api/requestLists.test.js`; the admin Sales page by `backend/tests/api/adminSales.test.js` and `backend/tests/unit/salesReport.test.js`; admin history (species requests, listings and plants) by `backend/tests/api/adminHistory.test.js`; archive, unarchive, delete rules and permissions by `backend/tests/api/adminRecords.test.js`; the homepage (consent, data exposure, disappearing batches, featured position, rate limit) by `backend/tests/api/homepage.test.js`, `backend/tests/unit/homepage.test.js` and `frontend/e2e/admin-homepage.spec.js`; help and support (permissions, public form limits, status flow, notifications, offline sending) by `backend/tests/api/support.test.js`, `backend/tests/unit/support.test.js` and `frontend/e2e/support.spec.js`. To run them safely, use the local MySQL (section 10) so that
 `backend/.env.test` and `.env.e2e` point to `127.0.0.1` with `_test` / `_e2e` database names; never point them at
 Aiven. Results, including Lighthouse scores,
 are in `docs/TEST_REPORT.md`.

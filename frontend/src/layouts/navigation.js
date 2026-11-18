@@ -33,6 +33,8 @@ export const NAVIGATION = {
       items: [
         { to: '/operator/sync', label: 'nav.sync' },
         { to: '/operator/settings', label: 'nav.settings' },
+        // Contact the administrator (W51)
+        { to: '/operator/help', label: 'nav.help' },
       ],
     },
   ],
@@ -51,7 +53,11 @@ export const NAVIGATION = {
     },
     {
       group: 'navGroups.settings',
-      items: [{ to: '/institution/settings', label: 'nav.settings' }],
+      items: [
+        { to: '/institution/settings', label: 'nav.settings' },
+        // Contact the administrator (W51)
+        { to: '/institution/help', label: 'nav.help' },
+      ],
     },
   ],
   admin: [
@@ -62,6 +68,8 @@ export const NAVIGATION = {
         { to: '/admin/listings', label: 'nav.listings', bottom: 3, icon: 'board' },
         // badge: the number of species requests waiting (see AppLayout.jsx)
         { to: '/admin/species-requests', label: 'nav.speciesRequests', badge: 'speciesRequests' },
+        // Help requests from users and visitors (W51); badge: how many are open
+        { to: '/admin/support', label: 'nav.support', badge: 'support' },
       ],
     },
     {

@@ -38,6 +38,7 @@ const rw = {
   stages: { seedling: 'Ingemwe nto', growing: 'Irakura', ready: 'Yiteguye', overgrown: 'Yarenze igihe', cleared: 'Yarangiye' }, // TODO: unsure
   alertStatus: { open: 'Gifunguye', acknowledged: 'Cyabonywe', resolved: 'Cyakemutse', dismissed: 'Cyirengagijwe' }, // TODO: unsure
   listingStatus: { active: 'Kiraboneka', reserved: 'Cyafashwe', fulfilled: 'Cyatanzwe', expired: 'Cyarangiye', withdrawn: 'Cyakuweho' }, // TODO: unsure
+  supportStatus: { open: 'Bifunguye', in_progress: 'Biri gukorwaho', resolved: 'Byakemuwe' }, // TODO: Kinyarwanda to review
   requestStatus: { pending: 'Bitegereje', approved: 'Byemejwe', fulfilled: 'Byarangiye', declined: 'Byanzwe', cancelled: 'Byahagaritswe' },
   actions: {
     reduce_or_discount: 'Gabanya ibyo uzatera ubutaha cyangwa ugabanye igiciro',
@@ -83,6 +84,8 @@ const rw = {
     speciesRequests: "Ubusabe bw'amoko", // TODO: Kinyarwanda to review
     nurseries: 'Pepiniyeri', // TODO: Kinyarwanda to review
     institutions: 'Ibigo', // TODO: Kinyarwanda to review
+    help: 'Ubufasha', // TODO: Kinyarwanda to review
+    support: 'Ubufasha', // TODO: Kinyarwanda to review
     waitingCount: '{n} bitegereje', // TODO: Kinyarwanda to review
   },
   navGroups: {
@@ -677,6 +680,11 @@ const rw = {
       species_merged: '"{species}" ni igihingwa kimwe na "{into}". Ibyiciro byawe ubu bikoresha "{into}".', // TODO: Kinyarwanda to review
       record_archived: "{name} byabitswe n'umuyobozi. Impamvu: {reason}", // TODO: Kinyarwanda to review
       record_restored: "{name} byagaruwe n'umuyobozi.", // TODO: Kinyarwanda to review
+      support_ticket_created: "{from} yohereje ubusabe bw'ubufasha: {subject}", // TODO: Kinyarwanda to review
+      support_user_replied: '{from} yasubije: {subject}', // TODO: Kinyarwanda to review
+      support_reopened: "{from} yongeye gufungura ubusabe bw'ubufasha: {subject}", // TODO: Kinyarwanda to review
+      support_admin_replied: "Umuyobozi yasubije ubusabe bwawe bw'ubufasha: {subject}", // TODO: Kinyarwanda to review
+      support_resolved: "Ubusabe bwawe bw'ubufasha bwakemuwe: {subject}. Ushobora kubwongera gufungura mu minsi {days}.", // TODO: Kinyarwanda to review
     },
   },
   admin: {
@@ -881,6 +889,11 @@ const rw = {
       species_merged: 'Ubwoko bwahujwe', // TODO: Kinyarwanda to review
       record_archived: "Byabitswe n'umuyobozi", // TODO: Kinyarwanda to review
       record_restored: "Byagaruwe n'umuyobozi", // TODO: Kinyarwanda to review
+      support_ticket_created: "Ubusabe bushya bw'ubufasha", // TODO: Kinyarwanda to review
+      support_user_replied: "Igisubizo ku busabe bw'ubufasha", // TODO: Kinyarwanda to review
+      support_reopened: "Ubusabe bw'ubufasha bwongeye gufungurwa", // TODO: Kinyarwanda to review
+      support_admin_replied: "Ubusabe bw'ubufasha bwasubijwe", // TODO: Kinyarwanda to review
+      support_resolved: "Ubusabe bw'ubufasha bwakemuwe", // TODO: Kinyarwanda to review
     },
   },
   // TODO(translation review): whole block
@@ -942,6 +955,10 @@ const rw = {
     FILE_REQUIRED: 'Hitamo inyandiko.',
     VALIDATION_FAILED: 'Reba ibice byagaragajwe.',
     DUPLICATE: 'Iyi nyandiko isanzwe ihari.',
+    TICKET_RESOLVED: "Ubu busabe bwakemuwe. Bwongere ufungure kugira ngo wandike.", // TODO: Kinyarwanda to review
+    REOPEN_EXPIRED: "Ubu busabe bwakemuwe hashize iminsi irenga 14. Ohereza ubushya.", // TODO: Kinyarwanda to review
+    NOT_RESOLVED: "Ubu busabe buracyafunguye.", // TODO: Kinyarwanda to review
+    PUBLIC_TICKET: "Uyu muntu nta konti afite. Musubize kuri imeri.", // TODO: Kinyarwanda to review
     SALE_EXCEEDS_STOCK: 'Ingemwe ntizihagije: {available} gusa ni zo zishobora kugurishwa.',
     STOCK_TOO_LOW: 'Ingemwe ziri muri iki cyiciro ntizihagije kuri iyi mpinduka.',
     LISTING_EXCEEDS_STOCK: 'Ingemwe ntizihagije: {available} gusa ni zo zishobora gutangwa.',
@@ -968,6 +985,7 @@ const rw = {
     invalid_phone: 'Andika nimero ya telefoni nyayo, urugero +250 788 000 000.',
     invalid_choice: 'Hitamo kimwe mu biri ku rutonde.',
     too_long: 'Ni birebire cyane.',
+    too_short: 'Andika ibindi bike.', // TODO: Kinyarwanda to review
     invalid: 'Ibi ntibyemewe.',
     invalid_code: 'Andika imibare 6 ya kode.', // TODO: unsure
     invalid_quantity: "Andika umubare wuzuye w'ingemwe.",
@@ -1096,6 +1114,75 @@ const rw = {
   },
   privacy: {
     salesVisible: "Umuyobozi abasha kubona igiteranyo n'inyandiko z'igurisha ryawe, kugira ngo apime umusaruro kandi afashe pepiniyeri nto.", // TODO: Kinyarwanda to review
+  },
+  support: {
+    helpTitle: "Ubufasha", // TODO: Kinyarwanda to review
+    helpIntro: "Ufite ikibazo kuri porogaramu? Andikira umuyobozi hano. Igisubizo ukibona kuri uru rupapuro no kuri imeri.", // TODO: Kinyarwanda to review
+    contactAdmin: "Vugana n’umuyobozi", // TODO: Kinyarwanda to review
+    category: "Icyiciro", // TODO: Kinyarwanda to review
+    categories: { account: "Konti", batches: "Ibyiciro by’ingemwe", requests: "Ubusabe", sales: "Igurisha", technical: "Ikibazo cya tekiniki", other: "Ibindi" }, // TODO: Kinyarwanda to review
+    subject: "Ingingo", // TODO: Kinyarwanda to review
+    message: "Ubutumwa", // TODO: Kinyarwanda to review
+    addScreenshot: "Ongeraho ifoto ya ekarani", // TODO: Kinyarwanda to review
+    screenshotHint: "Si ngombwa. PNG cyangwa JPEG, kugeza kuri MB 5.", // TODO: Kinyarwanda to review
+    removeScreenshot: "Kuraho ifoto", // TODO: Kinyarwanda to review
+    screenshotType: "Hemerwa amafoto ya PNG cyangwa JPEG gusa.", // TODO: Kinyarwanda to review
+    screenshotSize: "Ifoto irenze MB 5.", // TODO: Kinyarwanda to review
+    attached: "Byoherejwe hamwe n’ubusabe bwawe: {name} · {role} · {organisation} · {email}", // TODO: Kinyarwanda to review
+    send: "Ohereza ku muyobozi", // TODO: Kinyarwanda to review
+    sent: "Byoherejwe. Umuyobozi azagusubiza hano no kuri imeri.", // TODO: Kinyarwanda to review
+    savedOffline: "Byabitswe kuri telefoni. Bizoherezwa umaze kubona interineti.", // TODO: Kinyarwanda to review
+    waitingToSend: "Bitegereje koherezwa", // TODO: Kinyarwanda to review
+    discard: "Kureka", // TODO: Kinyarwanda to review
+    myMessages: "Ubutumwa bwanjye", // TODO: Kinyarwanda to review
+    empty: "Nta butumwa burahari", // TODO: Kinyarwanda to review
+    emptyText: "Ukeneye ubufasha? Kanda \"Vugana n’umuyobozi\".", // TODO: Kinyarwanda to review
+    conversation: "Ikiganiro", // TODO: Kinyarwanda to review
+    fromAdmin: "Umuyobozi", // TODO: Kinyarwanda to review
+    internalNote: "Icyitonderwa cy’imbere", // TODO: Kinyarwanda to review
+    screenshot: "Ifoto", // TODO: Kinyarwanda to review
+    reply: "Igisubizo cyawe", // TODO: Kinyarwanda to review
+    sendReply: "Ohereza igisubizo", // TODO: Kinyarwanda to review
+    replySent: "Igisubizo cyoherejwe.", // TODO: Kinyarwanda to review
+    wasSolved: "Byakemutse?", // TODO: Kinyarwanda to review
+    yes: "Yego", // TODO: Kinyarwanda to review
+    no: "Oya", // TODO: Kinyarwanda to review
+    thanks: "Murakoze ku gisubizo cyanyu.", // TODO: Kinyarwanda to review
+    saidSolved: "Igisubizo: byakemutse", // TODO: Kinyarwanda to review
+    saidNotSolved: "Igisubizo: ntibyakemutse", // TODO: Kinyarwanda to review
+    reopen: "Ongera ufungure", // TODO: Kinyarwanda to review
+    reopened: "Byongeye gufungurwa. Umuyobozi yabimenyeshejwe.", // TODO: Kinyarwanda to review
+    reopenExpired: "Byakemuwe hashize iminsi irenga 14. Ohereza ubusabe bushya niba ugikeneye ubufasha.", // TODO: Kinyarwanda to review
+    adminTitle: "Ubufasha", // TODO: Kinyarwanda to review
+    search: "Shakisha ingingo, izina cyangwa imeri", // TODO: Kinyarwanda to review
+    role: "Bivuye kuri", // TODO: Kinyarwanda to review
+    roles: { operator: "Pepiniyeri", institution: "Ikigo", public: "Usura urubuga (ifishi)" }, // TODO: Kinyarwanda to review
+    received: "Byakiriwe", // TODO: Kinyarwanda to review
+    allCategories: "Ibyiciro byose", // TODO: Kinyarwanda to review
+    allRoles: "Bose", // TODO: Kinyarwanda to review
+    adminEmpty: "Nta busabe bw’ubufasha.", // TODO: Kinyarwanda to review
+    from: "Bivuye kuri", // TODO: Kinyarwanda to review
+    resolvedOn: "Byakemuwe", // TODO: Kinyarwanda to review
+    publicHint: "Uyu muntu nta konti afite: musubize kuri imeri. Ibyitonderwa wandika hano biguma imbere.", // TODO: Kinyarwanda to review
+    noteLabel: "Icyitonderwa cy’imbere (abayobozi bonyine)", // TODO: Kinyarwanda to review
+    internalCheckbox: "Icyitonderwa cy’imbere: abayobozi bonyine ni bo bakibona", // TODO: Kinyarwanda to review
+    saveNote: "Bika icyitonderwa", // TODO: Kinyarwanda to review
+    noteSaved: "Icyitonderwa cyabitswe.", // TODO: Kinyarwanda to review
+    replyByEmail: "Subiza kuri imeri", // TODO: Kinyarwanda to review
+    markInProgress: "Biri gukorwaho", // TODO: Kinyarwanda to review
+    markResolved: "Byakemuwe", // TODO: Kinyarwanda to review
+    markOpen: "Ongera ufungure", // TODO: Kinyarwanda to review
+    statusSaved: "Uko bihagaze byabitswe.", // TODO: Kinyarwanda to review
+  },
+  contact: {
+    title: "Vugana n’umuyobozi", // TODO: Kinyarwanda to review
+    intro: "Ntushobora kwinjira, utegereje kwemezwa, cyangwa ufite ikibazo? Twandikire. Nta konti ikenewe.", // TODO: Kinyarwanda to review
+    cannotSignIn: "Ntushobora kwinjira? Vugana n’umuyobozi", // TODO: Kinyarwanda to review
+    name: "Izina ryawe", // TODO: Kinyarwanda to review
+    message: "Ubutumwa bwawe", // TODO: Kinyarwanda to review
+    privacy: "Ubutumwa bwawe bugera ku muyobozi gusa. Ntibugaragazwa ku mugaragaro.", // TODO: Kinyarwanda to review
+    send: "Ohereza ubutumwa", // TODO: Kinyarwanda to review
+    sent: "Murakoze. Umuyobozi azagusubiza kuri imeri.", // TODO: Kinyarwanda to review
   },
   notFound: { title: 'Ipaji ntibonetse', text: 'Ipaji ushaka ntibaho.', home: 'Jya ahabanza' },
 }

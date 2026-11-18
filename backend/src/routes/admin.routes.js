@@ -12,8 +12,9 @@ const speciesService = require('../services/speciesService');
 const salesReport = require('../services/salesReportService');
 const auditService = require('../services/auditService');
 const records = require('../services/adminRecordsService');
+const support = require('../services/supportService');
 const v = require('./validators');
-const { SPECIES_CATEGORIES, SPECIES_STATUSES, LISTING_STATUSES, BATCH_STAGES, KIGALI_DISTRICTS, ORG_TYPES } = require('../utils/constants');
+const { SPECIES_CATEGORIES, SPECIES_STATUSES, LISTING_STATUSES, BATCH_STAGES, KIGALI_DISTRICTS, ORG_TYPES, SUPPORT_CATEGORIES, SUPPORT_STATUSES } = require('../utils/constants');
 
 const router = express.Router();
 router.use(requireAuth, requireRole('admin'));
@@ -353,6 +354,37 @@ router.patch(
   handle(async (req, res) => res.json({ item: await records.updateBatch(req.user, req.params.id, req.body) }))
 );
 recordActions('batches', { archive: records.archiveBatch, unarchive: records.unarchiveBatch, remove: records.deleteBatch });
+
+// ---- Support: help requests (docs/DEVIATIONS.md W51) ----
+// Every reply, internal note and status change is written to the audit log (supportService).
+const supportId = param('id').isInt({ min: 1 }).withMessage('invalid').toInt();
+router.get(
+  '/support',
+  [
+    query('status').optional({ values: 'falsy' }).isIn([...SUPPORT_STATUSES, 'all']).withMessage('invalid_choice'),
+    query('category').optional({ values: 'falsy' }).isIn(SUPPORT_CATEGORIES).withMessage('invalid_choice'),
+    query('role').optional({ values: 'falsy' }).isIn(['operator', 'institution', 'public']).withMessage('invalid_choice'),
+    query('q').optional().isString().isLength({ max: 100 }).withMessage('too_long'),
+  ],
+  validate,
+  handle(async (req, res) => res.json(await support.adminList({ status: req.query.status, category: req.query.category, role: req.query.role, q: req.query.q })))
+);
+// The number on the "Support" menu item
+router.get('/support/count', handle(async (req, res) => res.json({ open: await support.openCount() })));
+router.get('/support/:id', [supportId], validate, handle(async (req, res) => res.json({ ticket: await support.adminGet(req.params.id) })));
+router.post(
+  '/support/:id/messages',
+  [
+    supportId,
+    body('message').isString().withMessage('required').trim().notEmpty().withMessage('required').isLength({ max: 4000 }).withMessage('too_long'),
+    body('internal').optional().isBoolean({ strict: true }).withMessage('invalid'),
+  ],
+  validate,
+  handle(async (req, res) => res.status(201).json({ ticket: await support.adminReply(req.user, req.params.id, { message: req.body.message, internal: req.body.internal === true }) }))
+);
+router.put('/support/:id/status', [supportId, body('status').isIn(SUPPORT_STATUSES).withMessage('invalid_choice')], validate, handle(async (req, res) => {
+  res.json({ ticket: await support.adminSetStatus(req.user, req.params.id, req.body.status) });
+}));
 
 // ---- Risk job on demand for every nursery ----
 router.post('/risk/run', handle(async (req, res) => {

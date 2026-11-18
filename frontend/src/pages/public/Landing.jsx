@@ -23,6 +23,7 @@ import { Skeleton } from '@/components/shadcn/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/shadcn/tabs'
 import { ToggleGroup, ToggleGroupItem } from '@/components/shadcn/toggle-group'
 import { PHOTOS } from '../../content/photos'
+import ContactForm from '../../components/support/ContactForm'
 import { DISTRICTS } from '../../utils/options'
 import { formatDate, formatNumber, formatRWF } from '../../utils/format'
 
@@ -424,6 +425,22 @@ function Directory() {
   )
 }
 
+// Contact the administrator without an account (W51)
+function Contact() {
+  const { t } = useI18n()
+  return (
+    <section id="contact" className="mx-auto max-w-3xl scroll-mt-24 px-4 py-10" aria-labelledby="contact-title">
+      <h2 id="contact-title" className="text-3xl font-bold tracking-tight sm:text-4xl">
+        {t('contact.title')}
+      </h2>
+      <p className="mt-2 text-ink-soft">{t('contact.intro')}</p>
+      <div className="mt-6 rounded-3xl border border-line bg-surface p-5 shadow-xs">
+        <ContactForm />
+      </div>
+    </section>
+  )
+}
+
 // Green call-to-action band on a photo of Rwandan hills
 function JoinBand() {
   const { t } = useI18n()
@@ -477,6 +494,7 @@ export default function Landing() {
           <Steps />
           <Directory />
           <JoinBand />
+          <Contact />
         </div>
       ) : (
         <div className="min-h-[60rem]" aria-hidden="true" />

@@ -29,6 +29,9 @@ const Notification = define(require('./notification'));
 const AuditLog = define(require('./auditLog'));
 const AuthToken = define(require('./authToken'));
 const UploadedFile = define(require('./uploadedFile'));
+// Support module (docs/DEVIATIONS.md W51): two tables added after the proposal's 15 entities
+const SupportTicket = define(require('./supportTicket'));
+const SupportMessage = define(require('./supportMessage'));
 
 // Identity
 User.hasOne(Institution, { foreignKey: 'user_id', as: 'institution' });
@@ -88,6 +91,15 @@ User.hasMany(AuditLog, { foreignKey: 'actor_id', as: 'auditLogs' });
 AuditLog.belongsTo(User, { foreignKey: 'actor_id', as: 'actor' });
 UploadedFile.belongsTo(User, { foreignKey: 'owner_user_id', as: 'owner' });
 
+// Support: help requests and their conversation
+User.hasMany(SupportTicket, { foreignKey: 'user_id', as: 'supportTickets' });
+SupportTicket.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+SupportTicket.belongsTo(User, { foreignKey: 'resolved_by', as: 'resolvedBy' });
+SupportTicket.hasMany(SupportMessage, { foreignKey: 'ticket_id', as: 'messages' });
+SupportMessage.belongsTo(SupportTicket, { foreignKey: 'ticket_id', as: 'ticket' });
+SupportMessage.belongsTo(User, { foreignKey: 'author_user_id', as: 'author' });
+SupportMessage.belongsTo(UploadedFile, { foreignKey: 'attachment_file_id', as: 'attachment' });
+
 module.exports = {
   sequelize,
   User,
@@ -108,4 +120,6 @@ module.exports = {
   AuditLog,
   AuthToken,
   UploadedFile,
+  SupportTicket,
+  SupportMessage,
 };

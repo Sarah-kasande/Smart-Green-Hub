@@ -14,6 +14,7 @@ const PAGES = [
   ['/admin/nurseries', 'Nurseries'],
   ['/admin/batches', 'Batches'],
   ['/admin/institutions', 'Institutions'],
+  ['/admin/support', 'Support'],
   ['/admin/impact', 'Impact'],
   ['/admin/audit', 'Audit log'],
   ['/admin/notifications-failed', 'Email problems'],

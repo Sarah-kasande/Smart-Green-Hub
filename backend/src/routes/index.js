@@ -6,6 +6,8 @@ router.use('/auth', require('./auth.routes'));
 router.use('/public', require('./public.routes'));
 router.use('/me', require('./me.routes'));
 router.use('/uploads', require('./uploads.routes'));
+// Help requests from signed-in nurseries and institutions (W51)
+router.use('/support', require('./support.routes'));
 router.use('/operator', require('./operator.routes'));
 router.use('/institution', require('./institution.routes'));
 router.use('/admin', require('./admin.routes'));

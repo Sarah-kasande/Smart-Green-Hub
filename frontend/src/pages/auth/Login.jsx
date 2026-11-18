@@ -6,6 +6,8 @@ import { useI18n } from '../../i18n/I18nProvider'
 import Button from '../../components/ui/Button'
 import Notice from '../../components/ui/Notice'
 import { TextField } from '../../components/ui/Fields'
+import { Disclosure } from '../../components/ui/Layout'
+import ContactForm from '../../components/support/ContactForm'
 import AuthCard from './AuthCard'
 
 export default function Login() {
@@ -77,6 +79,12 @@ export default function Login() {
           {t('common.register')}
         </Link>
       </p>
+      {/* Cannot sign in, or waiting for approval: write to the administrator without an account (W51) */}
+      <div className="mt-6">
+        <Disclosure summary={t('contact.cannotSignIn')}>
+          <ContactForm />
+        </Disclosure>
+      </div>
     </AuthCard>
   )
 }

@@ -58,6 +58,8 @@ const STATUS_STYLE = {
   approved: ['teal', 'check'],
   declined: ['red', 'close'],
   cancelled: ['grey', 'close'],
+  // help requests (open and resolved above)
+  in_progress: ['blue', 'clock'],
 }
 
 // A batch whose species is not approved: "Waiting for species approval" or "Species rejected".

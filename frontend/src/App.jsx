@@ -42,6 +42,8 @@ const AdminSales = lazy(() => import('./pages/admin/AdminSales'))
 const AdminNurseries = lazy(() => import('./pages/admin/AdminNurseries'))
 const AdminInstitutions = lazy(() => import('./pages/admin/AdminInstitutions'))
 const AdminBatches = lazy(() => import('./pages/admin/AdminBatches'))
+const Support = lazy(() => import('./pages/admin/Support'))
+const Help = lazy(() => import('./pages/shared/Help'))
 const AuditLog = lazy(() => import('./pages/admin/AuditLog'))
 const EmailProblems = lazy(() => import('./pages/admin/EmailProblems'))
 import RequireApproved from './auth/RequireApproved'
@@ -68,6 +70,8 @@ export default function App() {
           <Route index element={<OperatorHome />} />
           <Route path="settings" element={<Settings />} />
           <Route path="notifications" element={<Notifications />} />
+          {/* Help is open before approval too (W51) */}
+          <Route path="help" element={<Help />} />
           {/* Everything below needs an approved nursery (FR02) */}
           <Route element={<RequireApproved />}>
             <Route path="batches" element={<Batches />} />
@@ -90,6 +94,7 @@ export default function App() {
           <Route index element={<InstitutionHome />} />
           <Route path="settings" element={<Settings />} />
           <Route path="notifications" element={<Notifications />} />
+          <Route path="help" element={<Help />} />
           <Route element={<RequireApproved />}>
             <Route path="board" element={<Board />} />
             <Route path="requests" element={<Requests />} />
@@ -105,6 +110,7 @@ export default function App() {
           <Route path="verification" element={<VerificationQueue />} />
           <Route path="rules" element={<RulesSpecies />} />
           <Route path="species-requests" element={<SpeciesRequests />} />
+          <Route path="support" element={<Support />} />
           <Route path="listings" element={<AdminListings />} />
           <Route path="sales" element={<AdminSales />} />
           <Route path="nurseries" element={<AdminNurseries />} />

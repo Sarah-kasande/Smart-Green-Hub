@@ -2,6 +2,7 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../auth/AuthContext'
 import { outboxCounts, startAutoSync, subscribe, syncNow } from './sync'
+import { flushSupport, startSupportAutoSync } from './supportOutbox'
 
 const SyncContext = createContext(null)
 
@@ -35,6 +36,14 @@ export function SyncProvider({ children }) {
     startAutoSync()
     syncNow()
   }, [isOperator])
+
+  // Nurseries and institutions: send waiting help requests (W51), also before approval
+  const canAskForHelp = user?.role === 'operator' || user?.role === 'institution'
+  useEffect(() => {
+    if (!canAskForHelp) return
+    startSupportAutoSync()
+    flushSupport()
+  }, [canAskForHelp])
 
   const value = useMemo(() => ({ online, isOperator, ...state, syncNow }), [online, isOperator, state])
   return <SyncContext.Provider value={value}>{children}</SyncContext.Provider>

@@ -7,7 +7,7 @@
 import { useEffect, useState } from 'react'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
-import { Bell, ChevronDown, Download, LogOut, PanelLeft, Search, Settings as SettingsIcon } from 'lucide-react'
+import { Bell, ChevronDown, Download, LifeBuoy, LogOut, PanelLeft, Search, Settings as SettingsIcon } from 'lucide-react'
 import Icon from '../components/ui/Icon'
 import Logo from '../components/ui/Logo'
 import LanguageSwitch from '../components/ui/LanguageSwitch'
@@ -80,16 +80,21 @@ function MenuGroups({ groups, onNavigate, badges = {} }) {
   )
 }
 
-// Numbers on menu items, read again on every page change. Administrator: species requests waiting.
+// Numbers on menu items, read again on every page change. Administrator: species requests waiting and
+// open help requests.
 function useMenuBadges(role, pathname) {
   const [badges, setBadges] = useState({})
   useEffect(() => {
     if (role !== 'admin') return undefined
     let cancelled = false
-    api
-      .get('/admin/species-requests/count')
-      .then((res) => !cancelled && setBadges({ speciesRequests: res.data.pending }))
-      .catch(() => {}) // no number is better than an error in the menu
+    Promise.allSettled([api.get('/admin/species-requests/count'), api.get('/admin/support/count')]).then(([species, support]) => {
+      if (cancelled) return
+      // no number is better than an error in the menu
+      setBadges({
+        speciesRequests: species.status === 'fulfilled' ? species.value.data.pending : 0,
+        support: support.status === 'fulfilled' ? support.value.data.open : 0,
+      })
+    })
     return () => {
       cancelled = true
     }
@@ -168,6 +173,13 @@ function UserMenu({ onSignOut, onInstall }) {
           <SettingsIcon className="size-4" aria-hidden="true" />
           {t('userMenu.profile')}
         </DropdownMenuItem>
+        {/* Contact the administrator (W51) */}
+        {user.role !== 'admin' && (
+          <DropdownMenuItem className="min-h-12 gap-3 px-3 text-base" onSelect={() => navigate(`${homePathFor(user.role)}/help`)}>
+            <LifeBuoy className="size-4" aria-hidden="true" />
+            {t('nav.help')}
+          </DropdownMenuItem>
+        )}
         {canInstall && (
           <DropdownMenuItem className="min-h-12 gap-3 px-3 text-base" onSelect={onInstall}>
             <Download className="size-4" aria-hidden="true" />

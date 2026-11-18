@@ -35,8 +35,15 @@ module.exports = {
   // queued = waiting to be sent; skipped = printed to the console (development) instead of sent
   NOTIFICATION_STATUSES: ['queued', 'sent', 'failed', 'skipped'],
   TOKEN_PURPOSES: ['verify_email', 'reset_password'],
-  FILE_PURPOSES: ['verification_document', 'batch_photo'],
+  FILE_PURPOSES: ['verification_document', 'batch_photo', 'support_screenshot'],
   // Upload rules (NFR03)
   MAX_UPLOAD_BYTES: 10 * 1024 * 1024,
   ALLOWED_MIME_TYPES: ['application/pdf', 'image/png', 'image/jpeg'],
+  // Help requests to the administrator (docs/DEVIATIONS.md W51)
+  SUPPORT_CATEGORIES: ['account', 'batches', 'requests', 'sales', 'technical', 'other'],
+  SUPPORT_STATUSES: ['open', 'in_progress', 'resolved'],
+  SUPPORT_REOPEN_DAYS: 14, // a resolved ticket can be reopened by its sender for 14 days
+  // Screenshots: images only, at most 5 MB
+  SUPPORT_IMAGE_TYPES: ['image/png', 'image/jpeg'],
+  SUPPORT_MAX_IMAGE_BYTES: 5 * 1024 * 1024,
 };

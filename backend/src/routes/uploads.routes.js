@@ -35,6 +35,21 @@ router.post(
   }
 );
 
+// Screenshot for a help request (W51): images only, max 5 MB (checked in uploadService)
+router.post('/support-screenshots', requireRole('operator', 'institution'), uploadLimiter, rawBody, async (req, res, next) => {
+  try {
+    const declared = (req.get('content-type') || '').split(';')[0].trim().toLowerCase();
+    const file = await uploadService.saveSupportScreenshot(req.user, {
+      buffer: req.body,
+      declaredType: ALLOWED_MIME_TYPES.includes(declared) ? declared : 'unsupported',
+      fileName: decodeURIComponent(req.get('x-file-name') || 'screenshot'),
+    });
+    res.status(201).json({ file });
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.get('/:id', [param('id').isInt({ min: 1 }).withMessage('invalid')], validate, async (req, res, next) => {
   try {
     const file = await uploadService.getFileForUser(req.user, Number(req.params.id));

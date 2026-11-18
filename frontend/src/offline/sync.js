@@ -21,12 +21,13 @@ export function subscribe(listener) {
   listeners.add(listener)
   return () => listeners.delete(listener)
 }
-function emit() {
+export function emit() {
   listeners.forEach((listener) => listener())
 }
 
 export async function outboxCounts() {
-  const pending = await db.outbox.where('status').equals('pending').count()
+  // Help requests waiting to be sent count too (supportOutbox.js)
+  const pending = (await db.outbox.where('status').equals('pending').count()) + (await db.supportOutbox.where('status').equals('pending').count())
   const conflicts = await db.outbox.where('status').equals('conflict').toArray()
   return { pending, conflicts, lastResult, syncing }
 }

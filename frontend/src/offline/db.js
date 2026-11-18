@@ -2,6 +2,7 @@
 // restarting the phone (NFR06).
 //   outbox: changes recorded on this phone that the server has not confirmed yet
 //   cache:  the last copy of server data (batches, species) so lists still show offline
+//   supportOutbox: help requests and replies to the administrator waiting to be sent (W51, supportOutbox.js)
 import Dexie from 'dexie'
 
 export const db = new Dexie('smart_green_hub')
@@ -10,6 +11,13 @@ db.version(1).stores({
   // ++id = auto number (keeps the order the changes were made); status: pending | conflict
   outbox: '++id, client_uuid, status',
   cache: 'key',
+})
+
+// Version 2 adds the help-request outbox. Dexie upgrades existing phones automatically; nothing is lost.
+db.version(2).stores({
+  outbox: '++id, client_uuid, status',
+  cache: 'key',
+  supportOutbox: '++id, client_uuid, status',
 })
 
 export async function readCache(key) {
@@ -25,4 +33,5 @@ export async function writeCache(key, value) {
 export async function clearOfflineData() {
   await db.outbox.clear()
   await db.cache.clear()
+  await db.supportOutbox.clear()
 }

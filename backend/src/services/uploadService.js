@@ -4,7 +4,7 @@ const path = require('path');
 const { UploadedFile } = require('../models');
 const HttpError = require('../utils/httpError');
 const { detectMimeType } = require('../utils/fileSignature');
-const { MAX_UPLOAD_BYTES, ALLOWED_MIME_TYPES } = require('../utils/constants');
+const { MAX_UPLOAD_BYTES, ALLOWED_MIME_TYPES, SUPPORT_IMAGE_TYPES, SUPPORT_MAX_IMAGE_BYTES } = require('../utils/constants');
 const audit = require('./auditService');
 const { findOwnOrganisation } = require('./verificationService');
 
@@ -48,6 +48,26 @@ async function saveVerificationDocument(user, { buffer, declaredType, fileName }
   return { id: file.id, original_name: file.original_name, mime_type: file.mime_type, size_bytes: file.size_bytes, created_at: file.created_at };
 }
 
+// A screenshot for a help request (docs/DEVIATIONS.md W51): PNG or JPEG only, at most 5 MB, checked by its
+// real content like every upload. It is saved unattached (entity_id 0) and attached to the ticket's message
+// when the ticket is sent (supportService). Only its owner and administrators can ever open it.
+async function saveSupportScreenshot(user, { buffer, declaredType, fileName }) {
+  if (Buffer.isBuffer(buffer) && buffer.length > SUPPORT_MAX_IMAGE_BYTES) throw new HttpError(413, 'FILE_TOO_LARGE', 'The screenshot is larger than 5 MB');
+  const mime = checkFile(buffer, declaredType);
+  if (!SUPPORT_IMAGE_TYPES.includes(mime)) throw new HttpError(415, 'UNSUPPORTED_FILE_TYPE', 'Only PNG and JPEG screenshots are accepted');
+  const file = await UploadedFile.create({
+    owner_user_id: user.id,
+    purpose: 'support_screenshot',
+    entity_type: 'support_message',
+    entity_id: 0,
+    original_name: cleanFileName(fileName),
+    mime_type: mime,
+    size_bytes: buffer.length,
+    data: buffer,
+  });
+  return { id: file.id, original_name: file.original_name, mime_type: file.mime_type, size_bytes: file.size_bytes };
+}
+
 // Returns the file (with bytes) if the user may see it. Anyone else gets "not found",
 // so the response does not even reveal that the file exists.
 async function getFileForUser(user, fileId) {
@@ -58,4 +78,4 @@ async function getFileForUser(user, fileId) {
   return file;
 }
 
-module.exports = { saveVerificationDocument, getFileForUser, checkFile, cleanFileName };
+module.exports = { saveVerificationDocument, saveSupportScreenshot, getFileForUser, checkFile, cleanFileName };
