@@ -704,7 +704,9 @@ const rw = {
     override: "Itegeko ryihariye ry'igihe cyiza (iminsi)",
     summary: "yitegura nyuma y'iminsi {ready}, igihe cyiza iminsi {prime}",
     overridden: 'itegeko ryihariye',
-    empty: "Nta moko y'ibihingwa arahari.", // TODO: unsure
+    empty: 'Nta moko arahari. Ongeraho ubwa mbere ukoresheje "Ongeraho ubwoko"; nyuma pepiniyeri zishobora kongeramo ibyiciro.', // TODO: Kinyarwanda to review
+    noneTitle: 'Nta moko arahari', // TODO: Kinyarwanda to review
+    noneText: "Umuyobozi agomba kubanza kongeramo amoko (Amategeko n'amoko). Nyuma ushobora kongeramo ibyiciro no kubona inama zo gutera.", // TODO: Kinyarwanda to review
   },
   adminListings: {
     title: 'Kugenzura amatangazo',

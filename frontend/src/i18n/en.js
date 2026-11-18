@@ -706,7 +706,9 @@ const en = {
     override: 'Rule override for prime window (days)',
     summary: 'ready after {ready} days, prime window {prime} days',
     overridden: 'rule override',
-    empty: 'No plant species yet.',
+    empty: 'No species yet. Add the first one with "Add species"; nurseries can add batches after that.',
+    noneTitle: 'No species yet',
+    noneText: 'The administrator must add species first (Rules & Species). Then you can add batches and get planting suggestions.',
   },
   adminListings: {
     title: 'Listing moderation',

@@ -8,13 +8,13 @@ import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
 import Notice from '../../components/ui/Notice'
 import { SelectField, TextField } from '../../components/ui/Fields'
-import { Disclosure, PageHeader } from '../../components/ui/Layout'
+import { Disclosure, EmptyState, PageHeader } from '../../components/ui/Layout'
 import { todayIso } from '../../utils/format'
 
 export default function BatchNew() {
   const { t } = useI18n()
   const navigate = useNavigate()
-  const species = useSpecies()
+  const { species, loaded } = useSpecies()
   const [form, setForm] = useState({ species_id: '', quantity: '', planting_date: todayIso(), unit_price: '', days_to_ready: '', prime_days: '' })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
@@ -46,6 +46,16 @@ export default function BatchNew() {
     setBusy(false)
     if (result.status === 'conflict') return setError(result.code)
     navigate('/operator/batches', { state: { notice: { type: result.status === 'synced' ? 'success' : 'warning', text: result.status === 'synced' ? 'batches.created' : 'sync.savedOffline' } } })
+  }
+
+  // A batch needs a species: with none yet, say who must add them instead of showing an empty list
+  if (loaded && species.length === 0) {
+    return (
+      <div className="mx-auto max-w-2xl space-y-5">
+        <PageHeader title={t('batches.newTitle')} />
+        <EmptyState title={t('species.noneTitle')} text={t('species.noneText')} />
+      </div>
+    )
   }
 
   return (

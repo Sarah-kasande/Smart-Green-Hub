@@ -4,6 +4,7 @@ import { useState } from 'react'
 import api, { errorCode } from '../../api/client'
 import { useApi } from '../../api/useApi'
 import { useI18n } from '../../i18n/I18nProvider'
+import { useSpecies } from '../../offline/useOfflineData'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
 import Notice from '../../components/ui/Notice'
@@ -17,6 +18,8 @@ import { formatDate, formatNumber } from '../../utils/format'
 export default function Planting() {
   const { t } = useI18n()
   const { data, error, reload } = useApi('/operator/planting')
+  const { species, loaded: speciesLoaded } = useSpecies()
+  const noSpecies = speciesLoaded && species.length === 0
   const [notice, setNotice] = useState(null)
 
   async function decide(speciesId, status) {
@@ -35,7 +38,8 @@ export default function Planting() {
       {notice && <Notice type={notice.type}>{t(notice.text)}</Notice>}
       {error && <ErrorState code={error} onRetry={reload} />}
       {!data && !error && <PageLoader />}
-      {data && data.recommendations.length === 0 && <EmptyState title={t('planting.empty')} text={t('planting.emptyText')} />}
+      {data && data.recommendations.length === 0 &&
+        (noSpecies ? <EmptyState title={t('species.noneTitle')} text={t('species.noneText')} /> : <EmptyState title={t('planting.empty')} text={t('planting.emptyText')} />)}
       {data && data.recommendations.length > 0 && (
         <ul className="grid gap-4 md:grid-cols-2">
           {data.recommendations.map((r) => (

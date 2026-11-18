@@ -23,25 +23,27 @@ function pendingBatchToRow(row, speciesList) {
   }
 }
 
+// { species, loaded }: `loaded` tells "still loading" apart from "there are no species yet"
+// (a new live database starts with none until the administrator adds them).
 export function useSpecies() {
-  const [species, setSpecies] = useState([])
+  const [state, setState] = useState({ species: [], loaded: false })
   useEffect(() => {
     let cancelled = false
     api
       .get('/species')
       .then(async (res) => {
         await writeCache('species', res.data.species)
-        if (!cancelled) setSpecies(res.data.species)
+        if (!cancelled) setState({ species: res.data.species, loaded: true })
       })
       .catch(async () => {
         const cached = (await readCache('species')) || []
-        if (!cancelled) setSpecies(cached)
+        if (!cancelled) setState({ species: cached, loaded: true })
       })
     return () => {
       cancelled = true
     }
   }, [])
-  return species
+  return state
 }
 
 export function useBatches(stage = '') {
