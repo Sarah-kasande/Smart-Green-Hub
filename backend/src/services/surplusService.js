@@ -1,5 +1,6 @@
 // SurplusService (Figure 7, Figures 10-11, FR09-FR12): listings, the Surplus Board, requests,
-// decisions and the two-sided hand-over.
+// decisions and the two-sided hand-over. Requests can be for a surplus listing or, since W42,
+// directly for a ready batch shown as "Available plants"; both share the same request code.
 //
 // Quantities of a listing:
 //   reserved  = sum of pending + approved requests          (a valid request reserves plants, FR10)
@@ -18,12 +19,14 @@ const {
   SurplusListing,
   SurplusRequest,
   ImpactRecord,
+  RiskAlert,
 } = require('../models');
 const HttpError = require('../utils/httpError');
 const { todayKigali } = require('../utils/dates');
 const audit = require('./auditService');
 const { notify, dispatchSoon } = require('./notificationService');
-const { committedQuantity } = require('./stockService');
+const { committedQuantity, availableQuantity } = require('./stockService');
+const availablePlants = require('./availablePlantsService');
 const { findOwnBatch } = require('./inventoryService');
 
 const OPEN_REQUEST = ['pending', 'approved'];
@@ -220,20 +223,39 @@ async function board({ district, category, speciesId } = {}) {
 }
 
 // ---- Requests ----
+// A request is for ONE item (docs/DEVIATIONS.md W42):
+//   a surplus offer    -> listing_id is set (the batch is the listing's batch)
+//   an available plant -> batch_id is set (a ready batch shown in "Available plants")
+// Everything after that is the same for both: statuses, reservation in a transaction with the item
+// locked (no overselling), approve / decline with a reason, one request per institution per item,
+// and stock reduced only when BOTH sides confirmed the hand-over.
 
+const nurseryInclude = { model: Nursery, as: 'nursery', paranoid: false, include: [{ model: User, as: 'owner', attributes: ['id', 'full_name', 'phone', 'email'] }] };
 const requestInclude = [
   { model: SurplusListing, as: 'listing', paranoid: false, include: listingInclude },
+  { model: Batch, as: 'batch', paranoid: false, include: [speciesInclude, nurseryInclude] },
   { model: Institution, as: 'institution', include: [{ model: User, as: 'user', attributes: ['id', 'full_name', 'phone', 'email'] }] },
 ];
 
+// The batch, nursery and source of a request, whichever item it is for
+const requestBatch = (request) => request.listing?.batch || request.batch || null;
+const requestNursery = (request) => request.listing?.nursery || request.batch?.nursery || null;
+const requestSource = (request) => (request.listing_id ? 'surplus_offer' : 'available_plant');
+
 function requestJson(request, viewer) {
   const listing = request.listing;
+  const batch = requestBatch(request);
+  const nursery = requestNursery(request);
   const approvedOrDone = ['approved', 'fulfilled'].includes(request.status);
   return {
     id: request.id,
+    source: requestSource(request),
     listing_id: request.listing_id,
+    batch_id: request.batch_id,
     quantity_requested: request.quantity_requested,
     purpose: request.purpose,
+    preferred_pickup_date: request.preferred_pickup_date,
+    message: request.message,
     status: request.status,
     decision_reason: request.decision_reason,
     decided_at: request.decided_at,
@@ -244,19 +266,21 @@ function requestJson(request, viewer) {
     planting_district: request.planting_district,
     land_cleared_sqm: request.land_cleared_sqm === null ? null : Number(request.land_cleared_sqm),
     created_at: request.created_at,
-    species: listing?.batch?.species?.common_name || null,
-    offer_type: listing?.offer_type,
-    discounted_price: listing?.discounted_price,
-    pickup_note: listing?.pickup_note,
-    nursery: listing?.nursery
+    species: batch?.species?.common_name || null,
+    offer_type: listing?.offer_type || null,
+    discounted_price: listing?.discounted_price ?? null,
+    // Available plants: the nursery's price per plant, only if it entered one
+    unit_price: !listing && batch?.unit_price > 0 ? batch.unit_price : null,
+    pickup_note: listing?.pickup_note || null,
+    nursery: nursery
       ? {
-          name: listing.nursery.name,
-          district: listing.nursery.district,
-          sector: listing.nursery.sector,
-          address_text: listing.nursery.address_text,
+          name: nursery.name,
+          district: nursery.district,
+          sector: nursery.sector,
+          address_text: nursery.address_text,
           // Contact details are shared only after the operator approves the request
-          contact_name: viewer === 'operator' || approvedOrDone ? listing.nursery.owner?.full_name : null,
-          contact_phone: viewer === 'operator' || approvedOrDone ? listing.nursery.owner?.phone : null,
+          contact_name: viewer === 'operator' || approvedOrDone ? nursery.owner?.full_name : null,
+          contact_phone: viewer === 'operator' || approvedOrDone ? nursery.owner?.phone : null,
         }
       : null,
     institution: request.institution
@@ -272,25 +296,65 @@ function requestJson(request, viewer) {
   };
 }
 
-// A verified institution requests plants (FR10). Same institution + same listing:
+// The item being requested, locked for the rest of the transaction. Returns
+//   { key, nursery, species, remaining, refresh }
+//   key       { listing_id } or { batch_id }: the columns that identify the item on a request
+//   remaining how many plants can still be requested
+//   refresh   called after a change (updates the listing status; nothing to do for a batch)
+async function lockListingItem(listingId, transaction) {
+  const listing = await SurplusListing.findByPk(listingId, { include: listingInclude, transaction, lock: transaction.LOCK.UPDATE });
+  if (!listing || listing.nursery?.verification_status !== 'approved') throw new HttpError(404, 'NOT_FOUND', 'Listing not found');
+  return {
+    key: { listing_id: listing.id },
+    nursery: listing.nursery,
+    species: listing.batch?.species,
+    checkOpen: () => {
+      if (listing.status !== 'active' || listing.expires_at < todayKigali()) throw new HttpError(409, 'LISTING_CLOSED', 'This listing is no longer open');
+    },
+    remaining: async () => (await quantities(listing, transaction)).remaining,
+    refresh: () => refreshListingStatus(listing, transaction),
+  };
+}
+
+async function lockBatchItem(batchId, transaction) {
+  const batch = await Batch.findByPk(batchId, { include: [speciesInclude, nurseryInclude], transaction, lock: transaction.LOCK.UPDATE });
+  if (!batch || batch.nursery?.verification_status !== 'approved') throw new HttpError(404, 'NOT_FOUND', 'Not found');
+  return {
+    key: { batch_id: batch.id },
+    nursery: batch.nursery,
+    species: batch.species,
+    // Hidden by the nursery, no longer ready, or species not approved: not available any more
+    checkOpen: () => {
+      if (!availablePlants.isShown(batch)) throw new HttpError(409, 'NOT_AVAILABLE', 'These plants are no longer available');
+    },
+    remaining: () => availableQuantity(batch, { transaction }),
+    refresh: async () => {},
+  };
+}
+
+// A verified institution requests plants (FR10, W42). target: { listingId } or { batchId }.
+// Same institution + same item:
 //   an open request exists      -> it is returned (no duplicate)
 //   a closed request exists     -> that row is reopened (the pair is unique in the database)
-async function requestPlants(institution, user, listingId, { quantity, purpose }) {
+async function requestPlants(institution, user, target, { quantity, purpose, preferred_pickup_date: pickupDate, message }) {
   const result = await sequelize.transaction(async (transaction) => {
-    const listing = await SurplusListing.findByPk(listingId, { include: listingInclude, transaction, lock: transaction.LOCK.UPDATE });
-    if (!listing || listing.nursery?.verification_status !== 'approved') throw new HttpError(404, 'NOT_FOUND', 'Listing not found');
+    // Locking the listing or batch row first makes two institutions asking at the same moment
+    // wait for each other, so the second one sees the plants the first one reserved.
+    const item = target.batchId ? await lockBatchItem(target.batchId, transaction) : await lockListingItem(target.listingId, transaction);
 
-    const existing = await SurplusRequest.findOne({ where: { listing_id: listing.id, institution_id: institution.id }, transaction, lock: transaction.LOCK.UPDATE });
+    const existing = await SurplusRequest.findOne({ where: { ...item.key, institution_id: institution.id }, transaction, lock: transaction.LOCK.UPDATE });
     if (existing && OPEN_REQUEST.includes(existing.status)) return { request: existing, duplicate: true };
     if (existing && existing.status === 'fulfilled') throw new HttpError(409, 'ALREADY_FULFILLED', 'You already received plants from this listing');
 
-    if (listing.status !== 'active' || listing.expires_at < todayKigali()) throw new HttpError(409, 'LISTING_CLOSED', 'This listing is no longer open');
-    const { remaining } = await quantities(listing, transaction);
-    if (quantity > remaining) throw new HttpError(409, 'NOT_ENOUGH_LEFT', 'Not enough plants left on this listing', { remaining });
+    item.checkOpen();
+    const remaining = await item.remaining();
+    if (quantity > remaining) throw new HttpError(409, 'NOT_ENOUGH_LEFT', 'Not enough plants left', { remaining });
 
     const fields = {
       quantity_requested: quantity,
       purpose,
+      preferred_pickup_date: pickupDate || null,
+      message: message || null,
       status: 'pending',
       decision_reason: null,
       decided_at: null,
@@ -302,16 +366,17 @@ async function requestPlants(institution, user, listingId, { quantity, purpose }
     };
     const request = existing
       ? await existing.update(fields, { transaction })
-      : await SurplusRequest.create({ listing_id: listing.id, institution_id: institution.id, ...fields }, { transaction });
+      : await SurplusRequest.create({ ...item.key, institution_id: institution.id, ...fields }, { transaction });
 
-    await refreshListingStatus(listing, transaction);
-    const logRow = await audit.log({ actorId: user.id, action: 'request.created', entityType: 'surplus_request', entityId: request.id }, { transaction });
+    await item.refresh();
+    const source = item.key.batch_id ? 'available_plant' : 'surplus_offer';
+    const logRow = await audit.log({ actorId: user.id, action: 'request.created', entityType: 'surplus_request', entityId: request.id, reason: source }, { transaction });
     await notify(
       {
-        userId: listing.nursery.owner_id,
+        userId: item.nursery.owner_id,
         type: 'request_created',
-        eventKey: `audit:${logRow.id}:user:${listing.nursery.owner_id}`,
-        payload: { request_id: request.id, institution: institution.org_name, quantity, species: listing.batch?.species?.common_name, purpose },
+        eventKey: `audit:${logRow.id}:user:${item.nursery.owner_id}`,
+        payload: { request_id: request.id, institution: institution.org_name, quantity, species: item.species?.common_name, purpose, source },
       },
       { transaction }
     );
@@ -323,7 +388,7 @@ async function requestPlants(institution, user, listingId, { quantity, purpose }
 
 async function findRequestForNursery(nursery, requestId, transaction) {
   const request = await SurplusRequest.findByPk(requestId, { include: requestInclude, transaction, lock: transaction ? transaction.LOCK.UPDATE : undefined });
-  if (!request || request.listing?.nursery_id !== nursery.id) throw new HttpError(404, 'NOT_FOUND', 'Request not found');
+  if (!request || requestNursery(request)?.id !== nursery.id) throw new HttpError(404, 'NOT_FOUND', 'Request not found');
   return request;
 }
 
@@ -333,6 +398,9 @@ async function findRequestForInstitution(institution, requestId, transaction) {
   return request;
 }
 
+// Keeps a listing's status in line after a request changed (requests for a batch have no listing)
+const refreshAfter = (request, transaction) => (request.listing ? refreshListingStatus(request.listing, transaction) : null);
+
 // The operator approves or declines (FR11). Declining releases the reserved plants.
 async function decideRequest(nursery, user, requestId, decision, reason) {
   await sequelize.transaction(async (transaction) => {
@@ -340,14 +408,14 @@ async function decideRequest(nursery, user, requestId, decision, reason) {
     if (request.status !== 'pending') throw new HttpError(409, 'ALREADY_DECIDED', 'This request was already decided');
     const status = decision === 'approve' ? 'approved' : 'declined';
     await request.update({ status, decision_reason: reason || null, decided_at: new Date() }, { transaction });
-    await refreshListingStatus(request.listing, transaction);
+    await refreshAfter(request, transaction);
     const logRow = await audit.log({ actorId: user.id, action: `request.${status}`, entityType: 'surplus_request', entityId: request.id, reason }, { transaction });
     await notify(
       {
         userId: request.institution.user_id,
         type: 'request_decided',
         eventKey: `audit:${logRow.id}:user:${request.institution.user_id}`,
-        payload: { request_id: request.id, decision: status, reason: reason || null, species: request.listing.batch?.species?.common_name, quantity: request.quantity_requested, nursery: nursery.name },
+        payload: { request_id: request.id, decision: status, reason: reason || null, species: requestBatch(request)?.species?.common_name, quantity: request.quantity_requested, nursery: nursery.name },
       },
       { transaction }
     );
@@ -361,20 +429,31 @@ async function cancelRequest(institution, user, requestId, reason) {
     const request = await findRequestForInstitution(institution, requestId, transaction);
     if (!OPEN_REQUEST.includes(request.status)) throw new HttpError(409, 'REQUEST_CLOSED', 'This request is already closed');
     await request.update({ status: 'cancelled', decision_reason: reason || null }, { transaction });
-    await refreshListingStatus(request.listing, transaction);
+    await refreshAfter(request, transaction);
     const logRow = await audit.log({ actorId: user.id, action: 'request.cancelled', entityType: 'surplus_request', entityId: request.id, reason }, { transaction });
-    const ownerId = request.listing.nursery.owner_id;
+    const ownerId = requestNursery(request).owner_id;
     await notify(
       {
         userId: ownerId,
         type: 'request_cancelled',
         eventKey: `audit:${logRow.id}:user:${ownerId}`,
-        payload: { request_id: request.id, institution: institution.org_name, species: request.listing.batch?.species?.common_name, quantity: request.quantity_requested },
+        payload: { request_id: request.id, institution: institution.org_name, species: requestBatch(request)?.species?.common_name, quantity: request.quantity_requested },
       },
       { transaction }
     );
   });
   dispatchSoon();
+}
+
+// What a completed hand-over means for impact (W44):
+//   surplus_redirected  from a surplus offer, or from a batch that was surplus anyway
+//                       (overgrown, or with an open Medium/High risk alert at the hand-over)
+//   greening_supply     plants from healthy stock ("Available plants"): NOT saved from waste
+async function impactTypeFor(request, batch, transaction) {
+  if (request.listing_id) return 'surplus_redirected';
+  if (batch.stage === 'overgrown') return 'surplus_redirected';
+  const alert = await RiskAlert.findOne({ where: { batch_id: batch.id, status: { [Op.in]: ['open', 'acknowledged'] } }, transaction });
+  return alert ? 'surplus_redirected' : 'greening_supply';
 }
 
 // Both sides confirm the hand-over (FR11). Only when BOTH have confirmed does the system
@@ -398,8 +477,8 @@ async function confirmHandover({ side, nursery, institution, user, requestId, de
       );
     }
     const logRow = await audit.log({ actorId: user.id, action: `handover.confirmed_by_${side}`, entityType: 'surplus_request', entityId: request.id }, { transaction });
-    const species = request.listing.batch?.species?.common_name;
-    const nurseryUserId = request.listing.nursery.owner_id;
+    const species = requestBatch(request)?.species?.common_name;
+    const nurseryUserId = requestNursery(request).owner_id;
     const institutionUserId = request.institution.user_id;
 
     if (!(request.nursery_confirmed_at && request.institution_confirmed_at)) {
@@ -413,10 +492,13 @@ async function confirmHandover({ side, nursery, institution, user, requestId, de
     }
 
     // ---- Both confirmed: complete the hand-over ----
-    const batch = await Batch.findByPk(request.listing.batch_id, { transaction, lock: transaction.LOCK.UPDATE, paranoid: false });
+    const batchId = request.listing ? request.listing.batch_id : request.batch_id;
+    const batch = await Batch.findByPk(batchId, { transaction, lock: transaction.LOCK.UPDATE, paranoid: false });
     if (batch.quantity_current < request.quantity_requested) {
       throw new HttpError(409, 'STOCK_TOO_LOW', 'The batch no longer has enough plants for this hand-over');
     }
+    // Decided before the stock changes (a batch emptied by this hand-over becomes "cleared")
+    const impactType = await impactTypeFor(request, batch, transaction);
     const newStock = batch.quantity_current - request.quantity_requested;
     // Figure 10: "clear batch when stock is zero"
     await batch.update({ quantity_current: newStock, ...(newStock === 0 ? { stage: 'cleared' } : {}) }, { transaction });
@@ -429,11 +511,12 @@ async function confirmHandover({ side, nursery, institution, user, requestId, de
         district: request.planting_district,
         land_cleared_sqm: request.land_cleared_sqm ?? 0,
         recorded_at: new Date(),
+        impact_type: impactType,
       },
       { transaction }
     );
-    await refreshListingStatus(request.listing, transaction);
-    const doneLog = await audit.log({ actorId: user.id, action: 'handover.completed', entityType: 'surplus_request', entityId: request.id }, { transaction });
+    await refreshAfter(request, transaction);
+    const doneLog = await audit.log({ actorId: user.id, action: 'handover.completed', entityType: 'surplus_request', entityId: request.id, reason: impactType }, { transaction });
     if (newStock === 0) await audit.log({ actorId: null, action: 'batch.cleared', entityType: 'batch', entityId: batch.id, reason: 'stock reached zero after hand-over' }, { transaction });
     for (const userId of [nurseryUserId, institutionUserId]) {
       await notify(
@@ -447,18 +530,26 @@ async function confirmHandover({ side, nursery, institution, user, requestId, de
   return { completed };
 }
 
+// Requests for this nursery's surplus offers AND its available plants, in one list
+function nurseryRequestWhere(nursery) {
+  return { [Op.or]: [{ '$listing.nursery_id$': nursery.id }, { '$batch.nursery_id$': nursery.id }] };
+}
+
 async function listRequestsForNursery(nursery, { status } = {}) {
-  const where = {};
+  const where = nurseryRequestWhere(nursery);
   if (status && status !== 'all') where.status = status;
-  const rows = await SurplusRequest.findAll({
-    where,
-    include: [
-      { ...requestInclude[0], where: { nursery_id: nursery.id }, required: true },
-      requestInclude[1],
-    ],
-    order: [['created_at', 'DESC']],
-  });
+  const rows = await SurplusRequest.findAll({ where, include: requestInclude, order: [['created_at', 'DESC']] });
   return rows.map((r) => requestJson(r, 'operator'));
+}
+
+async function countPendingForNursery(nursery) {
+  return SurplusRequest.count({
+    where: { ...nurseryRequestWhere(nursery), status: 'pending' },
+    include: [
+      { model: SurplusListing, as: 'listing', attributes: [], paranoid: false },
+      { model: Batch, as: 'batch', attributes: [], paranoid: false },
+    ],
+  });
 }
 
 async function listRequestsForInstitution(institution, { status } = {}) {
@@ -481,7 +572,9 @@ module.exports = {
   cancelRequest,
   confirmHandover,
   listRequestsForNursery,
+  countPendingForNursery,
   listRequestsForInstitution,
+  requestSource,
   listingJson,
   listingInclude,
 };

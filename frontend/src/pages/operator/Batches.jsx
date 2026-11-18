@@ -68,6 +68,11 @@ export function BatchCard({ batch }) {
       </dl>
       {batch.prime_end_date && batch.stage !== 'cleared' && <PrimeProgress batch={batch} />}
       <SpeciesStatusPill status={batch.species?.status} />
+      {batch.show_to_institutions === false && (
+        <Pill tone="grey" icon="close">
+          {t('visibility.hidden')}
+        </Pill>
+      )}
       {batch.pending && (
         <Pill tone="amber" icon="clock">
           {t('sync.waitingOne')}
@@ -124,6 +129,11 @@ export default function Batches() {
       render: (b) => (
         <div className="flex flex-wrap gap-1.5">
           <SpeciesStatusPill status={b.species?.status} />
+          {b.show_to_institutions === false && (
+            <Pill tone="grey" icon="close">
+              {t('visibility.hidden')}
+            </Pill>
+          )}
           {b.pending && (
             <Pill tone="amber" icon="clock">
               {t('sync.waitingOne')}
@@ -145,6 +155,8 @@ export default function Batches() {
           </Link>
         }
       />
+      {/* What institutions can see of ready batches (W43) */}
+      <p className="text-sm text-ink-soft">{t('visibility.whatTheySee')}</p>
       {notice && <Notice type={notice.type}>{t(notice.text)}</Notice>}
       {offline && <Notice type="warning">{t('sync.offlineCopy')}</Notice>}
       <Toolbar>

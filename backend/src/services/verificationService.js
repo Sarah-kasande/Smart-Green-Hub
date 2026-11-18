@@ -136,7 +136,7 @@ function toOwnOrganisation({ type, row }) {
     review_note: row.review_note,
   };
   if (type === 'nursery') {
-    return { ...base, name: row.name, address_text: row.address_text, is_listed: row.is_listed, latitude: row.latitude === null ? null : Number(row.latitude), longitude: row.longitude === null ? null : Number(row.longitude) };
+    return { ...base, name: row.name, address_text: row.address_text, is_listed: row.is_listed, show_available_plants: row.show_available_plants, latitude: row.latitude === null ? null : Number(row.latitude), longitude: row.longitude === null ? null : Number(row.longitude) };
   }
   return { ...base, name: row.org_name, org_type: row.org_type, contact_phone: row.contact_phone };
 }

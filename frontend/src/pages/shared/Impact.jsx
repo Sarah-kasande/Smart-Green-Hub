@@ -1,5 +1,7 @@
 // Impact dashboard (FR12) for the signed-in role: totals, by district, by month and the records.
 // Every number comes from confirmed hand-overs; with no records everything is 0.
+// "Surplus redirected" (surplus offers, batches at risk) and "Supplied for greening" (healthy stock
+// from Available plants) are shown apart: healthy stock is never called saved from waste (W44).
 import { useState } from 'react'
 import { useAuth } from '../../auth/AuthContext'
 import { useApi } from '../../api/useApi'
@@ -17,10 +19,10 @@ export function ImpactCards({ summary }) {
   const { t } = useI18n()
   return (
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-      <StatCard label={t('impact.plants')} count={summary.plants_redirected || 0} />
-      <StatCard label={t('impact.handovers')} count={summary.handovers || 0} />
+      <StatCard label={t('impact.plants')} count={summary.plants_redirected || 0} hint={t('impact.plantsHint')} />
+      <StatCard label={t('impact.supplied')} count={summary.plants_supplied || 0} hint={t('impact.suppliedHint')} />
       <StatCard label={t('impact.land')} count={summary.land_cleared_sqm || 0} decimals={1} suffix=" m²" />
-      <StatCard label={t('impact.sites')} count={summary.planting_sites || 0} />
+      <StatCard label={t('impact.handovers')} count={summary.handovers || 0} hint={t('impact.sitesHint', { n: formatNumber(summary.planting_sites || 0) })} />
     </div>
   )
 }
@@ -43,6 +45,7 @@ export default function Impact() {
     { key: 'date', header: t('impact.date'), render: (r) => <span className="whitespace-nowrap">{formatDate(r.recorded_at)}</span> },
     { key: 'species', header: t('batches.species'), primary: true, render: (r) => r.species },
     { key: 'quantity', header: t('impact.quantity'), align: 'right', render: (r) => formatNumber(r.quantity_delivered) },
+    { key: 'type', header: t('impact.type'), render: (r) => t(`impact.types.${r.impact_type || 'surplus_redirected'}`) },
     showNursery && { key: 'nursery', header: t('impact.nursery'), render: (r) => r.nursery },
     showInstitution && { key: 'institution', header: t('impact.institution'), render: (r) => r.institution },
     { key: 'site', header: t('requests.plantingSite'), render: (r) => `${r.planting_site} (${r.district})` },
@@ -57,14 +60,14 @@ export default function Impact() {
         <EmptyState title={t('impact.empty')} text={t('impact.emptyText')} />
       ) : (
         <>
-          <div className="grid gap-5 lg:grid-cols-2">
+          <div className="grid gap-5 lg:grid-cols-2 [&>*]:min-w-0">
             <Card>
               <h2 className="mb-3 font-semibold">{t('impact.monthly')}</h2>
-              <SimpleBarChart title={t('impact.monthly')} valueLabel={t('impact.plants')} data={(summary.monthly || []).map((m) => ({ label: formatMonth(m.month), value: m.plants }))} format={(v) => formatNumber(v)} color="var(--chart-2)" />
+              <SimpleBarChart title={t('impact.monthly')} valueLabel={t('impact.quantity')} data={(summary.monthly || []).map((m) => ({ label: formatMonth(m.month), value: m.plants }))} format={(v) => formatNumber(v)} color="var(--chart-2)" />
             </Card>
             <Card>
               <h2 className="mb-3 font-semibold">{t('impact.byDistrict')}</h2>
-              <SimpleBarChart title={t('impact.byDistrict')} valueLabel={t('impact.plants')} data={(summary.by_district || []).map((d) => ({ label: d.district, value: d.plants }))} format={(v) => formatNumber(v)} />
+              <SimpleBarChart title={t('impact.byDistrict')} valueLabel={t('impact.quantity')} data={(summary.by_district || []).map((d) => ({ label: d.district, value: d.plants }))} format={(v) => formatNumber(v)} />
             </Card>
           </div>
           <section className="space-y-4">

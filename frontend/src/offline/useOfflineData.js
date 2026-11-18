@@ -23,6 +23,7 @@ function pendingBatchToRow(row, speciesList) {
     quantity_initial: Number(row.data.quantity),
     available: Number(row.data.quantity),
     unit_price: Number(row.data.unit_price) || 0,
+    show_to_institutions: row.data.show_to_institutions !== false,
     planting_date: row.data.planting_date,
     stage: row.data.stage || 'seedling',
   }

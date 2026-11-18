@@ -45,7 +45,7 @@ export default function BatchNew() {
   const [extra, setExtra] = useState([])
   const species = [...savedSpecies, ...extra.filter((e) => !savedSpecies.some((s) => s.id === e.id))]
   const noSpecies = loaded && savedSpecies.length === 0
-  const [form, setForm] = useState({ species_id: '', quantity: '', planting_date: todayIso(), unit_price: '' })
+  const [form, setForm] = useState({ species_id: '', quantity: '', planting_date: todayIso(), unit_price: '', show_to_institutions: true })
   const [proposal, setProposal] = useState({ common_name: '', category: '', kinyarwanda_name: '' })
   const [matches, setMatches] = useState(null) // { exact, similar } while asking "Did you mean ...?"
   const [busy, setBusy] = useState(false)
@@ -86,6 +86,7 @@ export default function BatchNew() {
       quantity: Number(form.quantity),
       planting_date: form.planting_date,
       unit_price: Number(form.unit_price) || 0,
+      show_to_institutions: form.show_to_institutions,
     }
     const result = await record('batch', payload)
     setBusy(false)
@@ -193,6 +194,13 @@ export default function BatchNew() {
             <TextField label={t('batches.plantingDate')} type="date" value={form.planting_date} onChange={set('planting_date')} error={fields.planting_date} />
           </div>
           <TextField label={t('batches.unitPrice')} type="number" inputMode="numeric" min="0" value={form.unit_price} onChange={set('unit_price')} optional />
+          <label className="flex min-h-12 items-start gap-3 rounded-xl bg-canvas p-3">
+            <input type="checkbox" checked={form.show_to_institutions} onChange={(e) => setForm({ ...form, show_to_institutions: e.target.checked })} className="mt-1 h-5 w-5 accent-leaf" />
+            <span>
+              {t('visibility.batchLabel')}
+              <span className="block text-sm text-ink-soft">{t('visibility.whatTheySee')}</span>
+            </span>
+          </label>
           <Button type="submit" full disabled={busy}>
             {busy ? t('common.saving') : t('batches.save')}
           </Button>

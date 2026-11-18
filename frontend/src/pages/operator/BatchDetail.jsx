@@ -26,7 +26,7 @@ const STAGES = ['seedling', 'growing', 'ready', 'overgrown', 'cleared']
 
 function EditForm({ batch, onSaved }) {
   const { t } = useI18n()
-  const [form, setForm] = useState({ stage: batch.stage, unit_price: batch.unit_price })
+  const [form, setForm] = useState({ stage: batch.stage, unit_price: batch.unit_price, show_to_institutions: batch.show_to_institutions !== false })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
   const [fields, setFields] = useState({})
@@ -58,6 +58,13 @@ function EditForm({ batch, onSaved }) {
         options={STAGES.map((s) => ({ value: s, label: t(`stages.${s}`) }))}
       />
       <TextField label={t('batches.unitPrice')} type="number" min="0" value={form.unit_price} onChange={set('unit_price')} error={fields.unit_price} />
+      <label className="flex min-h-12 items-start gap-3 rounded-xl bg-canvas p-3">
+        <input type="checkbox" checked={form.show_to_institutions} onChange={(e) => setForm({ ...form, show_to_institutions: e.target.checked })} className="mt-1 h-5 w-5 accent-leaf" />
+        <span>
+          {t('visibility.batchLabel')}
+          <span className="block text-sm text-ink-soft">{t('visibility.whatTheySee')}</span>
+        </span>
+      </label>
       <Button type="submit" disabled={busy}>
         {busy ? t('common.saving') : t('common.save')}
       </Button>

@@ -105,7 +105,7 @@ export default function AdminDashboard() {
           <SectionTitle>{t('impact.monthly')}</SectionTitle>
           <div className="mt-4">
             {(impact.monthly || []).length > 0 ? (
-              <SimpleBarChart title={t('impact.monthly')} valueLabel={t('impact.plants')} data={impact.monthly.map((m) => ({ label: formatMonth(m.month), value: m.plants }))} format={(v) => formatNumber(v)} color="var(--chart-2)" />
+              <SimpleBarChart title={t('impact.monthly')} valueLabel={t('impact.quantity')} data={impact.monthly.map((m) => ({ label: formatMonth(m.month), value: m.plants }))} format={(v) => formatNumber(v)} color="var(--chart-2)" />
             ) : (
               <p className="text-ink-soft">{t('impact.emptyText')}</p>
             )}

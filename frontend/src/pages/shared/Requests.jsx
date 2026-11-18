@@ -1,4 +1,5 @@
-// Surplus requests (FR10, FR11), for both sides:
+// Plant requests (FR10, FR11), for both sides. A request comes from a "Surplus offer" or from
+// "Available plants" (docs/DEVIATIONS.md W42); both are handled the same way, in one list:
 //  - operator: approve or decline, then confirm the hand-over (with land cleared)
 //  - institution: cancel, then confirm receipt (with the planting site)
 // Stock is reduced only when BOTH have confirmed.
@@ -99,7 +100,12 @@ function RequestCard({ request, side, institutionDistrict, onChanged }) {
             {side === 'operator' ? request.institution?.name : request.nursery?.name} · {formatDateTime(request.created_at)}
           </p>
         </div>
-        <StatusBadge group="requestStatus" status={request.status} />
+        <div className="flex flex-wrap gap-1.5">
+          <Pill tone={request.source === 'available_plant' ? 'teal' : 'amber'} icon={request.source === 'available_plant' ? 'sprout' : 'board'}>
+            {t(`requests.source.${request.source}`)}
+          </Pill>
+          <StatusBadge group="requestStatus" status={request.status} />
+        </div>
       </div>
       {['pending', 'approved', 'fulfilled'].includes(request.status) && (
         <Stepper
@@ -114,7 +120,12 @@ function RequestCard({ request, side, institutionDistrict, onChanged }) {
       )}
       <dl className="grid gap-3 sm:grid-cols-2">
         <Fact label={t('requests.purpose')}>{request.purpose}</Fact>
-        <Fact label={t('listings.offerType')}>{request.offer_type === 'free' ? t('listings.free') : t('board.priceEach', { price: formatRWF(request.discounted_price) })}</Fact>
+        {request.source === 'surplus_offer' && (
+          <Fact label={t('listings.offerType')}>{request.offer_type === 'free' ? t('listings.free') : t('board.priceEach', { price: formatRWF(request.discounted_price) })}</Fact>
+        )}
+        {request.source === 'available_plant' && request.unit_price && <Fact label={t('batches.unitPrice')}>{t('board.priceEach', { price: formatRWF(request.unit_price) })}</Fact>}
+        {request.preferred_pickup_date && <Fact label={t('board.pickupDate')}>{formatDate(request.preferred_pickup_date)}</Fact>}
+        {request.message && <Fact label={t('board.message')}>{request.message}</Fact>}
         {side === 'operator' && request.institution && (
           <Fact label={t('requests.from')}>
             {t(`orgTypes.${request.institution.org_type}`)} · {t(`districts.${request.institution.district}`)}, {request.institution.sector}

@@ -1,5 +1,6 @@
 // What public visitors may see (FR03, FR12, NFR03): approved nurseries whose operators agreed to be
-// listed, and aggregate impact figures. No risk information, no documents, no review notes.
+// listed, and aggregate impact figures. No risk information, no documents, no review notes, and no
+// stock: "Available plants" are for approved institutions only (W42).
 const { Nursery, User } = require('../models');
 const impact = require('./impactService');
 
@@ -28,7 +29,10 @@ async function publicImpact() {
   const s = await impact.summary();
   // Aggregates only: no nursery or institution names
   return {
+    // Surplus redirected and plants supplied for greening are kept apart (W44)
     plants_redirected: s.plants_redirected,
+    plants_supplied: s.plants_supplied,
+    plants_total: s.plants_total,
     handovers: s.handovers,
     land_cleared_sqm: s.land_cleared_sqm,
     planting_sites: s.planting_sites,

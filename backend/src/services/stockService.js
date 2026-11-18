@@ -1,9 +1,13 @@
 // How much of a batch is free to sell or to offer on the Surplus Board.
 //
-// committed = plants promised on the Surplus Board that have not been handed over yet:
-//             for every active or reserved listing of the batch,
-//             quantity_offered minus what was already handed over (fulfilled requests).
+// committed = plants promised that have not been handed over yet:
+//             for every active or reserved Surplus Board listing of the batch,
+//               quantity_offered minus what was already handed over (fulfilled requests),
+//             plus every OPEN request (pending or approved) for the batch from "Available plants"
+//               (requests straight to the batch, docs/DEVIATIONS.md W42)
 // available = quantity_current - committed      (docs/DEVIATIONS.md F5)
+// The same number is used for sales, stock changes, new listings and "Available plants", so the
+// same plants can never be promised twice.
 //
 // Stock itself (quantity_current) only goes down for a surplus listing when BOTH parties confirm
 // the hand-over (FR11), so until then the plants are still counted in stock but are not sellable.
@@ -22,7 +26,11 @@ async function committedQuantity(batchId, { transaction, excludeListingId } = {}
     });
     committed += Math.max(0, listing.quantity_offered - (handedOver || 0));
   }
-  return committed;
+  const reservedDirectly = await SurplusRequest.sum('quantity_requested', {
+    where: { batch_id: batchId, status: { [Op.in]: ['pending', 'approved'] } },
+    transaction,
+  });
+  return committed + (reservedDirectly || 0);
 }
 
 async function availableQuantity(batch, options = {}) {

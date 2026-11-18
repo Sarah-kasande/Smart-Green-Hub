@@ -20,6 +20,13 @@ module.exports = {
   OFFER_TYPES: ['free', 'discounted'],
   LISTING_STATUSES: ['active', 'reserved', 'fulfilled', 'expired', 'withdrawn'],
   REQUEST_STATUSES: ['pending', 'approved', 'fulfilled', 'declined', 'cancelled'],
+  // Where a request comes from: a surplus listing, or a ready batch shown as "Available plants" (W42)
+  REQUEST_SOURCES: ['surplus_offer', 'available_plant'],
+  // What a hand-over means for impact (W44): surplus that was saved from waste, or plants from
+  // healthy stock supplied for greening
+  IMPACT_TYPES: ['surplus_redirected', 'greening_supply'],
+  // Batch stages shown to institutions as "Available plants"
+  AVAILABLE_STAGES: ['ready', 'overgrown'],
   RECOMMENDATION_STATUSES: ['suggested', 'accepted', 'dismissed'],
   // queued = waiting to be sent; skipped = printed to the console (development) instead of sent
   NOTIFICATION_STATUSES: ['queued', 'sent', 'failed', 'skipped'],

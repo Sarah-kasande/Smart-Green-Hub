@@ -100,6 +100,47 @@ function Profile() {
   )
 }
 
+// Nurseries: show ready plants to institutions as "Available plants" (W43). Saved at once.
+function PlantVisibility() {
+  const { t } = useI18n()
+  const { organisation, refresh } = useAuth()
+  const [busy, setBusy] = useState(false)
+  const [message, setMessage] = useState(null)
+
+  async function toggle(event) {
+    const value = event.target.checked
+    setBusy(true)
+    setMessage(null)
+    try {
+      await api.put('/operator/visibility', { show_available_plants: value })
+      await refresh()
+      setMessage({ type: 'success', text: value ? 'visibility.nurseryOn' : 'visibility.nurseryOff' })
+    } catch (err) {
+      setMessage({ type: 'error', text: `errors.${errorCode(err)}` })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Card>
+      <h2 className="mb-3 text-lg font-semibold">{t('visibility.title')}</h2>
+      {message && (
+        <Notice type={message.type} className="mb-3">
+          {t(message.text)}
+        </Notice>
+      )}
+      <label className="flex min-h-12 items-start gap-3 rounded-xl bg-canvas p-3">
+        <input type="checkbox" checked={organisation.show_available_plants !== false} onChange={toggle} disabled={busy} className="mt-1 h-5 w-5 accent-leaf" />
+        <span>
+          {t('visibility.nurseryLabel')}
+          <span className="block text-sm text-ink-soft">{t('visibility.whatTheySee')}</span>
+        </span>
+      </label>
+    </Card>
+  )
+}
+
 function Organisation() {
   const { t } = useI18n()
   const { organisation, refresh } = useAuth()
@@ -131,6 +172,7 @@ function Organisation() {
           onCancel={() => setSaved(false)}
         />
       </Card>
+      {organisation.type === 'nursery' && organisation.verification_status === 'approved' && <PlantVisibility />}
       <Card>
         <h2 className="mb-3 text-lg font-semibold">{t('account.documentsTitle')}</h2>
         <Documents />

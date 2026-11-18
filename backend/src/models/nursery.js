@@ -13,6 +13,8 @@ module.exports = (sequelize, DataTypes, { archivable }) =>
       longitude: { type: DataTypes.DECIMAL(9, 6) },
       verification_status: { type: DataTypes.ENUM(...VERIFICATION_STATUSES), allowNull: false, defaultValue: 'pending' },
       is_listed: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
+      // Whole-nursery switch for "Available plants" (W43). Separate from is_listed (public directory).
+      show_available_plants: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
       review_note: { type: DataTypes.STRING(500) },
     },
     { ...archivable, tableName: 'nurseries' }

@@ -82,6 +82,8 @@ async function createBatch(nursery, user, data) {
         ...dates,
         stage: data.stage || suggestStage(dates) || 'seedling',
         unit_price: data.unit_price ?? 0,
+        // "Show to institutions" is ON unless the nursery switched it off (W43)
+        show_to_institutions: data.show_to_institutions !== false,
         client_uuid: data.client_uuid || crypto.randomUUID(),
       },
       { transaction }
@@ -110,17 +112,18 @@ async function listBatches(nursery, { stage, includeCleared = false } = {}) {
   return result;
 }
 
-// Operator edits: stage and price only. The dates follow the administrator's species rules
+// Operator edits: stage, price and "Show to institutions" (W43). The dates follow the administrator's species rules
 // (docs/DEVIATIONS.md W39), so they cannot be edited here.
 // Quantity is never edited directly; it changes through sales, stock adjustments or hand-overs.
 async function updateBatch(nursery, user, batchId, data) {
   return sequelize.transaction(async (transaction) => {
     const batch = await findOwnBatch(nursery, batchId, { transaction, lock: true });
     const changes = {};
-    for (const field of ['stage', 'unit_price']) {
+    for (const field of ['stage', 'unit_price', 'show_to_institutions']) {
       if (data[field] !== undefined) changes[field] = data[field];
     }
     const stageChanged = changes.stage && changes.stage !== batch.stage;
+    const visibilityChanged = changes.show_to_institutions !== undefined && changes.show_to_institutions !== batch.show_to_institutions;
     await batch.update(changes, { transaction });
     await audit.log(
       {
@@ -128,7 +131,10 @@ async function updateBatch(nursery, user, batchId, data) {
         action: stageChanged ? 'batch.stage_changed' : 'batch.updated',
         entityType: 'batch',
         entityId: batch.id,
-        reason: stageChanged ? `stage -> ${changes.stage}` : null,
+        reason:
+          [stageChanged && `stage -> ${changes.stage}`, visibilityChanged && (changes.show_to_institutions ? 'shown to institutions' : 'hidden from institutions')]
+            .filter(Boolean)
+            .join('; ') || null,
       },
       { transaction }
     );

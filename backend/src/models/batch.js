@@ -14,6 +14,8 @@ module.exports = (sequelize, DataTypes, { archivable }) =>
       prime_end_date: { type: DataTypes.DATEONLY },
       stage: { type: DataTypes.ENUM(...BATCH_STAGES), allowNull: false, defaultValue: 'seedling' },
       unit_price: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
+      // "Show to institutions" (W43): when ready, the free plants appear as "Available plants"
+      show_to_institutions: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
       client_uuid: { type: DataTypes.CHAR(36), allowNull: false, unique: true },
     },
     { ...archivable, tableName: 'batches' }

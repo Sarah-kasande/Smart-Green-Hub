@@ -66,6 +66,9 @@ Nursery.hasMany(SurplusListing, { foreignKey: 'nursery_id', as: 'listings' });
 SurplusListing.belongsTo(Nursery, { foreignKey: 'nursery_id', as: 'nursery' });
 SurplusListing.hasMany(SurplusRequest, { foreignKey: 'listing_id', as: 'requests' });
 SurplusRequest.belongsTo(SurplusListing, { foreignKey: 'listing_id', as: 'listing' });
+// A request for "Available plants" points straight to the batch (W42)
+Batch.hasMany(SurplusRequest, { foreignKey: 'batch_id', as: 'directRequests' });
+SurplusRequest.belongsTo(Batch, { foreignKey: 'batch_id', as: 'batch' });
 Institution.hasMany(SurplusRequest, { foreignKey: 'institution_id', as: 'requests' });
 SurplusRequest.belongsTo(Institution, { foreignKey: 'institution_id', as: 'institution' });
 SurplusRequest.hasOne(ImpactRecord, { foreignKey: 'request_id', as: 'impact' });

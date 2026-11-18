@@ -47,7 +47,8 @@ const RULES = {
     isInt(d.quantity, 1, 10000000) &&
     isDate(d.planting_date) &&
     optional(d.unit_price, (v) => isInt(v, 0, 1000000000)) &&
-    optional(d.stage, (v) => BATCH_STAGES.includes(v)),
+    optional(d.stage, (v) => BATCH_STAGES.includes(v)) &&
+    optional(d.show_to_institutions, (v) => typeof v === 'boolean'),
   sale: (d) =>
     (isInt(d.batch_id, 1, 2147483647) || UUID.test(String(d.batch_client_uuid || ''))) &&
     isInt(d.quantity, 1, 10000000) &&

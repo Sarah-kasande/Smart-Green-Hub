@@ -82,13 +82,14 @@ function Hero() {
   )
 }
 
-// The four impact numbers, only from confirmed hand-overs (0 stays 0)
+// The four impact numbers, only from confirmed hand-overs (0 stays 0). Surplus redirected and plants
+// supplied for greening from healthy stock are separate numbers (docs/DEVIATIONS.md W44).
 function ImpactBand() {
   const { t } = useI18n()
   const { data, error, reload } = useApi('/public/impact')
   const stats = [
     { label: t('impact.plants'), value: data?.plants_redirected },
-    { label: t('impact.handovers'), value: data?.handovers },
+    { label: t('impact.supplied'), value: data?.plants_supplied },
     { label: t('impact.land'), value: data?.land_cleared_sqm, decimals: 1, suffix: ' m²' },
     { label: t('impact.sites'), value: data?.planting_sites },
   ]

@@ -192,7 +192,7 @@ const rw = {
     pillarPlan: 'Gutegura',
     pillarPlanText: "Amateka yawe y'igurisha akugira inama y'ingano yo gutera ubutaha.",
     pillarMeasure: 'Gupima',
-    pillarMeasureText: "Reba umubare w'ibimera byoherejwe n'ubuso bwabohowe.", // TODO: unsure
+    pillarMeasureText: "Reba ibirenze byoherejwe, ingemwe zatanzwe zo gutoshya n'ubuso bwabohowe.", // TODO: Kinyarwanda to review
     impactTitle: 'Umusaruro wo gutoshya kugeza ubu',
     impactEmpty: 'Nta ihererekanya riranditswe. Iyi mibare iva gusa ku ihererekanya ryemejwe.',
     directoryTitle: 'Urutonde rwa pepiniyeri',
@@ -212,7 +212,7 @@ const rw = {
     forInstitutions: 'Ibigo',
     forInstitutionsText: "Shaka ibimera bikuze hafi yawe, ubisabe ugaragaza icyo bizakora, hanyuma wemeze ko wabyakiriye.",  // TODO: unsure
     forCity: 'Kigali',
-    forCityText: "Buri ihererekanya ryemejwe rirabarwa: ibimera byoherejwe, ubutaka bwakuweho n'ahatewe.",  // TODO: unsure
+    forCityText: "Buri ihererekanya ryemejwe rirabarwa: ibirenze byoherejwe, ingemwe zatanzwe zo gutoshya, ubutaka bwakuweho n'ahatewe.", // TODO: Kinyarwanda to review
     receiversTitle: 'Ibimera bijya ku',  // TODO: unsure
     howTitle: 'Uko bikora',
     step1: 'Iyandikishe wemezwe',  // TODO: unsure
@@ -530,7 +530,8 @@ const rw = {
   },
   requests: {
     title: 'Ubusabe',
-    introOperator: 'Ibigo bisaba ingemwe zawe zirenze. Emeza cyangwa wange, hanyuma wemeze ihererekanya.',
+    introOperator: 'Ibigo bisaba ingemwe zawe zirenze cyangwa ziboneka. Emeza cyangwa wange, hanyuma wemeze ihererekanya.', // TODO: Kinyarwanda to review
+    source: { surplus_offer: 'Ibirenze bitangwa', available_plant: 'Ingemwe ziboneka' }, // TODO: Kinyarwanda to review
     introInstitution: 'Ubusabe bwawe. Pepiniyeri imaze kwemeza, fata ingemwe hanyuma wemeze ko wazakiriye.',
     empty: 'Nta busabe buhari.',
     purpose: 'Icyo zizakoreshwa',
@@ -579,8 +580,19 @@ const rw = {
     purposeExample: "Ibiti ku ruzitiro rw'ishuri",
     send: 'Ohereza ubusabe',
     sent: 'Ubusabe bwoherejwe. Pepiniyeri izabwemeza cyangwa ibwange.',
-    already: 'Usanzwe ufite ubusabe butegereje kuri iri tangazo.',
-    noLocation: "Amatangazo {n} ni aya pepiniyeri zitagaragaza aho ziri ku ikarita; agaragara ku rutonde gusa.",
+    already: 'Usanzwe ufite ubusabe butegereje kuri izi ngemwe.', // TODO: Kinyarwanda to review
+    noLocation: "Ibintu {n} ni ibya pepiniyeri zitagaragaza aho ziri ku ikarita; bigaragara ku rutonde gusa.", // TODO: Kinyarwanda to review
+    offers: 'Ibirenze bitangwa', // TODO: Kinyarwanda to review
+    available: 'Ingemwe ziboneka', // TODO: Kinyarwanda to review
+    offersIntro: "Ingemwe pepiniyeri itanga ku buntu cyangwa ku giciro gito kuko zitazagurishwa ku gihe.", // TODO: Kinyarwanda to review
+    availableIntro: "Ingemwe ziteguye pepiniyeri zishobora gutanga. Ohereza ubusabe; pepiniyeri irabwemeza cyangwa ikabwanga.", // TODO: Kinyarwanda to review
+    emptyAvailable: 'Nta ngemwe ziboneka ubu', // TODO: Kinyarwanda to review
+    pickupDate: "Itariki wifuza kuzifata", // TODO: Kinyarwanda to review
+    message: 'Ubutumwa kuri pepiniyeri', // TODO: Kinyarwanda to review
+    pickupFrom: 'Zafatwa guhera {date}', // TODO: Kinyarwanda to review
+    allSpecies: 'Amoko yose', // TODO: Kinyarwanda to review
+    bySpecies: 'Ubwoko', // TODO: Kinyarwanda to review
+    minQuantity: 'Byibura (ingemwe)', // TODO: Kinyarwanda to review
   },
   impact: {
     title: 'Umusaruro',
@@ -589,11 +601,19 @@ const rw = {
       institution: "Ingemwe ikigo cyawe cyakiriye kandi cyateye.",
       admin: 'Ihererekanya ryose ryemejwe ku rubuga.',
     },
-    plants: 'Ingemwe zoherejwe',
+    plants: 'Ibirenze byoherejwe', // TODO: Kinyarwanda to review
+    plantsHint: "Ibirenze bitangwa n'ibyiciro bifite ibyago", // TODO: Kinyarwanda to review
+    supplied: 'Zatanzwe zo gutoshya', // TODO: Kinyarwanda to review
+    suppliedHint: 'Ziva mu bubiko busanzwe (ingemwe ziboneka)', // TODO: Kinyarwanda to review
+    sitesHint: 'Ahantu {n} hatewe', // TODO: Kinyarwanda to review
+    received: 'Ingemwe zakiriwe', // TODO: Kinyarwanda to review
+    receivedHint: 'Ibirenze {surplus} byoherejwe, {supplied} zatanzwe zo gutoshya', // TODO: Kinyarwanda to review
+    type: 'Ubwoko', // TODO: Kinyarwanda to review
+    types: { surplus_redirected: 'Ibirenze byoherejwe', greening_supply: 'Zatanzwe zo gutoshya' }, // TODO: Kinyarwanda to review
     handovers: 'Ihererekanya ryarangiye',
     land: 'Ubutaka bwa pepiniyeri bwabohowe',
     sites: 'Aho zatewe',
-    monthly: 'Ingemwe zoherejwe buri kwezi',
+    monthly: 'Ingemwe zahererekanyijwe buri kwezi', // TODO: Kinyarwanda to review
     byDistrict: 'Ingemwe hakurikijwe akarere',
     records: "Inyandiko z'ihererekanya",
     empty: 'Nta ihererekanya riraba',
@@ -734,6 +754,15 @@ const rw = {
     openRequests: "Fungura ubusabe bw'amoko", // TODO: Kinyarwanda to review
     noneTitle: 'Nta moko arahari', // TODO: Kinyarwanda to review
     noneText: "Umuyobozi agomba kubanza kongeramo amoko (Amategeko n'amoko). Nyuma ushobora kongeramo ibyiciro no kubona inama zo gutera.", // TODO: Kinyarwanda to review
+  },
+  visibility: {
+    title: 'Ingemwe ziboneka', // TODO: Kinyarwanda to review
+    batchLabel: "Erekana ibigo iyo ziteguye", // TODO: Kinyarwanda to review
+    nurseryLabel: "Erekana ingemwe zanjye ziteguye ibigo byemejwe", // TODO: Kinyarwanda to review
+    whatTheySee: "Ibigo bibona gusa ubwoko, umubare ushobora gutanga, igiciro cy'ingemwe niba gihari, izina rya pepiniyeri n'akarere. Ntibibona ibyo wagurishije, ibyo wakoresheje, ibyago cyangwa telefoni yawe.", // TODO: Kinyarwanda to review
+    hidden: 'Zihishwe ibigo', // TODO: Kinyarwanda to review
+    nurseryOn: 'Ingemwe zawe ziteguye zigaragara ku bigo byemejwe.', // TODO: Kinyarwanda to review
+    nurseryOff: 'Ingemwe zawe zihishwe ibigo. Ibirenze ushyize ku rubuga biracyagaragara.', // TODO: Kinyarwanda to review
   },
   speciesRequests: {
     title: "Ubusabe bw'amoko", // TODO: Kinyarwanda to review
@@ -881,7 +910,8 @@ const rw = {
     STOCK_TOO_LOW: 'Ingemwe ziri muri iki cyiciro ntizihagije kuri iyi mpinduka.',
     LISTING_EXCEEDS_STOCK: 'Ingemwe ntizihagije: {available} gusa ni zo zishobora gutangwa.',
     BATCH_CLEARED: 'Iki cyiciro cyarangiye.',
-    BATCH_HAS_LISTINGS: "Banza ukureho amatangazo y'iki cyiciro.",
+    BATCH_HAS_LISTINGS: "Banza ufunge amatangazo n'ubusabe bifunguye by'iki cyiciro.", // TODO: Kinyarwanda to review
+    NOT_AVAILABLE: 'Izi ngemwe ntizikiboneka.', // TODO: Kinyarwanda to review
     INVALID_STATUS_CHANGE: 'Iyi mpinduka ntigishoboka.',
     LISTING_CLOSED: 'Iri tangazo ntirigifunguye.',
     NOT_ENOUGH_LEFT: 'Ingemwe zisigaye ntizihagije: {remaining} gusa.',

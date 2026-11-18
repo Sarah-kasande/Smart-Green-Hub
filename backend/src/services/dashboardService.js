@@ -4,6 +4,7 @@ const { RiskAlert, Batch, PlantSpecies, SurplusListing, SurplusRequest } = requi
 const { todayKigali } = require('../utils/dates');
 const inventory = require('./inventoryService');
 const finance = require('./financeService');
+const surplus = require('./surplusService');
 const impact = require('./impactService');
 
 async function operatorDashboard(nursery) {
@@ -17,10 +18,8 @@ async function operatorDashboard(nursery) {
     order: [['risk_level', 'DESC'], ['days_to_prime_end', 'ASC']],
   });
   const activeListings = await SurplusListing.count({ where: { nursery_id: nursery.id, status: { [Op.in]: ['active', 'reserved'] } } });
-  const pendingRequests = await SurplusRequest.count({
-    where: { status: 'pending' },
-    include: [{ model: SurplusListing, as: 'listing', where: { nursery_id: nursery.id } }],
-  });
+  // Requests for surplus offers and for available plants (W42)
+  const pendingRequests = await surplus.countPendingForNursery(nursery);
   // Highest risk first: risk_level is an ENUM ordered low < medium < high, so DESC puts high first
   const levelRank = { high: 0, medium: 1, low: 2 };
   openAlerts.sort((a, b) => levelRank[a.risk_level] - levelRank[b.risk_level] || a.days_to_prime_end - b.days_to_prime_end);

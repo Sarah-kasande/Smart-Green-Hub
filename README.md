@@ -56,9 +56,9 @@ they already keep (batches, sales, expenses) into early warnings and a way to pa
 | Job | What it does | Where in the app |
 |-----|--------------|------------------|
 | **1. Predict** | Every night (and on demand) simple, explainable rules estimate how many plants of each batch will remain unsold at the end of their prime window, and rate the batch **Low / Medium / High** risk with a suggested action. No machine learning. | Nursery dashboard, **Alerts** |
-| **2. Redirect** | A **Surplus Board** where nurseries post mature plants (free or discounted) and verified institutions request them. Both sides confirm the hand-over. | **Surplus Board**, **Requests** |
+| **2. Redirect** | A **Surplus Board** where nurseries post mature plants (free or discounted) and verified institutions request them. Approved institutions also see **Available plants**: ready plants nurseries can supply (section 4.8). Request and approve only, never a shop. Both sides confirm the hand-over. | **Surplus Board**, **Requests** |
 | **3. Plan** | Planting suggestions: how many of each species to plant next, based on the nursery's own sales of the last 3 months. | **Planting** |
-| **4. Measure** | Impact dashboards: plants redirected, hand-overs, planting sites, land cleared. Only confirmed hand-overs count. | **Impact**, public landing page |
+| **4. Measure** | Impact dashboards: **surplus redirected** and **plants supplied for greening** (kept apart), hand-overs, planting sites, land cleared. Only confirmed hand-overs count. | **Impact**, public landing page |
 
 ## 3. Who uses it
 
@@ -102,7 +102,7 @@ Forgot your password? Use **Forgot password** on the sign-in page: you receive a
 | Step | Page | What to do |
 |------|------|------------|
 | 1 | **Dashboard** | See open requests as steps (*Requested → Approved → Handed over → Received*) and plants available in your district on a map. |
-| 2 | **Surplus Board** | Browse listings as a list or on the map; filter by plant type and district. Choose **Request plants**, enter the quantity and what the plants are for (for example, greening the school compound). |
+| 2 | **Surplus Board** | Two views: **Surplus offers** (listings posted by nurseries) and **Available plants** (ready plants nurseries can supply). Both as cards or on the map; filter by district, plant type, species and minimum quantity. Choose **Request plants**, enter the quantity, what the plants are for, and optionally a preferred pickup date and a message. |
 | 3 | **My requests** | Follow each request. When the plants arrive, **confirm receipt**. You can cancel a request before it is fulfilled. |
 | 4 | **Impact** | Plants received per month, hand-overs and planting sites. |
 
@@ -162,6 +162,27 @@ Nightly job: listings past their end date                    listing: expired
      species* and keeps its stock.
    - *Merge:* for a spelling duplicate. The batches move to the existing species and get its dates.
    Every decision is in the audit log, and the nursery is notified (in-app and email).
+
+### 4.8 Available plants (more outlets for nurseries)
+
+Besides surplus offers, approved institutions see **Available plants**: batches that are *ready* (or
+*overgrown*) and can be supplied now. It works exactly like a surplus request (request → nursery approves or
+declines with a reason → both confirm the hand-over → stock goes down). It is **not a shop**: no cart, no
+checkout, no payment, no price comparison, no delivery tracking.
+
+- **What institutions see:** species, plant type, the quantity that is truly free (stock minus plants on
+  active listings and in open requests), the nursery's name, district and sector, the price per plant if the
+  nursery entered one, and the earliest pickup date. **Never** sales, expenses, risk level, alerts, total
+  stock or the phone number (contact details are shared only after a request is approved).
+- **Nursery control:** every batch has **Show to institutions** (on by default; Add batch and the batch page),
+  and *Settings → Nursery details → Available plants* switches it off for the whole nursery. Hiding a batch
+  stops new requests; requests already open continue. Batches waiting for species approval never appear.
+- **Requests page:** each request is marked **Surplus offer** or **Available plant**; the nursery handles both
+  in one place.
+- **Only approved institutions** can see or request available plants. Public visitors see no stock.
+- **Impact stays honest:** a hand-over from a surplus offer, or of a batch that was overgrown or had an open
+  risk alert, counts as **surplus redirected**; plants from healthy stock count as **supplied for
+  greening** and are never called saved from waste.
 
 ## 5. How the risk rules work
 
@@ -408,14 +429,14 @@ Local development and tests use a **local MySQL 8.4 in Docker**, never the live 
 | Command | What runs |
 |---------|-----------|
 | `cd backend && npm test` | Jest unit and API tests (risk rules, planting, sync, surplus, codes, email outbox, ...) on the LOCAL test database |
-| `cd frontend && npm run test:e2e` | 29 Playwright tests in Microsoft Edge at phone and desktop size (starts its own API and app on the LOCAL e2e database) |
+| `cd frontend && npm run test:e2e` | 34 Playwright tests in Microsoft Edge at phone and desktop size (starts its own API and app on the LOCAL e2e database) |
 | `cd frontend && npm run lint` | ESLint |
 | `cd backend && node scripts/load-test.js http://localhost:5000 50 10` | 50-user load test (NFR01), local API only |
 
 The tests need the local Docker MySQL. They **refuse** to run when the database is remote or `defaultdb`, and
 they create their own `[TEST]` species in the local test databases only. The species-request flow is covered by
 `backend/tests/api/speciesRequests.test.js`, `backend/tests/unit/speciesNames.test.js` and
-`frontend/e2e/species-requests.spec.js`. To run them safely, start the local Docker MySQL (section 10) so that
+`frontend/e2e/species-requests.spec.js`; Available plants by `backend/tests/api/availablePlants.test.js` and `frontend/e2e/available-plants.spec.js`. To run them safely, start the local Docker MySQL (section 10) so that
 `backend/.env.test` and `.env.e2e` point to `127.0.0.1` with `_test` / `_e2e` database names; never point them at
 Aiven. Results, including Lighthouse scores,
 are in `docs/TEST_REPORT.md`.

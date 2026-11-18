@@ -14,6 +14,7 @@ const planning = require('../services/planningService');
 const surplus = require('../services/surplusService');
 const impact = require('../services/impactService');
 const speciesService = require('../services/speciesService');
+const audit = require('../services/auditService');
 const { operatorDashboard } = require('../services/dashboardService');
 const { BATCH_STAGES, OFFER_TYPES, ALERT_STATUSES, REQUEST_STATUSES, SPECIES_CATEGORIES } = require('../utils/constants');
 
@@ -29,6 +30,19 @@ const optionalDate = (field) => body(field).optional({ values: 'falsy' }).isISO8
 const uuid = () => body('client_uuid').optional({ values: 'falsy' }).isUUID().withMessage('invalid');
 const money = (field) => body(field).isInt({ min: 0, max: 1000000000 }).withMessage('invalid_amount').toInt();
 const queryDate = (field) => query(field).optional({ values: 'falsy' }).isISO8601({ strict: true }).withMessage('invalid_date');
+
+// ---- Whole-nursery switch: show ready plants to institutions as "Available plants" (W43) ----
+router.put('/visibility', [body('show_available_plants').isBoolean({ strict: true }).withMessage('invalid')], validate, handle(async (req, res) => {
+  await req.nursery.update({ show_available_plants: req.body.show_available_plants });
+  await audit.log({
+    actorId: req.user.id,
+    action: 'nursery.visibility_changed',
+    entityType: 'nursery',
+    entityId: req.nursery.id,
+    reason: req.body.show_available_plants ? 'available plants shown' : 'available plants hidden',
+  });
+  res.json({ show_available_plants: req.nursery.show_available_plants });
+}));
 
 // ---- Dashboard ----
 router.get('/dashboard', handle(async (req, res) => res.json(await operatorDashboard(req.nursery))));
@@ -49,6 +63,7 @@ const batchRules = [
   date('planting_date'),
   money('unit_price'),
   body('stage').optional({ values: 'falsy' }).isIn(BATCH_STAGES).withMessage('invalid_choice'),
+  body('show_to_institutions').optional().isBoolean({ strict: true }).withMessage('invalid'),
   uuid(),
 ];
 
@@ -70,8 +85,8 @@ router.get('/batches', [query('stage').optional().isIn([...BATCH_STAGES, 'all'])
 
 router.post('/batches', batchRules, validate, handle(async (req, res) => {
   // Only the allowed fields reach the service (days_to_ready / prime_days are never used)
-  const { species_id, new_species, quantity, planting_date, unit_price, stage, client_uuid } = req.body;
-  const data = { species_id, new_species: new_species || null, quantity, planting_date, unit_price, stage, client_uuid };
+  const { species_id, new_species, quantity, planting_date, unit_price, stage, show_to_institutions, client_uuid } = req.body;
+  const data = { species_id, new_species: new_species || null, quantity, planting_date, unit_price, stage, show_to_institutions, client_uuid };
   const { batch, duplicate } = await inventory.createBatch(req.nursery, req.user, data);
   res.status(duplicate ? 200 : 201).json({ batch: inventory.toBatchJson(batch), duplicate });
 }));
@@ -88,6 +103,7 @@ router.patch(
     id(),
     body('stage').optional().isIn(BATCH_STAGES).withMessage('invalid_choice'),
     body('unit_price').optional().isInt({ min: 0, max: 1000000000 }).withMessage('invalid_amount').toInt(),
+    body('show_to_institutions').optional().isBoolean({ strict: true }).withMessage('invalid'),
   ],
   validate,
   handle(async (req, res) => {

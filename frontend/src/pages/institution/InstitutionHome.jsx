@@ -176,7 +176,7 @@ function Dashboard() {
         }
       />
       <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-        <StatCard label={t('impact.plants')} count={impact.plants_redirected || 0} />
+        <StatCard label={t('impact.received')} count={impact.plants_total || 0} hint={t('impact.receivedHint', { surplus: formatNumber(impact.plants_redirected || 0), supplied: formatNumber(impact.plants_supplied || 0) })} />
         <StatCard label={t('impact.handovers')} count={impact.handovers || 0} />
         <StatCard label={t('impact.sites')} count={impact.planting_sites || 0} />
         <StatCard label={t('institutionHome.inProgress')} count={(requests.pending || 0) + (requests.approved || 0)} hint={t('institutionHome.inProgressHint', { pending: requests.pending || 0, approved: requests.approved || 0 })} />
@@ -190,7 +190,7 @@ function Dashboard() {
           <SectionTitle>{t('impact.monthly')}</SectionTitle>
           <div className="mt-4">
             {monthly.length > 0 ? (
-              <SimpleBarChart title={t('impact.monthly')} valueLabel={t('impact.plants')} data={monthly.map((m) => ({ label: formatMonth(m.month), value: m.plants }))} format={(v) => formatNumber(v)} color="var(--chart-2)" />
+              <SimpleBarChart title={t('impact.monthly')} valueLabel={t('impact.quantity')} data={monthly.map((m) => ({ label: formatMonth(m.month), value: m.plants }))} format={(v) => formatNumber(v)} color="var(--chart-2)" />
             ) : (
               <p className="text-ink-soft">{t('impact.emptyText')}</p>
             )}

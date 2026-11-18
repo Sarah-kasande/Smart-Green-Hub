@@ -132,11 +132,11 @@ const notificationTexts = {
   request_created: {
     en: (p) => ({
       subject: `New plant request from ${p.institution}`,
-      text: `${p.institution} requested ${p.quantity} ${p.species} from your Surplus Board listing.\nPurpose: ${p.purpose}\nApprove or decline: ${appUrl()}/operator/requests`,
+      text: `${p.institution} requested ${p.quantity} ${p.species} ${p.source === 'available_plant' ? 'from your available plants' : 'from your Surplus Board listing'}.\nPurpose: ${p.purpose}\nApprove or decline: ${appUrl()}/operator/requests`,
     }),
     rw: (p) => ({
       subject: `Ubusabe bushya buvuye kuri ${p.institution}`,
-      text: `${p.institution} yasabye ${p.quantity} ${p.species} ku bimera byawe birenze.\nIcyo bizakoreshwa: ${p.purpose}\nEmeza cyangwa wange: ${appUrl()}/operator/requests`,
+      text: `${p.institution} yasabye ${p.quantity} ${p.species} ${p.source === 'available_plant' ? 'ku bimera byawe biboneka' /* TODO(translation review) */ : 'ku bimera byawe birenze'}.\nIcyo bizakoreshwa: ${p.purpose}\nEmeza cyangwa wange: ${appUrl()}/operator/requests`,
     }),
   },
   request_decided: {
