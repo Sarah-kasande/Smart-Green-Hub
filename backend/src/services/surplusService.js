@@ -50,10 +50,16 @@ async function refreshListingStatus(listing, transaction) {
   return listing;
 }
 
-const speciesInclude = { model: PlantSpecies, as: 'species', paranoid: false };
-const listingInclude = [
-  { model: Batch, as: 'batch', paranoid: false, include: [speciesInclude] },
-  { model: Nursery, as: 'nursery', paranoid: false, include: [{ model: User, as: 'owner', attributes: ['id', 'full_name', 'phone', 'email'] }] },
+// The includes are FUNCTIONS that return a NEW object on every call, never shared objects.
+// Why: Sequelize copies the include options with lodash cloneDeep, which keeps an object that is used
+// twice as ONE object. A request reaches a batch and its species by two paths (through its listing,
+// and directly for available plants). With one shared species object, both joins got the same parent
+// and the same SQL alias 'batch->species', and MySQL refused the query ("Not unique table/alias").
+const speciesInclude = () => ({ model: PlantSpecies, as: 'species', paranoid: false });
+const nurseryInclude = () => ({ model: Nursery, as: 'nursery', paranoid: false, include: [{ model: User, as: 'owner', attributes: ['id', 'full_name', 'phone', 'email'] }] });
+const listingInclude = () => [
+  { model: Batch, as: 'batch', paranoid: false, include: [speciesInclude()] },
+  nurseryInclude(),
 ];
 
 async function listingJson(listing, transaction) {
@@ -126,7 +132,7 @@ async function createListing(nursery, user, data) {
 }
 
 async function listOwnListings(nursery) {
-  const listings = await SurplusListing.findAll({ where: { nursery_id: nursery.id }, include: listingInclude, order: [['created_at', 'DESC']] });
+  const listings = await SurplusListing.findAll({ where: { nursery_id: nursery.id }, include: listingInclude(), order: [['created_at', 'DESC']] });
   const result = [];
   for (const listing of listings) result.push(await listingJson(listing));
   return result;
@@ -160,7 +166,7 @@ async function withdrawListing({ nursery = null, user, listingId, reason }) {
   await sequelize.transaction(async (transaction) => {
     const where = { id: listingId };
     if (nursery) where.nursery_id = nursery.id;
-    const listing = await SurplusListing.findOne({ where, include: listingInclude, transaction, lock: transaction.LOCK.UPDATE });
+    const listing = await SurplusListing.findOne({ where, include: listingInclude(), transaction, lock: transaction.LOCK.UPDATE });
     if (!listing) throw new HttpError(404, 'NOT_FOUND', 'Listing not found');
     if (!['active', 'reserved'].includes(listing.status)) throw new HttpError(409, 'LISTING_CLOSED', 'This listing is already closed');
     await cancelOpenRequests(listing, reason || 'Listing withdrawn', user.id, transaction);
@@ -174,7 +180,7 @@ async function withdrawListing({ nursery = null, user, listingId, reason }) {
 async function expireListings({ today = todayKigali() } = {}) {
   const due = await SurplusListing.findAll({
     where: { status: { [Op.in]: ['active', 'reserved'] }, expires_at: { [Op.lt]: today } },
-    include: listingInclude,
+    include: listingInclude(),
   });
   for (const listing of due) {
     await sequelize.transaction(async (transaction) => {
@@ -209,7 +215,7 @@ async function board({ district, category, speciesId } = {}) {
   const listings = await SurplusListing.findAll({
     where: { status: 'active', expires_at: { [Op.gte]: today } },
     include: [
-      { model: Batch, as: 'batch', required: true, include: [{ ...speciesInclude, where: speciesWhere, required: true }] },
+      { model: Batch, as: 'batch', required: true, include: [{ ...speciesInclude(), where: speciesWhere, required: true }] },
       { model: Nursery, as: 'nursery', required: true, where: nurseryWhere },
     ],
     order: [['expires_at', 'ASC']],
@@ -230,10 +236,11 @@ async function board({ district, category, speciesId } = {}) {
 // locked (no overselling), approve / decline with a reason, one request per institution per item,
 // and stock reduced only when BOTH sides confirmed the hand-over.
 
-const nurseryInclude = { model: Nursery, as: 'nursery', paranoid: false, include: [{ model: User, as: 'owner', attributes: ['id', 'full_name', 'phone', 'email'] }] };
-const requestInclude = [
-  { model: SurplusListing, as: 'listing', paranoid: false, include: listingInclude },
-  { model: Batch, as: 'batch', paranoid: false, include: [speciesInclude, nurseryInclude] },
+// Two paths to a batch, with different aliases: 'listing->batch' (surplus offer) and 'batch' (available plant).
+// Each path gets its own new include objects (see speciesInclude above).
+const requestInclude = () => [
+  { model: SurplusListing, as: 'listing', paranoid: false, include: listingInclude() },
+  { model: Batch, as: 'batch', paranoid: false, include: [speciesInclude(), nurseryInclude()] },
   { model: Institution, as: 'institution', include: [{ model: User, as: 'user', attributes: ['id', 'full_name', 'phone', 'email'] }] },
 ];
 
@@ -302,7 +309,7 @@ function requestJson(request, viewer) {
 //   remaining how many plants can still be requested
 //   refresh   called after a change (updates the listing status; nothing to do for a batch)
 async function lockListingItem(listingId, transaction) {
-  const listing = await SurplusListing.findByPk(listingId, { include: listingInclude, transaction, lock: transaction.LOCK.UPDATE });
+  const listing = await SurplusListing.findByPk(listingId, { include: listingInclude(), transaction, lock: transaction.LOCK.UPDATE });
   if (!listing || listing.nursery?.verification_status !== 'approved') throw new HttpError(404, 'NOT_FOUND', 'Listing not found');
   return {
     key: { listing_id: listing.id },
@@ -317,7 +324,7 @@ async function lockListingItem(listingId, transaction) {
 }
 
 async function lockBatchItem(batchId, transaction) {
-  const batch = await Batch.findByPk(batchId, { include: [speciesInclude, nurseryInclude], transaction, lock: transaction.LOCK.UPDATE });
+  const batch = await Batch.findByPk(batchId, { include: [speciesInclude(), nurseryInclude()], transaction, lock: transaction.LOCK.UPDATE });
   if (!batch || batch.nursery?.verification_status !== 'approved') throw new HttpError(404, 'NOT_FOUND', 'Not found');
   return {
     key: { batch_id: batch.id },
@@ -387,13 +394,13 @@ async function requestPlants(institution, user, target, { quantity, purpose, pre
 }
 
 async function findRequestForNursery(nursery, requestId, transaction) {
-  const request = await SurplusRequest.findByPk(requestId, { include: requestInclude, transaction, lock: transaction ? transaction.LOCK.UPDATE : undefined });
+  const request = await SurplusRequest.findByPk(requestId, { include: requestInclude(), transaction, lock: transaction ? transaction.LOCK.UPDATE : undefined });
   if (!request || requestNursery(request)?.id !== nursery.id) throw new HttpError(404, 'NOT_FOUND', 'Request not found');
   return request;
 }
 
 async function findRequestForInstitution(institution, requestId, transaction) {
-  const request = await SurplusRequest.findByPk(requestId, { include: requestInclude, transaction, lock: transaction ? transaction.LOCK.UPDATE : undefined });
+  const request = await SurplusRequest.findByPk(requestId, { include: requestInclude(), transaction, lock: transaction ? transaction.LOCK.UPDATE : undefined });
   if (!request || request.institution_id !== institution.id) throw new HttpError(404, 'NOT_FOUND', 'Request not found');
   return request;
 }
@@ -538,7 +545,7 @@ function nurseryRequestWhere(nursery) {
 async function listRequestsForNursery(nursery, { status } = {}) {
   const where = nurseryRequestWhere(nursery);
   if (status && status !== 'all') where.status = status;
-  const rows = await SurplusRequest.findAll({ where, include: requestInclude, order: [['created_at', 'DESC']] });
+  const rows = await SurplusRequest.findAll({ where, include: requestInclude(), order: [['created_at', 'DESC']] });
   return rows.map((r) => requestJson(r, 'operator'));
 }
 
@@ -555,7 +562,7 @@ async function countPendingForNursery(nursery) {
 async function listRequestsForInstitution(institution, { status } = {}) {
   const where = { institution_id: institution.id };
   if (status && status !== 'all') where.status = status;
-  const rows = await SurplusRequest.findAll({ where, include: requestInclude, order: [['created_at', 'DESC']] });
+  const rows = await SurplusRequest.findAll({ where, include: requestInclude(), order: [['created_at', 'DESC']] });
   return rows.map((r) => requestJson(r, 'institution'));
 }
 

@@ -164,7 +164,7 @@ async function auditLog({ entityType, action, actorId, from, to, page = 1, pageS
 async function listListings({ status } = {}) {
   const where = {};
   if (status && status !== 'all') where.status = status;
-  const listings = await SurplusListing.findAll({ where, include: listingInclude, order: [['created_at', 'DESC']], limit: 200 });
+  const listings = await SurplusListing.findAll({ where, include: listingInclude(), order: [['created_at', 'DESC']], limit: 200 });
   const result = [];
   for (const listing of listings) result.push(await listingJson(listing));
   return result;

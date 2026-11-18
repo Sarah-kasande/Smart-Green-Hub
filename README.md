@@ -436,7 +436,7 @@ Local development and tests use a **local MySQL 8.4 in Docker**, never the live 
 The tests need the local Docker MySQL. They **refuse** to run when the database is remote or `defaultdb`, and
 they create their own `[TEST]` species in the local test databases only. The species-request flow is covered by
 `backend/tests/api/speciesRequests.test.js`, `backend/tests/unit/speciesNames.test.js` and
-`frontend/e2e/species-requests.spec.js`; Available plants by `backend/tests/api/availablePlants.test.js` and `frontend/e2e/available-plants.spec.js`. To run them safely, start the local Docker MySQL (section 10) so that
+`frontend/e2e/species-requests.spec.js`; Available plants by `backend/tests/api/availablePlants.test.js` and `frontend/e2e/available-plants.spec.js`; the Requests lists with both kinds of request (surplus offer and available plant) by `backend/tests/api/requestLists.test.js`. To run them safely, start the local Docker MySQL (section 10) so that
 `backend/.env.test` and `.env.e2e` point to `127.0.0.1` with `_test` / `_e2e` database names; never point them at
 Aiven. Results, including Lighthouse scores,
 are in `docs/TEST_REPORT.md`.
