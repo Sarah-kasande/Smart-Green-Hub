@@ -98,11 +98,23 @@ async function approvedUser(admin, data) {
   return { client, id: org.id };
 }
 
-// Puts DEMO species in (the reset empties the table) and returns them
+// TEST species for the local test database only (the reset empties the table; the server itself
+// never creates species). Labelled [TEST] so they can never be mistaken for real data.
+const TEST_SPECIES = [
+  { common_name: 'Grevillea robusta [TEST]', category: 'tree' },
+  { common_name: 'Jacaranda mimosifolia [TEST]', category: 'tree' },
+  { common_name: 'Persea americana (avocado) [TEST]', category: 'tree' },
+  { common_name: 'Moringa oleifera [TEST]', category: 'tree' },
+  { common_name: 'Bougainvillea spectabilis [TEST]', category: 'shrub' },
+  { common_name: 'Rosa (rose) [TEST]', category: 'flower' },
+];
+
+// Puts the TEST species in (only if the table is empty) and returns them
 async function demoSpecies() {
-  const { ensureDemoSpecies } = require('../src/services/bootstrapService');
   const { PlantSpecies } = require('../src/models');
-  await ensureDemoSpecies();
+  if ((await PlantSpecies.count({ paranoid: false })) === 0) {
+    await PlantSpecies.bulkCreate(TEST_SPECIES.map((s) => ({ ...s, default_days_to_ready: 180, default_prime_days: 60 })));
+  }
   return PlantSpecies.findAll({ order: [['id', 'ASC']] });
 }
 

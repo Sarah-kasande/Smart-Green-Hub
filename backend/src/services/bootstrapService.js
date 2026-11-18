@@ -1,8 +1,14 @@
-// Runs when the server starts. Both steps are idempotent: running them again changes nothing.
+// Runs when the server starts. Every step is idempotent: running it again changes nothing, and it
+// never overwrites anything the administrator has edited.
+//   1. the first administrator, from ADMIN_EMAIL and ADMIN_PASSWORD (only if no administrator exists)
+//   2. the default risk rule (Table 5 values), only if the default row is missing
+// It NEVER inserts plant species or any other data: the live database holds real data only, and the
+// administrator adds the real species in Rules & Species.
 const bcrypt = require('bcryptjs');
-const { User, PlantSpecies } = require('../models');
+const { User, PlantSpecies, RuleSetting } = require('../models');
 const audit = require('./auditService');
 const { BCRYPT_ROUNDS } = require('./authService');
+const { FALLBACK } = require('./ruleService');
 
 // Creates the first administrator from ADMIN_EMAIL and ADMIN_PASSWORD, but ONLY if no
 // administrator exists yet. The email and password are never logged.
@@ -31,36 +37,20 @@ async function ensureAdmin() {
   return 'created';
 }
 
-// DEMO species so batches can be tried before the needs assessment.
-// The names are common Kigali plants; the day values are PLACEHOLDERS, not research data.
-// They are inserted only when the species table is completely empty, and the administrator
-// replaces them after the needs assessment.
-const DEMO_LABEL = '[DEMO - confirm in needs assessment]';
-const DEMO_SPECIES = [
-  { name: 'Grevillea robusta', category: 'tree' },
-  { name: 'Jacaranda mimosifolia', category: 'tree' },
-  { name: 'Persea americana (avocado)', category: 'tree' },
-  { name: 'Moringa oleifera', category: 'tree' },
-  { name: 'Bougainvillea spectabilis', category: 'shrub' },
-  { name: 'Rosa (rose)', category: 'flower' },
-];
-const DEMO_DAYS_TO_READY = 180;
-const DEMO_PRIME_DAYS = 60;
-
-async function ensureDemoSpecies() {
-  const count = await PlantSpecies.count({ paranoid: false });
-  if (count > 0) return 'exists';
-  await PlantSpecies.bulkCreate(
-    DEMO_SPECIES.map((s) => ({
-      common_name: `${s.name} ${DEMO_LABEL}`,
-      kinyarwanda_name: null,
-      category: s.category,
-      default_days_to_ready: DEMO_DAYS_TO_READY,
-      default_prime_days: DEMO_PRIME_DAYS,
-    }))
-  );
+// The default rule row (species_id = NULL) with the Table 5 values of the proposal. The migration
+// 20261016000019 inserts it too; this is a second safety net. An existing row is never changed,
+// so thresholds the administrator edited in Rules & Species are kept.
+async function ensureDefaultRule() {
+  const existing = await RuleSetting.findOne({ where: { species_id: null } });
+  if (existing) return 'exists';
+  const rule = await RuleSetting.create({ species_id: null, prime_window_days: null, ...FALLBACK, updated_by: null });
+  await audit.log({ actorId: null, action: 'rules.defaults_created', entityType: 'rule_setting', entityId: rule.id });
   return 'created';
 }
+
+// Kept only so scripts/seed-species.js can archive DEMO species left in an older local database.
+// The server no longer creates DEMO species anywhere.
+const DEMO_LABEL = '[DEMO - confirm in needs assessment]';
 
 async function runBootstrap() {
   const adminStatus = await ensureAdmin();
@@ -71,8 +61,9 @@ async function runBootstrap() {
     'email-in-use': 'Administrator: NOT created (ADMIN_EMAIL already belongs to another account)',
   };
   console.log(messages[adminStatus]);
-  const speciesStatus = await ensureDemoSpecies();
-  if (speciesStatus === 'created') console.log('Plant species: DEMO rows inserted (replace after the needs assessment)');
+  const ruleStatus = await ensureDefaultRule();
+  console.log(ruleStatus === 'created' ? 'Risk rules: default Table 5 values created' : 'Risk rules: already set');
+  if ((await PlantSpecies.count()) === 0) console.log('Plant species: none yet. The administrator adds them in Rules & Species.');
 }
 
-module.exports = { ensureAdmin, ensureDemoSpecies, runBootstrap, DEMO_LABEL };
+module.exports = { ensureAdmin, ensureDefaultRule, runBootstrap, DEMO_LABEL };

@@ -274,7 +274,19 @@ frontend/e2e/    Playwright end-to-end tests
 
 ## 10. Running it on your computer
 
-Local development and tests use a **local MySQL 8.4 in Docker**, never the production database.
+> **The live database holds REAL data only.** The live database is Aiven MySQL on the free plan, which allows
+> exactly one database, `defaultdb`. Nothing fake ever goes into it: no demo species, test users, test nurseries
+> or sample batches. It contains only (1) the tables created by the migrations, (2) the default risk rule
+> (Table 5: lookback 28 days, Medium from 20 %, High from 50 %, safety margin 10 %, far 28 days, near 7 days) and
+> (3) the administrator created from `ADMIN_EMAIL` / `ADMIN_PASSWORD`. The administrator adds the real plant
+> species in *Rules & Species*; until then *Add batch* and *Planting plan* say "No species yet".
+>
+> The code enforces this (`backend/src/utils/dbSafety.js`): a database counts as **live** when its host is not
+> this computer, or when its name is `defaultdb`. Against a live database, `npm test`, the Playwright tests,
+> `seed-demo.js`, `seed-species.js`, the load test and `npm run migrate:undo` all **refuse to run**, with no way
+> around it. Migrations reach the live database only with `npm run migrate:live` (or `npm start` on Render).
+
+Local development and tests use a **local MySQL 8.4 in Docker**, never the live database.
 
 **Requirements:** Node.js 20 or newer, Docker Desktop, Git.
 
@@ -290,13 +302,18 @@ Local development and tests use a **local MySQL 8.4 in Docker**, never the produ
    Later: start Docker Desktop, then `docker start sgh-mysql`.
 
 2. **Create the environment files** (none are committed; `backend/.env.example` lists every name):
-   - `backend/.env`: real settings (`JWT_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, email, ...)
+   - `backend/.env`: real settings: the Aiven connection (`DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`,
+     `DB_NAME=defaultdb`, `DB_CA_PATH=certs/aiven-ca.pem`), `JWT_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, email.
+     Download Aiven's CA certificate into `backend/certs/aiven-ca.pem` (the `certs/` folder is never committed).
+   - **Order matters:** the API loads `backend/.env.local` first and `.env` only fills what is missing, so while
+     `.env.local` exists, `npm run dev` uses the LOCAL database. Without `.env.local`, `npm run dev` uses the live
+     Aiven database (real data); then start it with `npm run dev -- --no-db`.
    - `backend/.env.local`: local overrides: `DB_HOST=127.0.0.1`, `DB_PORT=3307`, `DB_NAME=smart_green_hub_dev`,
      `DB_USER=sgh_local`, `DB_PASSWORD=sgh_local_pw`, `DB_SSL=false`, `NODE_ENV=development`,
      `APP_URL=http://localhost:5173`, `CORS_ORIGIN=http://localhost:5173`. An empty line here never hides a value
      from `.env`.
    - `backend/.env.test`: only for `npm test`: the same local values with `DB_NAME=smart_green_hub_test`, a test
-     `JWT_SECRET` and fake admin details. Tests refuse to run against Aiven.
+     `JWT_SECRET` and fake admin details. Tests refuse any remote host and `defaultdb`.
    - `backend/.env.e2e`: only for Playwright: `PORT=5001`, `DB_NAME=smart_green_hub_e2e`, a fake admin
      (`e2e-admin@example.test` / `E2eAdmin123`), `APP_URL` and `CORS_ORIGIN` = `http://localhost:5174`,
      `EMAIL_OUTBOX_FILE=e2e-emails.jsonl`, plus the local database values.
@@ -326,11 +343,23 @@ Local development and tests use a **local MySQL 8.4 in Docker**, never the produ
 
    You can still start each part on its own: `cd backend` then `npm run dev`, and `cd frontend` then `npm run dev`.
 
-   The first administrator is created from `ADMIN_EMAIL` / `ADMIN_PASSWORD` when the API starts, only if no
-   administrator exists. Without `BREVO_API_KEY`, emails (including the 6-digit codes) are printed in the API
-   terminal instead of being sent.
+   When the API starts it creates, only if missing: the first administrator from `ADMIN_EMAIL` /
+   `ADMIN_PASSWORD`, and the default risk rule. It **never creates plant species** or any other data. Without
+   `BREVO_API_KEY`, emails (including the 6-digit codes) are printed in the API terminal instead of being sent.
 
-4. **Demo data** (optional, for presentations; local database only):
+4. **Database commands** (from `backend/`; migrations only ever add tables and columns):
+
+   | Command | What it does |
+   |---------|--------------|
+   | `npm run migrate` | apply new migrations to the LOCAL database (refuses the live one) |
+   | `npm run migrate:status` | which migrations ran on the LOCAL database (read-only) |
+   | `npm run migrate:undo` | undo the last migration, LOCAL only (always refused on the live database) |
+   | `npm run migrate:live` | **on purpose:** apply new migrations to the LIVE database (reads only `backend/.env`) |
+   | `npm run migrate:live:status` | which migrations ran on the LIVE database (read-only) |
+
+   Running `npx sequelize-cli ...` directly against the live database is refused too; always use these scripts.
+
+5. **Demo data** (optional, for a presentation on a LOCAL database only):
 
    ```
    cd backend
@@ -338,31 +367,32 @@ Local development and tests use a **local MySQL 8.4 in Docker**, never the produ
    ```
 
    It creates sample nurseries, institutions, batches, sales and hand-overs. Every demo name starts with
-   **[DEMO]** so it can never be mistaken for real data. The script refuses to run against the production
-   database unless `--allow-production` is given.
+   **[DEMO]**. It needs some species in the local database first. It refuses the live database, with no
+   override.
 
-5. **Kigali starter species** (replaces the six DEMO species with 35 plants commonly grown around Kigali):
+6. **Kigali starter species** (LOCAL database only: 35 plants commonly grown around Kigali, for trying the app):
 
    ```
    cd backend
-   node scripts/seed-species.js --dry-run --archive-demo   # preview only
-   node scripts/seed-species.js --archive-demo             # add the plants, archive the DEMO species
+   node scripts/seed-species.js --dry-run   # preview only
+   node scripts/seed-species.js             # add the plants
    ```
 
-   The days-to-ready and prime-window values are **estimates** to confirm with nursery operators and correct in
-   Admin > Rules and species. Plants that already exist are skipped, so running it twice is safe. For the live
-   database, run it with `ENV_FILE=.env` (only the Aiven settings) and add `--allow-production`.
+   The day values are **estimates**. The script refuses the live database: on the live site the administrator
+   adds the real species, with confirmed values, in *Rules & Species*.
 
 ## 11. Tests
 
 | Command | What runs |
 |---------|-----------|
-| `cd backend && npm test` | 233 Jest unit and API tests (risk rules, planting, sync, surplus, codes, email outbox, ...) on the test database |
-| `cd frontend && npm run test:e2e` | 24 Playwright tests in Microsoft Edge at phone and desktop size (starts its own API and app) |
+| `cd backend && npm test` | Jest unit and API tests (risk rules, planting, sync, surplus, codes, email outbox, ...) on the LOCAL test database |
+| `cd frontend && npm run test:e2e` | 24 Playwright tests in Microsoft Edge at phone and desktop size (starts its own API and app on the LOCAL e2e database) |
 | `cd frontend && npm run lint` | ESLint |
-| `cd backend && node scripts/load-test.js <url> 50 10` | 50-user load test (NFR01) |
+| `cd backend && node scripts/load-test.js http://localhost:5000 50 10` | 50-user load test (NFR01), local API only |
 
-All tests pass. Results, including Lighthouse scores, are in `docs/TEST_REPORT.md`.
+The tests need the local Docker MySQL. They **refuse** to run when the database is remote or `defaultdb`, and
+they create their own `[TEST]` species in the local test databases only. Results, including Lighthouse scores,
+are in `docs/TEST_REPORT.md`.
 
 ## 12. Environment variables
 
@@ -387,8 +417,23 @@ All tests pass. Results, including Lighthouse scores, are in `docs/TEST_REPORT.m
 
 `PORT` is not needed on Vercel. Never set `DB_CA_PATH`, `ENV_FILE` or `EMAIL_OUTBOX_FILE` there.
 
-**Render (only if the API runs on Render instead):** the same names without `CRON_SECRET` and `VITE_API_URL`,
-with `PORT` set by Render and `TRUST_PROXY` = `2`.
+**Render (API service).** *Environment* tab of the service:
+
+| Name | Value |
+|------|-------|
+| `NODE_ENV` | `production` |
+| `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD` | the Aiven service's connection details |
+| `DB_NAME` | `defaultdb` (the only database on Aiven's free plan) |
+| `DB_CA_CERT` | the full text of Aiven's CA certificate, from `-----BEGIN CERTIFICATE-----` to `-----END CERTIFICATE-----` |
+| `JWT_SECRET` | long random text |
+| `ADMIN_EMAIL`, `ADMIN_PASSWORD` | first administrator |
+| `BREVO_API_KEY`, `MAIL_FROM` | email |
+| `APP_URL`, `CORS_ORIGIN` | the address of the frontend (no trailing slash) |
+| `TRUST_PROXY` | `2` |
+| `OTP_SECRET` | optional |
+
+Render sets `PORT` and `RENDER=true` itself. **Never set `DB_CA_PATH` on Render** (the file does not exist
+there and the API would not start), nor `DB_SSL`, `ENV_FILE` or `EMAIL_OUTBOX_FILE`.
 
 ## 13. Deployment
 
@@ -426,12 +471,25 @@ service bindings.
 - After changing a `VITE_` variable, redeploy (it is read at build time).
 - After a deploy the new app version downloads in the background and switches on at the next page change.
 
-### On Render (the earlier setup, still supported)
+### On Render (API)
 
-- **Render** (API): root directory `backend`, build command `npm install`, start command `npm start` (runs the
-  migrations, then starts `src/server.js` with node-cron). Auto-Deploy *On Commit* for branch `main`.
+- **Render** (API): root directory `backend`, build command `npm install`, start command **`npm start`**.
+  Auto-Deploy *On Commit* for branch `main`.
 - **Vercel** (app only): a project with root directory `frontend`; `frontend/vercel.json` sends `/api/*` to Render.
 - Free-plan note: Render sleeps when unused, so the first request can take up to about 50 seconds.
+
+**What `npm start` does on every start, by itself (all steps are safe to repeat):**
+1. `scripts/migrate.js up --deploy`: applies only migrations that have not run yet. On an empty `defaultdb`
+   this creates all tables and the default risk rule; on an up-to-date database it changes nothing. It is
+   allowed on the live database only because Render sets `RENDER=true`; the same command on your computer refuses.
+2. `src/server.js` starts the API and then checks: the default risk rule exists (created only if missing,
+   never overwritten), and an administrator exists (created from `ADMIN_EMAIL` / `ADMIN_PASSWORD` only if there
+   is none; the password is never printed). No species and no other data are created.
+
+**Moving to a new, empty Aiven database:** update the `DB_` variables in *Environment* (and remove
+`DB_CA_PATH` if it is there) → *Manual Deploy → Deploy latest commit* → open `/api/health` and check
+`"database":"connected"` → sign in with `ADMIN_EMAIL` / `ADMIN_PASSWORD` → add the real species in
+*Rules & Species*.
 
 The root `package.json` and `scripts/dev.js` are for local development only.
 
@@ -446,7 +504,13 @@ The root `package.json` and `scripts/dev.js` are for local development only.
 - **The nightly job does not run on Vercel**: check that `CRON_SECRET` is set, then open *Settings → Cron Jobs →
   View Logs*. A `401` answer means the secret is missing or different.
 - **An old screen after a deploy**: reload with Ctrl+Shift+R.
-- **Database up to date?** `cd backend && npx sequelize-cli db:migrate:status` (every line should say `up`).
+- **Database up to date?** Live: `cd backend && npm run migrate:live:status`; local: `npm run migrate:status`
+  (every line should say `up`).
+- **"The server took too long to answer" and `/api/health` does not answer**: the free Aiven service is
+  probably powered off after a period without use. Aiven console → the MySQL service → *Power on*, wait until
+  it shows *Running*.
+- **"No species yet" on Add batch / Planting plan**: expected on a new database. The administrator adds the
+  species in *Rules & Species*.
 - **Local database not reachable?** Start Docker Desktop, then `docker start sgh-mysql`.
 - **`npm` says ENOENT / package.json not found**: you are in the wrong folder. Run `npm run dev` from the
   project root (`Smart-Green-Hub`).
@@ -459,7 +523,10 @@ The root `package.json` and `scripts/dev.js` are for local development only.
 ## 15. Before the pilot, and future work
 
 **Before a real pilot:**
-- Replace the demo species values with the needs-assessment results (Admin → Rules & Species).
+- **Aiven is retiring its free MySQL plan:** on 21 December 2026 free MySQL services are powered off and their
+  data and backups deleted. Upgrade the service to the Developer plan (USD 5 per month, always on; Aiven keeps
+  the data and connection details) before entering real pilot data, or export the data in time.
+- The administrator adds the real plant species with values from the needs assessment (Admin → Rules & Species).
 - Have a native speaker review `frontend/src/i18n/rw.js` and `backend/src/services/emailTemplates.js`
   (`TODO` marks).
 - Turn on daily backups in Aiven and test one restore (NFR05).

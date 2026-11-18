@@ -1,6 +1,6 @@
 const h = require('../helpers');
-const { User, Nursery, AuditLog } = require('../../src/models');
-const { ensureAdmin, ensureDemoSpecies } = require('../../src/services/bootstrapService');
+const { User, Nursery, AuditLog, PlantSpecies, RuleSetting } = require('../../src/models');
+const { ensureAdmin, ensureDefaultRule, runBootstrap } = require('../../src/services/bootstrapService');
 
 beforeAll(h.resetDatabase);
 afterAll(() => h.sequelize.close());
@@ -27,9 +27,26 @@ describe('administrator seeding', () => {
     }
   });
 
-  test('DEMO species are inserted only into an empty table and are clearly labelled', async () => {
-    expect(await ensureDemoSpecies()).toBe('created');
-    expect(await ensureDemoSpecies()).toBe('exists');
+  test('startup never inserts plant species (the administrator adds the real ones)', async () => {
+    await h.resetDatabase();
+    await runBootstrap();
+    expect(await PlantSpecies.count({ paranoid: false })).toBe(0);
+  });
+
+  test('the default rule is created only when missing and an edited rule is never overwritten', async () => {
+    await RuleSetting.destroy({ where: {} });
+    expect(await ensureDefaultRule()).toBe('created');
+    const rule = await RuleSetting.findOne({ where: { species_id: null } });
+    expect(rule.sales_lookback_days).toBe(28);
+    expect(Number(rule.high_risk_ratio)).toBe(0.5);
+    expect(Number(rule.medium_risk_ratio)).toBe(0.2);
+    expect(Number(rule.safety_margin)).toBe(0.1);
+
+    await rule.update({ high_risk_ratio: 0.6 }); // the administrator edits it
+    expect(await ensureDefaultRule()).toBe('exists');
+    const after = await RuleSetting.findOne({ where: { species_id: null } });
+    expect(Number(after.high_risk_ratio)).toBe(0.6);
+    expect(await RuleSetting.count({ where: { species_id: null } })).toBe(1);
   });
 });
 

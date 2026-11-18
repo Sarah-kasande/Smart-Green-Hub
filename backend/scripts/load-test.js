@@ -5,6 +5,12 @@ const base = process.argv[2] || 'http://localhost:5000';
 const users = Number(process.argv[3] || 50);
 const perUser = Number(process.argv[4] || 20);
 
+// Never load-test the live site: it shares the live database and its free connection limit.
+if (!['localhost', '127.0.0.1', '[::1]'].includes(new URL(base).hostname)) {
+  console.error('STOP: the load test only runs against a local API (http://localhost:...), never the live site.');
+  process.exit(1);
+}
+
 const ENDPOINTS = ['/api/health', '/api/public/directory', '/api/public/impact', '/api/auth/me'];
 
 function percentile(sorted, p) {

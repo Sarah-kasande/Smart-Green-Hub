@@ -25,7 +25,8 @@ if (missing.length > 0) {
 }
 
 console.log('Build: running database migrations');
-const result = spawnSync('npx', ['sequelize-cli', 'db:migrate'], { stdio: 'inherit', shell: true });
+// Through scripts/migrate.js, the only way allowed to change the live database (VERCEL=1 here)
+const result = spawnSync('node', ['scripts/migrate.js', 'up', '--deploy'], { stdio: 'inherit', shell: true });
 if (result.status !== 0) {
   console.error(
     'Build: database migrations FAILED (message above). Common causes:\n' +

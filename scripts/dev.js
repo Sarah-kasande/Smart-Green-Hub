@@ -11,7 +11,7 @@
 //      their output is shown with [api] and [app] in front of each line
 // Ctrl+C stops both. If one of them stops on its own, the other is stopped too.
 //
-// Option:  --no-db  skips step 2 (when the database is not the local Docker one)
+// Option:  --no-db  skips steps 2 and 3 (when the database is not the local Docker one)
 // No extra packages are needed: only Node.js, npm and Docker Desktop.
 const { spawn, spawnSync } = require('node:child_process');
 const fs = require('node:fs');
@@ -145,10 +145,15 @@ async function main() {
     say('Database is ready.');
   }
 
-  // 3. Migrations (safe to run every time: only new changes are applied)
-  say('Bringing the database up to date...');
-  if (!run('npm run migrate --silent', path.join(root, 'backend'))) {
-    stopWith('The database migrations failed (see the message above). Check backend/.env.local.');
+  // 3. Migrations on the LOCAL database (safe to run every time: only new changes are applied).
+  // With --no-db the database may be the live one, which is only migrated on purpose (npm run migrate:live).
+  if (skipDb) {
+    say('Skipping migrations (--no-db). For the live database run, on purpose: cd backend && npm run migrate:live');
+  } else {
+    say('Bringing the database up to date...');
+    if (!run('npm run migrate --silent', path.join(root, 'backend'))) {
+      stopWith('The database migrations failed (see the message above). Check backend/.env.local.');
+    }
   }
 
   // 4. API and app together

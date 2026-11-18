@@ -10,7 +10,12 @@ let adminUser;
 beforeAll(async () => {
   await h.resetDatabase();
   await h.adminClient();
-  await h.demoSpecies();
+  // Two DEMO rows as an older local database could still have them (the server no longer creates any)
+  await PlantSpecies.bulkCreate(
+    [['Grevillea robusta', 'tree'], ['Rosa (rose)', 'flower']].map(([name, category]) => ({
+      common_name: `${name} ${DEMO_LABEL}`, category, default_days_to_ready: 180, default_prime_days: 60,
+    }))
+  );
   adminUser = await User.findOne({ where: { role: 'admin' } });
 });
 afterAll(() => h.sequelize.close());

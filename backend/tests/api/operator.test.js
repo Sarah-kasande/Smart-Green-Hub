@@ -30,7 +30,7 @@ describe('approval gate (FR02)', () => {
 });
 
 describe('batches (FR04)', () => {
-  test('dates come from species defaults: 180 days to ready, 60-day prime window (DEMO values)', async () => {
+  test('dates come from species defaults: 180 days to ready, 60-day prime window (TEST species)', async () => {
     const res = await newBatch();
     expect(res.status).toBe(201);
     expect(res.body.batch).toMatchObject({ quantity_initial: 100, quantity_current: 100, expected_ready_date: '2026-06-30', prime_end_date: '2026-08-29' });

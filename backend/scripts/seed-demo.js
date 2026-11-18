@@ -14,7 +14,7 @@
 // It uses the same services as the app, so stock, reservations, hand-overs, impact records and the
 // audit log follow the real rules. Only the dates of past events are moved back afterwards, so the
 // charts show several months. No email is sent: emails are marked "skipped".
-// It refuses to run on the production (Aiven) database unless --allow-production is given, and it
+// It refuses the live database (Aiven "defaultdb" or any remote host) with no way around it, and it
 // stops if the demo data already exists.
 require('../src/config/env');
 // No real emails for demo events (they would go to fake @example.test addresses)
@@ -32,10 +32,10 @@ const surplus = require('../src/services/surplusService');
 const risk = require('../src/services/riskService');
 const notifications = require('../src/services/notificationService');
 const { todayKigali, addDays } = require('../src/utils/dates');
+const { dbTarget, describeTarget } = require('../src/utils/dbSafety');
 
 const args = process.argv.slice(2);
 const fillEmail = (args.find((a) => a.startsWith('--fill=')) || '').slice('--fill='.length).trim().toLowerCase();
-const allowProduction = args.includes('--allow-production');
 const TODAY = todayKigali();
 // A date N days before today, and a time on that day (10:00 Kigali)
 const daysAgo = (n) => addDays(TODAY, -n);
@@ -72,10 +72,8 @@ async function makeInstitution(user, data) {
 }
 
 async function main() {
-  const host = (process.env.DB_HOST || '').toLowerCase();
-  if (host.includes('aivencloud.com') && !allowProduction) {
-    stop('STOP: this is the production (Aiven) database. Demo data is meant for the local database.\nAdd --allow-production only if you really want demo data on the live site.');
-  }
+  const target = dbTarget();
+  if (target.live) stop(`STOP: demo data is never written to the live ${describeTarget(target)}. It is only for a local database.`);
   const password = process.env.DEMO_PASSWORD || '';
   if (!/^(?=.*[A-Za-z])(?=.*\d).{8,}$/.test(password)) stop('Set DEMO_PASSWORD (at least 8 characters with a letter and a number) for the demo accounts.');
   if (await User.findOne({ where: { email: 'demo-school@example.test' }, paranoid: false })) stop('Demo data already exists. Nothing changed.');
@@ -86,7 +84,7 @@ async function main() {
   const speciesRows = await PlantSpecies.findAll();
   const species = (word) => {
     const found = speciesRows.find((s) => s.common_name.toLowerCase().includes(word));
-    if (!found) stop(`Species "${word}" not found. Start the API once so the DEMO species are created.`);
+    if (!found) stop(`Species "${word}" not found. Add species to the LOCAL database first (node scripts/seed-species.js).`);
     return found;
   };
 
@@ -139,11 +137,11 @@ async function main() {
   const batch = async (nursery, owner, word, quantity, plantedDaysAgo, unitPrice) =>
     (await inventory.createBatch(nursery, owner, { species_id: species(word).id, quantity, planting_date: daysAgo(plantedDaysAgo), unit_price: unitPrice })).batch;
 
-  // Ages chosen with the DEMO species defaults (ready after 180 days, prime window 60 days):
+  // Ages chosen for species ready after about 180 days with a 60-day prime window (risk levels vary with the real values):
   const grevillea = await batch(main, mainUser, 'grevillea', 260, 281, 500); // prime window ended -> overgrown, High
   const jacaranda = await batch(main, mainUser, 'jacaranda', 220, 217, 800); // ready, ~23 days left -> Medium
   const avocado = await batch(main, mainUser, 'avocado', 120, 196, 1500); // ready, ~44 days left, selling well -> Low
-  const moringa = await batch(main, mainUser, 'moringa', 150, 144, 400); // growing, selling well -> Low
+  const markhamia = await batch(main, mainUser, 'markhamia', 150, 144, 400); // growing, selling well -> Low
   const bougainvillea = await batch(main, mainUser, 'bougainvillea', 120, 245, 600); // prime window just ended -> High
   const rosa = await batch(remera, remeraUser, 'rosa', 150, 236, 300); // ~4 days left -> High
   const remeraJacaranda = await batch(remera, remeraUser, 'jacaranda', 100, 161, 800); // growing -> Low
@@ -153,7 +151,7 @@ async function main() {
     [main, mainUser, grevillea, [[123, 25], [105, 30], [87, 20], [69, 25], [48, 20], [21, 15], [7, 10]]],
     [main, mainUser, jacaranda, [[110, 12], [83, 15], [43, 15], [24, 20], [17, 18], [10, 22], [3, 18]]],
     [main, mainUser, avocado, [[120, 10], [64, 19], [23, 12], [13, 10], [4, 9]]],
-    [main, mainUser, moringa, [[22, 15], [9, 15]]],
+    [main, mainUser, markhamia, [[22, 15], [9, 15]]],
     [main, mainUser, bougainvillea, [[59, 10], [38, 10]]],
     [remera, remeraUser, rosa, [[95, 30], [54, 20], [18, 20], [6, 20]]],
     [remera, remeraUser, remeraJacaranda, [[13, 25]]],

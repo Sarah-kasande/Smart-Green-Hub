@@ -5,7 +5,8 @@
 //   node scripts/seed-species.js                   (adds the plants to the local database)
 //   node scripts/seed-species.js --archive-demo    (also archives the "[DEMO - ...]" species)
 //
-// On the production (Aiven) database it stops unless --allow-production is given.
+// LOCAL databases only: it refuses the live database (Aiven "defaultdb" or any remote host), with no
+// way around it. On the live site the administrator adds the real species in Rules & Species.
 //
 // IMPORTANT: the day values below are ESTIMATES for a starting point, not research data.
 // Confirm them with nursery operators and correct them in Admin > Rules and species.
@@ -19,6 +20,7 @@ require('../src/config/env');
 const { sequelize, User, PlantSpecies } = require('../src/models');
 const admin = require('../src/services/adminService');
 const { DEMO_LABEL } = require('../src/services/bootstrapService');
+const { dbTarget, describeTarget } = require('../src/utils/dbSafety');
 
 // [common name, Kinyarwanda name or null, category, days to ready (estimate), prime days (estimate)]
 // days to ready = from sowing/planting in the nursery until it can be sold
@@ -91,9 +93,9 @@ async function importSpecies(adminUser, { archiveDemo = false, dryRun = false } 
 async function main() {
   const args = process.argv.slice(2);
   const dryRun = args.includes('--dry-run');
-  const host = (process.env.DB_HOST || '').toLowerCase();
-  if (host.includes('aivencloud.com') && !args.includes('--allow-production')) {
-    console.error('STOP: this is the production (Aiven) database. Add --allow-production if you really want to add the plants there.');
+  const target = dbTarget();
+  if (target.live) {
+    console.error(`STOP: this script never writes to the live ${describeTarget(target)}. On the live site the administrator adds species in Rules & Species.`);
     process.exit(1);
   }
   const adminUser = await User.findOne({ where: { role: 'admin' } });

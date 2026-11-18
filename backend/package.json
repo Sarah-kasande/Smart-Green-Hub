@@ -4,10 +4,13 @@
   "description": "Smart Green Hub REST API",
   "main": "src/server.js",
   "scripts": {
-    "start": "sequelize-cli db:migrate && node src/server.js",
+    "start": "node scripts/migrate.js up --deploy && node src/server.js",
     "dev": "nodemon src/server.js",
-    "migrate": "sequelize-cli db:migrate",
-    "migrate:undo": "sequelize-cli db:migrate:undo",
+    "migrate": "node scripts/migrate.js up",
+    "migrate:status": "node scripts/migrate.js status",
+    "migrate:undo": "node scripts/migrate.js undo",
+    "migrate:live": "node scripts/migrate.js up --live",
+    "migrate:live:status": "node scripts/migrate.js status --live",
     "seed:admin": "node scripts/seed-admin.js",
     "vercel-build": "node scripts/vercel-build.js",
     "test": "jest --runInBand"

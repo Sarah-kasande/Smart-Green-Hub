@@ -1,13 +1,14 @@
-// Safety guard: tests must NEVER run against the production database (Aiven).
+// Safety guard: tests must NEVER run against the live database (Aiven "defaultdb" or any remote host).
 // Called before any test touches a database. Throws, which stops the whole test run.
+const { dbTarget, describeTarget } = require('../src/utils/dbSafety');
+
 function assertSafeTestDatabase() {
-  const host = (process.env.DB_HOST || '').toLowerCase();
-  const name = process.env.DB_NAME || '';
-  if (host.includes('aivencloud.com')) {
-    throw new Error('ABORTED: DB_HOST points to Aiven (production). Tests must use the local test database in .env.test.');
+  const target = dbTarget();
+  if (target.live) {
+    throw new Error(`ABORTED: tests refuse to run against ${describeTarget(target)}. Tests only use the local test database in .env.test.`);
   }
-  if (!name.endsWith('_test')) {
-    throw new Error(`ABORTED: DB_NAME "${name}" does not end with "_test". Tests only run on a dedicated test database.`);
+  if (!target.name.endsWith('_test')) {
+    throw new Error(`ABORTED: DB_NAME "${target.name}" does not end with "_test". Tests only run on a dedicated test database.`);
   }
 }
 
