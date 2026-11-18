@@ -149,6 +149,8 @@ export default function Register() {
                 <input type="checkbox" checked={form.is_listed} onChange={set('is_listed')} className="mt-1 h-5 w-5 accent-leaf" />
                 <span>{t('auth.listConsent')}</span>
               </label>
+              {/* Transparency: the administrator sees the nursery's sales (docs/DEVIATIONS.md W45) */}
+              <p className="text-sm text-ink-soft">{t('privacy.salesVisible')}</p>
             </>
           ) : (
             <TextField label={t('auth.contactPhone')} type="tel" value={form.contact_phone} onChange={set('contact_phone')} error={orgField('contact_phone')} optional />

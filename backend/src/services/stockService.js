@@ -11,7 +11,7 @@
 //
 // Stock itself (quantity_current) only goes down for a surplus listing when BOTH parties confirm
 // the hand-over (FR11), so until then the plants are still counted in stock but are not sellable.
-const { Op } = require('sequelize');
+const { Op, fn, col } = require('sequelize');
 const { SurplusListing, SurplusRequest } = require('../models');
 
 async function committedQuantity(batchId, { transaction, excludeListingId } = {}) {
@@ -37,4 +37,41 @@ async function availableQuantity(batch, options = {}) {
   return Math.max(0, batch.quantity_current - (await committedQuantity(batch.id, options)));
 }
 
-module.exports = { committedQuantity, availableQuantity };
+// The same "committed" number for MANY batches at once (the administrator's list of every batch).
+// Same rule as committedQuantity above, but with 3 queries in total instead of 2-3 per batch.
+// Returns a Map: batch id -> committed plants.
+async function committedForBatches(batchIds) {
+  const committed = new Map(batchIds.map((id) => [id, 0]));
+  if (batchIds.length === 0) return committed;
+  const sum = [fn('SUM', col('quantity_requested')), 'total'];
+
+  const listings = await SurplusListing.findAll({
+    where: { batch_id: { [Op.in]: batchIds }, status: { [Op.in]: ['active', 'reserved'] } },
+    attributes: ['id', 'batch_id', 'quantity_offered'],
+    raw: true,
+  });
+  const handedOver = new Map();
+  if (listings.length) {
+    const rows = await SurplusRequest.findAll({
+      where: { listing_id: { [Op.in]: listings.map((l) => l.id) }, status: 'fulfilled' },
+      attributes: ['listing_id', sum],
+      group: ['listing_id'],
+      raw: true,
+    });
+    for (const r of rows) handedOver.set(r.listing_id, Number(r.total));
+  }
+  for (const l of listings) {
+    committed.set(l.batch_id, committed.get(l.batch_id) + Math.max(0, l.quantity_offered - (handedOver.get(l.id) || 0)));
+  }
+
+  const direct = await SurplusRequest.findAll({
+    where: { batch_id: { [Op.in]: batchIds }, status: { [Op.in]: ['pending', 'approved'] } },
+    attributes: ['batch_id', sum],
+    group: ['batch_id'],
+    raw: true,
+  });
+  for (const r of direct) committed.set(r.batch_id, committed.get(r.batch_id) + Number(r.total));
+  return committed;
+}
+
+module.exports = { committedQuantity, availableQuantity, committedForBatches };

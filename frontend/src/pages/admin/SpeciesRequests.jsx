@@ -20,7 +20,8 @@ import { countLabel, matches } from '../../components/ui/dataViewTools'
 import { SelectField, TextArea, TextField } from '../../components/ui/Fields'
 import { formatDate, formatNumber } from '../../utils/format'
 
-const STATUSES = ['pending', 'approved', 'rejected', 'merged', 'all']
+// 'all' first and by default: decided requests stay visible as history
+const STATUSES = ['all', 'pending', 'approved', 'rejected', 'merged']
 const CATEGORIES = ['flower', 'tree', 'shrub', 'other']
 const STATUS_STYLE = { pending: ['amber', 'clock'], approved: ['green', 'check'], rejected: ['red', 'close'], merged: ['grey', 'arrowRight'] }
 
@@ -259,7 +260,7 @@ function Detail({ item, approved, onDone, onClose }) {
 
 export default function SpeciesRequests() {
   const { t } = useI18n()
-  const [status, setStatus] = useState('pending')
+  const [status, setStatus] = useState('all')
   const [search, setSearch] = useState('')
   const [selectedId, setSelectedId] = useState(null)
   const [notice, setNotice] = useState(null)
@@ -273,7 +274,7 @@ export default function SpeciesRequests() {
   const counts = data?.counts || {}
   const statusOptions = STATUSES.map((s) => ({
     value: s,
-    label: s === 'all' ? t('table.allStatuses') : `${t(`speciesRequests.status.${s}`)} (${counts[s] || 0})`,
+    label: `${s === 'all' ? t('table.allStatuses') : t(`speciesRequests.status.${s}`)} (${counts[s] || 0})`,
   }))
 
   function open(item) {
@@ -306,6 +307,21 @@ export default function SpeciesRequests() {
     { key: 'batches', header: t('speciesRequests.batches'), align: 'right', render: (item) => formatNumber(item.batch_count) },
     { key: 'date', header: t('speciesRequests.date'), render: (item) => <span className="whitespace-nowrap">{formatDate(item.created_at)}</span> },
     { key: 'status', header: t('table.status'), render: (item) => <RequestStatus item={item} /> },
+    // Who decided, when and why: the history of every decided request
+    {
+      key: 'decided',
+      header: t('speciesRequests.decided'),
+      render: (item) =>
+        item.decided_at ? (
+          <>
+            <span className="whitespace-nowrap">{formatDate(item.decided_at)}</span>
+            {item.decidedBy && <span className="block text-sm text-ink-soft">{item.decidedBy.full_name}</span>}
+            {item.decision_reason && <span className="block text-sm text-ink-soft">{item.decision_reason}</span>}
+          </>
+        ) : (
+          <span className="text-ink-soft">–</span>
+        ),
+    },
     {
       key: 'actions',
       header: t('table.actions'),
@@ -328,10 +344,19 @@ export default function SpeciesRequests() {
       </Toolbar>
       {error && <ErrorState code={error} onRetry={reload} />}
       {!data && !error && <PageLoader />}
-      {data && items.length === 0 && !search ? (
-        <EmptyState title={status === 'pending' ? t('speciesRequests.emptyPending') : t('speciesRequests.empty')} />
+      {/* The empty state only when there is truly nothing; otherwise the table says nothing matches the filter */}
+      {data && (counts.all || 0) === 0 ? (
+        <EmptyState title={t('speciesRequests.empty')} />
       ) : (
-        data && <DataTable caption={t('speciesRequests.title')} columns={columns} rows={rows} rowKey={(item) => item.id} empty={t('table.noMatch')} />
+        data && (
+          <DataTable
+            caption={t('speciesRequests.title')}
+            columns={columns}
+            rows={rows}
+            rowKey={(item) => item.id}
+            empty={search ? t('table.noMatch') : status === 'pending' ? t('speciesRequests.emptyPending') : t('speciesRequests.emptyStatus')}
+          />
+        )
       )}
       <div ref={detailRef}>
         {selected && <Detail key={selected.id} item={selected} approved={approvedSpecies.data?.species || []} onDone={done} onClose={() => setSelectedId(null)} />}

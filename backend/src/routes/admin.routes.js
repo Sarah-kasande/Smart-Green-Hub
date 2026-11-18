@@ -9,7 +9,9 @@ const risk = require('../services/riskService');
 const surplus = require('../services/surplusService');
 const impact = require('../services/impactService');
 const speciesService = require('../services/speciesService');
-const { SPECIES_CATEGORIES, SPECIES_STATUSES, LISTING_STATUSES } = require('../utils/constants');
+const salesReport = require('../services/salesReportService');
+const auditService = require('../services/auditService');
+const { SPECIES_CATEGORIES, SPECIES_STATUSES, LISTING_STATUSES, BATCH_STAGES } = require('../utils/constants');
 
 const router = express.Router();
 router.use(requireAuth, requireRole('admin'));
@@ -105,7 +107,8 @@ router.post('/species/:id/restore', [speciesId], validate, handle(async (req, re
 // ---- Species requests from nurseries (docs/DEVIATIONS.md W39) ----
 const requestId = param('id').isInt({ min: 1 }).withMessage('invalid').toInt();
 router.get('/species-requests', [query('status').optional().isIn([...SPECIES_STATUSES, 'all']).withMessage('invalid_choice')], validate, handle(async (req, res) => {
-  res.json(await speciesService.listRequests({ status: req.query.status || 'pending' }));
+  // Default: ALL requests, so decided ones stay visible as history
+  res.json(await speciesService.listRequests({ status: req.query.status || 'all' }));
 }));
 // The number on the "Species requests" menu item
 router.get('/species-requests/count', handle(async (req, res) => res.json({ pending: await speciesService.pendingCount() })));
@@ -151,9 +154,73 @@ router.get(
   })
 );
 
-// ---- Listing moderation (FR15) ----
-router.get('/listings', [query('status').optional().isIn([...LISTING_STATUSES, 'all'])], validate, handle(async (req, res) => {
-  res.json({ listings: await admin.listListings({ status: req.query.status }) });
+// ---- Listings and plants (FR15; docs/DEVIATIONS.md W46) ----
+const optionalId = (name) => query(name).optional({ values: 'falsy' }).isInt({ min: 1 }).withMessage('invalid').toInt();
+
+// Choices for the nursery and species filters
+router.get('/filter-options', handle(async (req, res) => res.json(await admin.filterOptions())));
+
+router.get(
+  '/listings',
+  [query('status').optional().isIn([...LISTING_STATUSES, 'all']), optionalId('nursery_id'), optionalId('species_id')],
+  validate,
+  handle(async (req, res) => {
+    res.json({ listings: await admin.listListings({ status: req.query.status, nurseryId: req.query.nursery_id, speciesId: req.query.species_id }) });
+  })
+);
+// Every batch of every approved nursery, with its free quantity and whether institutions see it
+router.get(
+  '/plants',
+  [
+    optionalId('nursery_id'),
+    optionalId('species_id'),
+    query('stage').optional().isIn([...BATCH_STAGES, 'all']).withMessage('invalid_choice'),
+    query('visibility').optional().isIn(['shown', 'hidden', 'all']).withMessage('invalid_choice'),
+  ],
+  validate,
+  handle(async (req, res) => {
+    res.json({
+      plants: await admin.listPlants({ nurseryId: req.query.nursery_id, speciesId: req.query.species_id, stage: req.query.stage, visibility: req.query.visibility }),
+    });
+  })
+);
+
+// ---- Sales of every nursery (docs/DEVIATIONS.md W45) ----
+// Totals, breakdowns and rows all come from the SALES table on the server, with the same filters.
+const salesFilters = [
+  query('period').optional().isIn(salesReport.PERIODS).withMessage('invalid_choice'),
+  query('from').optional({ values: 'falsy' }).isISO8601({ strict: true }).withMessage('invalid_date'),
+  query('to')
+    .optional({ values: 'falsy' })
+    .isISO8601({ strict: true })
+    .withMessage('invalid_date')
+    .custom((to, { req }) => !req.query.from || to >= req.query.from)
+    .withMessage('invalid_range'),
+  optionalId('nursery_id'),
+  optionalId('species_id'),
+  query('q').optional().isString().isLength({ max: 100 }).withMessage('too_long'),
+];
+const salesQuery = (q) => ({ period: q.period || 'month', from: q.from, to: q.to, nurseryId: q.nursery_id, speciesId: q.species_id, search: q.q });
+
+router.get('/sales', salesFilters, validate, handle(async (req, res) => res.json(await salesReport.report(salesQuery(req.query)))));
+
+// CSV of every matching sale. Each export is written to the audit log (who, when, which filters, how many rows).
+router.get('/sales/export', salesFilters, validate, handle(async (req, res) => {
+  const filters = salesQuery(req.query);
+  const { csv, count, range } = await salesReport.exportCsv(filters);
+  const described = [
+    `period ${filters.period}: ${range.from || 'start'} to ${range.to || 'today'}`,
+    filters.nurseryId && `nursery #${filters.nurseryId}`,
+    filters.speciesId && `species #${filters.speciesId}`,
+    filters.search && `search "${String(filters.search).slice(0, 100)}"`,
+    `${count} rows`,
+  ].filter(Boolean);
+  await auditService.log({ actorId: req.user.id, action: 'sales.exported', entityType: 'sale', reason: described.join('; ') });
+  const name = `sales-${range.from || 'all'}-to-${range.to || 'today'}.csv`;
+  res.set('Content-Type', 'text/csv; charset=utf-8');
+  res.set('Content-Disposition', `attachment; filename="${name}"`);
+  res.set('Cache-Control', 'no-store');
+  res.send(csv);
 }));
 router.post(
   '/listings/:id/withdraw',

@@ -72,7 +72,7 @@ const rw = {
     verificationShort: 'Kwemeza',
     rules: "Amategeko n'amoko",
     rulesShort: 'Amategeko',
-    listings: 'Amatangazo', // TODO: unsure
+    listings: "Amatangazo n'ingemwe", // TODO: Kinyarwanda to review
     audit: "Amateka y'ibikorwa",
     emailProblems: 'Imeri zitagezeyo', // TODO: unsure
     sales: 'Igurisha', // TODO: unsure
@@ -561,6 +561,7 @@ const rw = {
     completed: "Ihererekanya ryarangiye. Ububiko n'umusaruro byahinduwe.",
     waitingOther: 'Wemeje. Dutegereje undi.',
     fulfilledOn: 'Byahererekanyijwe {date} · {site}',
+    closedOn: { declined: 'Byanzwe {date}', cancelled: 'Byahagaritswe {date}' }, // TODO: Kinyarwanda to review
   },
   board: {
     title: 'Ibimera birenze',
@@ -793,10 +794,23 @@ const rw = {
     rejected: 'Ubwoko bwanzwe. Pepiniyeri yamenyeshejwe.', // TODO: Kinyarwanda to review
     merged: 'Ubwoko bwahujwe. Pepiniyeri yamenyeshejwe.', // TODO: Kinyarwanda to review
     emptyPending: "Nta busabe bw'amoko butegereje.", // TODO: Kinyarwanda to review
+    emptyStatus: "Nta busabe bw'amoko bufite uko bihagaze.", // TODO: Kinyarwanda to review
     empty: "Nta busabe bw'amoko buri hano.", // TODO: Kinyarwanda to review
   },
   adminListings: {
-    title: 'Kugenzura amatangazo',
+    title: "Amatangazo n'ingemwe", // TODO: Kinyarwanda to review
+    listings: "Amatangazo y'ibirenze", // TODO: Kinyarwanda to review
+    allNurseries: 'Pepiniyeri zose', // TODO: Kinyarwanda to review
+    allStages: 'Ibyiciro byose', // TODO: Kinyarwanda to review
+    stage: 'Icyiciro', // TODO: Kinyarwanda to review
+    inStock: 'Mu bubiko', // TODO: Kinyarwanda to review
+    free: 'Izishobora gutangwa', // TODO: Kinyarwanda to review
+    shown: 'Zigaragara ku bigo', // TODO: Kinyarwanda to review
+    visibility: { all: "Zigaragara n'izihishwe", shown: 'Zigaragara', hidden: 'Zihishwe' }, // TODO: Kinyarwanda to review
+    batchOff: 'Byazimijwe kuri iki cyiciro', // TODO: Kinyarwanda to review
+    nurseryOff: 'Byazimijwe kuri pepiniyeri yose', // TODO: Kinyarwanda to review
+    plantsIntro: "Ibyiciro byose bya pepiniyeri zose zemejwe. \"Zigaragara\" bivuga ko ibigo bizibona mu ngemwe ziboneka ubu.", // TODO: Kinyarwanda to review
+    emptyPlants: "Nta cyiciro gihuye n'ibyo washyizeho.", // TODO: Kinyarwanda to review
     intro: "Amatangazo yose y'ibirenze. Kuraho itangazo ritubahiriza amategeko (impamvu irasabwa kandi irandikwa).",
     reason: 'Impamvu yo gukuraho iri tangazo (ibwirwa pepiniyeri kandi irandikwa):',
     status: 'Uko bihagaze',
@@ -943,6 +957,29 @@ const rw = {
     must_be_below_high: "Hagati igomba kuba munsi ya Hejuru.",
     must_be_below_far: 'Imipaka "hafi" igomba kuba munsi ya "kure".',
     duplicate: 'Iri zina risanzwe rihari.', // TODO: Kinyarwanda to review
+  },
+  adminSales: {
+    title: 'Igurisha', // TODO: Kinyarwanda to review
+    intro: "Igurisha ryose ryanditswe na pepiniyeri zose, harimo iryahujwe rivuye nta murandasi. Igiteranyo kibara igurisha ryose rihuye n'ibyo washyizeho.", // TODO: Kinyarwanda to review
+    search: 'Shakisha pepiniyeri, ubwoko cyangwa icyitonderwa', // TODO: Kinyarwanda to review
+    periods: { today: 'Uyu munsi', week: 'Iki cyumweru', month: 'Uku kwezi', year: 'Uyu mwaka', custom: 'Amatariki wihitiyemo', all: 'Igihe cyose' }, // TODO: Kinyarwanda to review
+    from: 'Guhera', // TODO: Kinyarwanda to review
+    to: 'Kugeza', // TODO: Kinyarwanda to review
+    range: '{from} kugeza {to}', // TODO: Kinyarwanda to review
+    amount: "Igiteranyo cy'igurisha (RWF)", // TODO: Kinyarwanda to review
+    count: "Umubare w'igurisha", // TODO: Kinyarwanda to review
+    plants: 'Ingemwe zagurishijwe', // TODO: Kinyarwanda to review
+    quantity: 'Ingemwe', // TODO: Kinyarwanda to review
+    note: "Icyitonderwa cy'ubwishyu", // TODO: Kinyarwanda to review
+    records: "Inyandiko z'igurisha", // TODO: Kinyarwanda to review
+    limited: 'Hagaragara igurisha {n} rya vuba muri {total}. Kuramo CSV kugira ngo ubone ryose.', // TODO: Kinyarwanda to review
+    empty: 'Nta gurisha muri iki gihe.', // TODO: Kinyarwanda to review
+    byNursery: 'Kuri buri pepiniyeri', // TODO: Kinyarwanda to review
+    bySpecies: 'Kuri buri bwoko', // TODO: Kinyarwanda to review
+    export: 'Kuramo CSV', // TODO: Kinyarwanda to review
+  },
+  privacy: {
+    salesVisible: "Umuyobozi abasha kubona igiteranyo n'inyandiko z'igurisha ryawe, kugira ngo apime umusaruro kandi afashe pepiniyeri nto.", // TODO: Kinyarwanda to review
   },
   notFound: { title: 'Ipaji ntibonetse', text: 'Ipaji ushaka ntibaho.', home: 'Jya ahabanza' },
 }

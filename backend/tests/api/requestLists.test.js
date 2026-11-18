@@ -6,6 +6,7 @@
 // Runs ONLY against the local test database (tests/guard.js refuses the live one). Fake accounts and
 // [TEST] species only.
 const h = require('../helpers');
+const { Batch, SurplusListing, Institution } = require('../../src/models');
 const { todayKigali, addDays } = require('../../src/utils/dates');
 
 let admin;
@@ -14,6 +15,9 @@ let school;
 let species;
 let offerRequestId;
 let plantRequestId;
+let listingId;
+let offerBatchId;
+let plantBatchId;
 
 const inDays = (n) => addDays(todayKigali(), n);
 const newBatch = (overrides = {}) =>
@@ -43,12 +47,15 @@ test('the nursery and the institution list a surplus-offer request and an availa
   const offer = await school.post(`/api/institution/listings/${listing.id}/requests`).send({ quantity: 15, purpose: 'School garden' });
   expect(offer.status).toBe(201);
   offerRequestId = offer.body.request.id;
+  listingId = listing.id;
+  offerBatchId = offerBatch.id;
 
   // 2. An available plant: another ready batch (a different species), requested directly
   const plantBatch = await newBatch({ species_id: species[1].id, unit_price: 300 });
   const plant = await school.post(`/api/institution/available-plants/${plantBatch.id}/requests`).send({ quantity: 10, purpose: 'Trees along the fence', message: 'Saturday morning' });
   expect(plant.status).toBe(201);
   plantRequestId = plant.body.request.id;
+  plantBatchId = plantBatch.id;
 
   // 3. The nursery's list: both, each with its source, species, quantity, nursery and institution
   const forOp = await op.get('/api/operator/requests?status=all');
@@ -100,4 +107,50 @@ test('approve, decline and confirm work on both kinds (each loads the request wi
   expect((await school.get('/api/institution/impact')).status).toBe(200);
   expect((await admin.get('/api/admin/impact')).status).toBe(200);
   expect((await admin.get('/api/admin/listings')).status).toBe(200);
+});
+
+// History (never disappears): both lists open on ALL requests, newest first
+test('fulfilled, declined and cancelled requests stay in both default lists with their dates', async () => {
+  const thirdBatch = await newBatch({ species_id: species[2].id });
+  const third = (await school.post(`/api/institution/available-plants/${thirdBatch.id}/requests`).send({ quantity: 5, purpose: 'Hedge' })).body.request;
+  expect((await school.post(`/api/institution/requests/${third.id}/cancel`).send({})).status).toBe(200);
+
+  for (const [client, path] of [[op, '/api/operator/requests'], [school, '/api/institution/requests']]) {
+    const list = (await client.get(path)).body.requests; // no status: everything
+    expect(list.map((r) => [r.id, r.status])).toEqual([
+      [third.id, 'cancelled'],
+      [plantRequestId, 'declined'],
+      [offerRequestId, 'fulfilled'],
+    ]);
+    const [cancelled, declined, fulfilled] = list;
+    expect(cancelled.closed_at).toBeTruthy();
+    expect(declined.closed_at).toBeTruthy();
+    expect(fulfilled.fulfilled_at).toBeTruthy();
+    expect(fulfilled.closed_at).toBeNull();
+    for (const r of list) {
+      expect(r.species).toBeTruthy();
+      expect(r.quantity_requested).toBeGreaterThan(0);
+      expect(r.nursery.name).toBe('Lists Test Nursery');
+      expect(r.institution.name).toBeTruthy();
+    }
+    expect((await client.get(`${path}?status=cancelled`)).body.requests.map((r) => r.id)).toEqual([third.id]);
+    expect((await client.get(`${path}?status=declined`)).body.requests.map((r) => r.id)).toEqual([plantRequestId]);
+  }
+});
+
+test('archiving the listing, the batches or the institution later keeps the history linked', async () => {
+  // Archived = soft-deleted (archived_at set); local test database only
+  await SurplusListing.destroy({ where: { id: listingId } });
+  await Batch.destroy({ where: { id: [offerBatchId, plantBatchId] } });
+  const schoolOrg = (await school.get('/api/auth/me')).body.organisation;
+  const before = (await op.get('/api/operator/requests')).body.requests;
+  await Institution.destroy({ where: { id: schoolOrg.id } });
+
+  const after = (await op.get('/api/operator/requests')).body.requests;
+  expect(after).toHaveLength(before.length);
+  const offer = after.find((r) => r.id === offerRequestId);
+  const plant = after.find((r) => r.id === plantRequestId);
+  expect(offer).toMatchObject({ source: 'surplus_offer', status: 'fulfilled', species: species[0].common_name, nursery: { name: 'Lists Test Nursery' } });
+  expect(plant).toMatchObject({ source: 'available_plant', status: 'declined', species: species[1].common_name });
+  expect(offer.institution.name).toBe(schoolOrg.name);
 });

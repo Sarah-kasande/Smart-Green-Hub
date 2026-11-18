@@ -4,23 +4,21 @@
 // What it does, in order:
 //   0. checks that the API and the app are not already running (ports 5000 and 5173)
 //   1. installs the packages of backend/ and frontend/ if they are missing
-//   2. starts the local MySQL container (sgh-mysql) and waits until MySQL answers,
+//   2. checks that the local MySQL (MySQL Server installed on this computer) answers,
 //      because the API checks the database only once, when it starts
 //   3. brings the database up to date (migrations)
 //   4. starts the API (http://localhost:5000) and the app (http://localhost:5173) at the same time;
 //      their output is shown with [api] and [app] in front of each line
 // Ctrl+C stops both. If one of them stops on its own, the other is stopped too.
 //
-// Option:  --no-db  skips steps 2 and 3 (when the database is not the local Docker one)
-// No extra packages are needed: only Node.js, npm and Docker Desktop.
+// Option:  --no-db  skips steps 2 and 3 (when the database is not the local one)
+// No extra packages are needed: only Node.js, npm and MySQL Server (README, section 10).
 const { spawn, spawnSync } = require('node:child_process');
 const fs = require('node:fs');
 const net = require('node:net');
 const path = require('node:path');
 
 const root = path.resolve(__dirname, '..');
-const CONTAINER = 'sgh-mysql';
-const DB_PORT = 3307; // the local MySQL as seen from this computer (README, section 10)
 const isWindows = process.platform === 'win32';
 const skipDb = process.argv.includes('--no-db');
 
@@ -33,16 +31,16 @@ function stopWith(message) {
   process.exit(1);
 }
 
-// Runs a command and waits for it. shell:true lets Windows find npm.cmd and docker.exe.
+// Runs a command and waits for it. shell:true lets Windows find npm.cmd.
 function run(command, cwd = root, quiet = false) {
   const result = spawnSync(command, { cwd, shell: true, stdio: quiet ? 'pipe' : 'inherit' });
   return result.status === 0;
 }
 
 // Is something already answering on this port? (e.g. the API still running in another terminal)
-function portInUse(port) {
+function portInUse(port, host = 'localhost') {
   return new Promise((resolve) => {
-    const socket = net.connect({ port, host: 'localhost' });
+    const socket = net.connect({ port, host });
     socket.once('connect', () => {
       socket.destroy();
       resolve(true);
@@ -52,6 +50,20 @@ function portInUse(port) {
 }
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// Where the local MySQL listens: DB_HOST and DB_PORT from backend/.env.local (only these two
+// lines are read; passwords are never read or shown). MySQL's usual port is 3306.
+function localDatabase() {
+  const values = {};
+  const file = path.join(root, 'backend', '.env.local');
+  if (fs.existsSync(file)) {
+    for (const line of fs.readFileSync(file, 'utf8').split(/\r?\n/)) {
+      const match = /^\s*(DB_HOST|DB_PORT)\s*=\s*["']?([^"'\s]*)["']?\s*$/.exec(line);
+      if (match) values[match[1]] = match[2];
+    }
+  }
+  return { host: values.DB_HOST || '127.0.0.1', port: Number(values.DB_PORT) || 3306 };
+}
 
 // ---------- the two running processes ----------
 const children = [];
@@ -115,32 +127,23 @@ async function main() {
     }
   }
 
-  // 2. Database
+  // 2. Database: the local MySQL must already be running (on Windows it is the "MySQL80" service,
+  // which normally starts with the computer). Wait up to 15 seconds for it to answer.
   if (!skipDb) {
-    say(`Starting the database container ${CONTAINER}...`);
-    if (!run(`docker start ${CONTAINER}`, root, true)) {
+    const db = localDatabase();
+    say(`Checking the local MySQL on ${db.host}:${db.port}...`);
+    let ready = await portInUse(db.port, db.host);
+    for (let i = 0; i < 15 && !ready; i++) {
+      await wait(1000);
+      ready = await portInUse(db.port, db.host);
+    }
+    if (!ready) {
       stopWith(
-        `Could not start the database container "${CONTAINER}".\n` +
-          '      - Is Docker Desktop open? Start it, wait until it says "Engine running", then try again.\n' +
-          '      - First time on this computer? Create the container with the command in README.md, section 10.\n' +
+        `The local MySQL does not answer on ${db.host}:${db.port}.\n` +
+          '      - Is MySQL Server running? Windows: open "Services" and start "MySQL80".\n' +
+          '      - Check DB_HOST and DB_PORT in backend/.env.local (README.md, section 10).\n' +
           '      - Using another database? Run: npm run dev -- --no-db'
       );
-    }
-    // "mysqladmin ping" answers as soon as MySQL accepts connections (no password needed)
-    say('Waiting for MySQL to be ready...');
-    let ready = false;
-    for (let i = 0; i < 60 && !ready; i++) {
-      ready = run(`docker exec ${CONTAINER} mysqladmin ping --silent`, root, true);
-      if (!ready) await wait(1000);
-    }
-    if (!ready) stopWith('MySQL did not become ready within 60 seconds. Check Docker Desktop.');
-    // Sometimes Docker Desktop starts the container before its port link (3307 on this computer)
-    // works. MySQL then runs, but the API cannot reach it. Restarting the container repairs the link.
-    if (!(await portInUse(DB_PORT))) {
-      say(`Port ${DB_PORT} is not reachable yet; restarting the database container once...`);
-      run(`docker restart ${CONTAINER}`, root, true);
-      for (let i = 0; i < 30 && !(await portInUse(DB_PORT)); i++) await wait(1000);
-      if (!(await portInUse(DB_PORT))) stopWith(`MySQL runs, but port ${DB_PORT} cannot be reached. Restart Docker Desktop and try again.`);
     }
     say('Database is ready.');
   }

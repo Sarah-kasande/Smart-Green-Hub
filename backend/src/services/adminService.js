@@ -20,6 +20,8 @@ const audit = require('./auditService');
 const impact = require('./impactService');
 const { defaultRule } = require('./ruleService');
 const { listingJson, listingInclude } = require('./surplusService');
+const { committedForBatches } = require('./stockService');
+const { isShown } = require('./availablePlantsService');
 const notifications = require('./notificationService');
 const otp = require('./otpService');
 const speciesService = require('./speciesService');
@@ -161,13 +163,73 @@ async function auditLog({ entityType, action, actorId, from, to, page = 1, pageS
 
 // ---- Listing moderation (FR15) ----
 
-async function listListings({ status } = {}) {
+// "Listings and plants", first view: Surplus Board listings. Every status by default (history stays visible).
+async function listListings({ status, nurseryId, speciesId } = {}) {
   const where = {};
   if (status && status !== 'all') where.status = status;
-  const listings = await SurplusListing.findAll({ where, include: listingInclude(), order: [['created_at', 'DESC']], limit: 200 });
+  if (nurseryId) where.nursery_id = nurseryId;
+  const include = listingInclude();
+  if (speciesId) Object.assign(include[0], { where: { species_id: speciesId }, required: true }); // include[0] = the batch
+  const listings = await SurplusListing.findAll({ where, include, order: [['created_at', 'DESC']], limit: 500 });
   const result = [];
   for (const listing of listings) result.push(await listingJson(listing));
   return result;
+}
+
+// "Listings and plants", second view: EVERY batch of every approved nursery (docs/DEVIATIONS.md W46).
+//   free    = stock minus plants promised on listings and in open requests (same rule as stockService)
+//   visible = institutions see it under "Available plants" right now (availablePlantsService.isShown and free > 0)
+// visibility: 'shown' (visible now) | 'hidden' (not visible, for any reason) | 'all'
+async function listPlants({ nurseryId, speciesId, stage, visibility } = {}) {
+  const where = {};
+  if (nurseryId) where.nursery_id = nurseryId;
+  if (speciesId) where.species_id = speciesId;
+  if (stage && stage !== 'all') where.stage = stage;
+  const batches = await Batch.findAll({
+    where,
+    include: [
+      { model: PlantSpecies, as: 'species', paranoid: false },
+      { model: Nursery, as: 'nursery', where: { verification_status: 'approved' }, required: true },
+    ],
+    order: [['planting_date', 'DESC'], ['id', 'DESC']],
+    limit: 1000,
+  });
+  const committed = await committedForBatches(batches.map((b) => b.id));
+  const result = batches.map((b) => {
+    const free = Math.max(0, b.quantity_current - committed.get(b.id));
+    return {
+      id: b.id,
+      stage: b.stage,
+      planting_date: b.planting_date,
+      quantity_current: b.quantity_current,
+      free,
+      unit_price: b.unit_price > 0 ? b.unit_price : null,
+      show_to_institutions: b.show_to_institutions,
+      nursery_shows: b.nursery.show_available_plants,
+      visible: isShown(b) && free > 0,
+      species: { id: b.species.id, name: b.species.common_name, status: b.species.status },
+      nursery: { id: b.nursery.id, name: b.nursery.name, district: b.nursery.district },
+    };
+  });
+  if (visibility === 'shown') return result.filter((p) => p.visible);
+  if (visibility === 'hidden') return result.filter((p) => !p.visible);
+  return result;
+}
+
+// Choices for the nursery and species filters (Listings and plants, Sales).
+// Every nursery that is or was approved, and every species, so old records stay filterable.
+async function filterOptions() {
+  const nurseries = await Nursery.findAll({ attributes: ['id', 'name', 'district', 'verification_status'], paranoid: false, order: [['name', 'ASC']] });
+  const species = await PlantSpecies.findAll({
+    attributes: ['id', 'common_name', 'status'],
+    where: { status: { [Op.in]: ['approved', 'pending'] } },
+    paranoid: false,
+    order: [['common_name', 'ASC']],
+  });
+  return {
+    nurseries: nurseries.map((n) => ({ id: n.id, name: n.name, district: n.district })),
+    species: species.map((s) => ({ id: s.id, name: s.common_name })),
+  };
 }
 
 // ---- Email report (FR14: every email has a status; failures visible for follow-up) ----
@@ -209,6 +271,8 @@ module.exports = {
   restoreSpecies,
   auditLog,
   listListings,
+  listPlants,
+  filterOptions,
   emailReport,
   retryEmail,
 };

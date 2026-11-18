@@ -23,7 +23,8 @@ import { SelectField, TextField } from '../../components/ui/Fields'
 import { DISTRICTS } from '../../utils/options'
 import { formatDate, formatDateTime, formatNumber, formatRWF } from '../../utils/format'
 
-const FILTERS = ['pending', 'approved', 'fulfilled', 'all']
+// 'all' first and by default: fulfilled, declined and cancelled requests stay visible as history (newest first)
+const FILTERS = ['all', 'pending', 'approved', 'fulfilled', 'declined', 'cancelled']
 
 function Confirm({ request, side, institutionDistrict, onDone }) {
   const { t } = useI18n()
@@ -159,6 +160,9 @@ function RequestCard({ request, side, institutionDistrict, onChanged }) {
           </Pill>
         </div>
       )}
+      {['declined', 'cancelled'].includes(request.status) && request.closed_at && (
+        <p className="text-sm text-ink-soft">{t(`requests.closedOn.${request.status}`, { date: formatDate(request.closed_at) })}</p>
+      )}
       {request.status === 'fulfilled' && (
         <p className="text-sm text-leaf-text">
           {t('requests.fulfilledOn', { date: formatDate(request.fulfilled_at), site: request.planting_site || '' })}
@@ -195,7 +199,7 @@ export default function Requests() {
   const { t } = useI18n()
   const { user, organisation } = useAuth()
   const side = user.role === 'operator' ? 'operator' : 'institution'
-  const [status, setStatus] = useState('pending')
+  const [status, setStatus] = useState('all')
   const [search, setSearch] = useState('')
   const { data, error, reload } = useApi(`/${side}/requests?status=${status}`)
   const [notice, setNotice] = useState(null)

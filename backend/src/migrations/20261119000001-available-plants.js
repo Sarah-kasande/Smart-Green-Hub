@@ -45,16 +45,34 @@ module.exports = {
     });
   },
 
+  // Every step checks first, like up(): MySQL cannot roll back table changes, so an undo that stopped
+  // halfway must be able to run again.
   async down(queryInterface, Sequelize) {
-    const [[{ direct }]] = await queryInterface.sequelize.query('SELECT COUNT(*) AS direct FROM surplus_requests WHERE batch_id IS NOT NULL');
-    if (Number(direct) > 0) throw new Error('Cannot undo: some requests are for available plants (batch_id is set).');
-    await queryInterface.removeColumn('impact_records', 'impact_type');
-    await queryInterface.removeIndex('surplus_requests', 'uq_surplus_requests_batch_institution');
-    await queryInterface.removeColumn('surplus_requests', 'message');
-    await queryInterface.removeColumn('surplus_requests', 'preferred_pickup_date');
-    await queryInterface.removeColumn('surplus_requests', 'batch_id');
+    const hasColumn = async (table, column) => Boolean((await queryInterface.describeTable(table))[column]);
+    const removeIfPresent = async (table, column) => {
+      if (await hasColumn(table, column)) await queryInterface.removeColumn(table, column);
+    };
+
+    if (await hasColumn('surplus_requests', 'batch_id')) {
+      const [[{ direct }]] = await queryInterface.sequelize.query('SELECT COUNT(*) AS direct FROM surplus_requests WHERE batch_id IS NOT NULL');
+      if (Number(direct) > 0) throw new Error('Cannot undo: some requests are for available plants (batch_id is set).');
+      // The foreign key on batch_id uses the unique index (batch_id, institution_id), and MySQL refuses
+      // to drop an index a foreign key needs. So: foreign key first, then the index, then the column.
+      const [keys] = await queryInterface.sequelize.query(
+        "SELECT CONSTRAINT_NAME AS name FROM information_schema.KEY_COLUMN_USAGE WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'surplus_requests' AND COLUMN_NAME = 'batch_id' AND REFERENCED_TABLE_NAME IS NOT NULL"
+      );
+      for (const { name } of keys) await queryInterface.removeConstraint('surplus_requests', name);
+    }
+    const indexes = await queryInterface.showIndex('surplus_requests');
+    if (indexes.some((index) => index.name === 'uq_surplus_requests_batch_institution')) {
+      await queryInterface.removeIndex('surplus_requests', 'uq_surplus_requests_batch_institution');
+    }
+    await removeIfPresent('impact_records', 'impact_type');
+    await removeIfPresent('surplus_requests', 'message');
+    await removeIfPresent('surplus_requests', 'preferred_pickup_date');
+    await removeIfPresent('surplus_requests', 'batch_id');
     await queryInterface.changeColumn('surplus_requests', 'listing_id', { type: Sequelize.INTEGER, allowNull: false });
-    await queryInterface.removeColumn('nurseries', 'show_available_plants');
-    await queryInterface.removeColumn('batches', 'show_to_institutions');
+    await removeIfPresent('nurseries', 'show_available_plants');
+    await removeIfPresent('batches', 'show_to_institutions');
   },
 };

@@ -137,8 +137,9 @@ async function pendingCount() {
   return PlantSpecies.count({ where: { status: 'pending' } });
 }
 
-// Requests = species proposed by a nursery. status: pending (default), approved, rejected, merged, all
-async function listRequests({ status = 'pending' } = {}) {
+// Requests = species proposed by a nursery. status: all (default), pending, approved, rejected, merged.
+// Decided requests are never removed from this list: they stay as history with who decided, when and why.
+async function listRequests({ status = 'all' } = {}) {
   const where = { requested_by_nursery_id: { [Op.ne]: null } };
   if (status !== 'all') where.status = status;
   const rows = await PlantSpecies.findAll({
@@ -149,7 +150,8 @@ async function listRequests({ status = 'pending' } = {}) {
       { model: User, as: 'decidedBy', attributes: ['id', 'full_name'], paranoid: false },
       { model: PlantSpecies, as: 'mergedInto', attributes: ['id', 'common_name'], paranoid: false },
     ],
-    order: [['created_at', status === 'pending' ? 'ASC' : 'DESC']],
+    // Pending: oldest first (the order to work through them); otherwise newest first
+    order: [['created_at', status === 'pending' ? 'ASC' : 'DESC'], ['id', 'DESC']],
     limit: 300,
   });
   const approved = await PlantSpecies.findAll({ where: { status: 'approved' }, order: [['common_name', 'ASC']] });
@@ -171,6 +173,7 @@ async function listRequests({ status = 'pending' } = {}) {
   for (const s of ['pending', 'approved', 'rejected', 'merged']) {
     counts[s] = await PlantSpecies.count({ where: { requested_by_nursery_id: { [Op.ne]: null }, status: s }, paranoid: false });
   }
+  counts.all = counts.pending + counts.approved + counts.rejected + counts.merged;
   return { items: result, counts };
 }
 

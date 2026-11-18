@@ -14,7 +14,7 @@ function loadCa() {
 }
 
 function buildDbConfig() {
-  // SSL is on unless DB_SSL=false. Only the local MySQL in Docker turns it off.
+  // SSL is on unless DB_SSL=false. Only the local MySQL on your own computer turns it off.
   const useSsl = process.env.DB_SSL !== 'false';
   const ca = useSsl ? loadCa() : undefined;
 

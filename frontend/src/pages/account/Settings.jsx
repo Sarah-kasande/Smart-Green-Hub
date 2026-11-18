@@ -152,6 +152,8 @@ function Organisation() {
           <h2 className="text-lg font-semibold">{organisation.type === 'nursery' ? t('auth.nurseryDetails') : t('auth.institutionDetails')}</h2>
           <VerificationBadge status={organisation.verification_status} />
         </div>
+        {/* Transparency: the administrator sees the nursery's sales (docs/DEVIATIONS.md W45) */}
+        {organisation.type === 'nursery' && <p className="mb-4 text-sm text-ink-soft">{t('privacy.salesVisible')}</p>}
         {organisation.verification_status === 'rejected' && (
           <Notice type="warning" className="mb-4">
             {t('account.rejectedText')} “{organisation.review_note}”

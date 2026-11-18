@@ -56,7 +56,7 @@ async function refreshListingStatus(listing, transaction) {
 // and directly for available plants). With one shared species object, both joins got the same parent
 // and the same SQL alias 'batch->species', and MySQL refused the query ("Not unique table/alias").
 const speciesInclude = () => ({ model: PlantSpecies, as: 'species', paranoid: false });
-const nurseryInclude = () => ({ model: Nursery, as: 'nursery', paranoid: false, include: [{ model: User, as: 'owner', attributes: ['id', 'full_name', 'phone', 'email'] }] });
+const nurseryInclude = () => ({ model: Nursery, as: 'nursery', paranoid: false, include: [{ model: User, as: 'owner', paranoid: false, attributes: ['id', 'full_name', 'phone', 'email'] }] });
 const listingInclude = () => [
   { model: Batch, as: 'batch', paranoid: false, include: [speciesInclude()] },
   nurseryInclude(),
@@ -241,7 +241,9 @@ async function board({ district, category, speciesId } = {}) {
 const requestInclude = () => [
   { model: SurplusListing, as: 'listing', paranoid: false, include: listingInclude() },
   { model: Batch, as: 'batch', paranoid: false, include: [speciesInclude(), nurseryInclude()] },
-  { model: Institution, as: 'institution', include: [{ model: User, as: 'user', attributes: ['id', 'full_name', 'phone', 'email'] }] },
+  // paranoid: false everywhere: an archived listing, batch, species, nursery, institution or account never
+  // removes a request from either side's history; it keeps its names and numbers.
+  { model: Institution, as: 'institution', paranoid: false, include: [{ model: User, as: 'user', paranoid: false, attributes: ['id', 'full_name', 'phone', 'email'] }] },
 ];
 
 // The batch, nursery and source of a request, whichever item it is for
@@ -269,6 +271,8 @@ function requestJson(request, viewer) {
     nursery_confirmed_at: request.nursery_confirmed_at,
     institution_confirmed_at: request.institution_confirmed_at,
     fulfilled_at: request.fulfilled_at,
+    // When a declined or cancelled request was closed (older cancelled rows have no decided_at: last change)
+    closed_at: ['declined', 'cancelled'].includes(request.status) ? request.decided_at || request.updated_at : null,
     planting_site: request.planting_site,
     planting_district: request.planting_district,
     land_cleared_sqm: request.land_cleared_sqm === null ? null : Number(request.land_cleared_sqm),
@@ -435,7 +439,8 @@ async function cancelRequest(institution, user, requestId, reason) {
   await sequelize.transaction(async (transaction) => {
     const request = await findRequestForInstitution(institution, requestId, transaction);
     if (!OPEN_REQUEST.includes(request.status)) throw new HttpError(409, 'REQUEST_CLOSED', 'This request is already closed');
-    await request.update({ status: 'cancelled', decision_reason: reason || null }, { transaction });
+    // decided_at = when the request was closed, so the history shows the date
+    await request.update({ status: 'cancelled', decision_reason: reason || null, decided_at: new Date() }, { transaction });
     await refreshAfter(request, transaction);
     const logRow = await audit.log({ actorId: user.id, action: 'request.cancelled', entityType: 'surplus_request', entityId: request.id, reason }, { transaction });
     const ownerId = requestNursery(request).owner_id;
@@ -545,7 +550,7 @@ function nurseryRequestWhere(nursery) {
 async function listRequestsForNursery(nursery, { status } = {}) {
   const where = nurseryRequestWhere(nursery);
   if (status && status !== 'all') where.status = status;
-  const rows = await SurplusRequest.findAll({ where, include: requestInclude(), order: [['created_at', 'DESC']] });
+  const rows = await SurplusRequest.findAll({ where, include: requestInclude(), order: [['created_at', 'DESC'], ['id', 'DESC']] });
   return rows.map((r) => requestJson(r, 'operator'));
 }
 
@@ -562,7 +567,7 @@ async function countPendingForNursery(nursery) {
 async function listRequestsForInstitution(institution, { status } = {}) {
   const where = { institution_id: institution.id };
   if (status && status !== 'all') where.status = status;
-  const rows = await SurplusRequest.findAll({ where, include: requestInclude(), order: [['created_at', 'DESC']] });
+  const rows = await SurplusRequest.findAll({ where, include: requestInclude(), order: [['created_at', 'DESC'], ['id', 'DESC']] });
   return rows.map((r) => requestJson(r, 'institution'));
 }
 

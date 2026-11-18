@@ -69,6 +69,8 @@ export const NAVIGATION = {
       items: [
         { to: '/admin', label: 'nav.dashboard', end: true, bottom: 1, icon: 'home' },
         { to: '/admin/rules', label: 'nav.rules' },
+        // Every sale recorded by every nursery (docs/DEVIATIONS.md W45)
+        { to: '/admin/sales', label: 'nav.sales' },
         { to: '/admin/impact', label: 'nav.impact' },
         { to: '/admin/audit', label: 'nav.audit', bottom: 4, icon: 'list' },
         { to: '/admin/notifications-failed', label: 'nav.emailProblems' },

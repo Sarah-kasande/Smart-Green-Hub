@@ -92,7 +92,7 @@ Forgot your password? Use **Forgot password** on the sign-in page: you receive a
 | 3 | **Dashboard** | See the batch most at risk in the **Act now** card, the number of batches per risk level, a timeline of prime windows, requests waiting for you and income vs expenses. |
 | 4 | **Alerts** | Every batch at Medium or High risk, with the numbers behind it and a suggested action. Mark an alert acknowledged, resolved or dismissed. Use **Check now** to recalculate immediately. |
 | 5 | **Surplus Board** | Post plants you cannot sell in time: quantity, free or discounted price, and an end date. You can withdraw a listing. |
-| 6 | **Requests** | Approve or decline requests from institutions. After giving the plants, confirm the hand-over. |
+| 6 | **Requests** | Approve or decline requests from institutions. After giving the plants, confirm the hand-over. The page opens on **all** requests, newest first; fulfilled, declined and cancelled ones stay as history with their dates. |
 | 7 | **Planting** | See how many of each species to plant next. |
 | 8 | **Impact** | Plants redirected, hand-overs and planting sites from your nursery. |
 | — | **Sync** | Shows changes recorded offline that are still waiting to be sent, and any that the server refused. |
@@ -103,7 +103,7 @@ Forgot your password? Use **Forgot password** on the sign-in page: you receive a
 |------|------|------------|
 | 1 | **Dashboard** | See open requests as steps (*Requested → Approved → Handed over → Received*) and plants available in your district on a map. |
 | 2 | **Surplus Board** | Two views: **Surplus offers** (listings posted by nurseries) and **Available plants** (ready plants nurseries can supply). Both as cards or on the map; filter by district, plant type, species and minimum quantity. Choose **Request plants**, enter the quantity, what the plants are for, and optionally a preferred pickup date and a message. |
-| 3 | **My requests** | Follow each request. When the plants arrive, **confirm receipt**. You can cancel a request before it is fulfilled. |
+| 3 | **My requests** | Follow each request. When the plants arrive, **confirm receipt**. You can cancel a request before it is fulfilled. Every request stays in the list as history (filter by status). |
 | 4 | **Impact** | Plants received per month, hand-overs and planting sites. |
 
 ### 4.4 Administrator
@@ -112,9 +112,10 @@ Forgot your password? Use **Forgot password** on the sign-in page: you receive a
 |------|------------|
 | **Dashboard** | A *Needs your attention* list (organisations to verify, species requests, email problems) and the total impact. |
 | **Verification** | Approve or reject new nurseries and institutions after checking their details and documents. |
-| **Species requests** | Species proposed by nurseries (the menu shows how many wait). Approve with the growing time and prime window, reject with a reason, or merge a spelling duplicate into an existing species (see 4.7). |
+| **Species requests** | Species proposed by nurseries (the menu shows how many wait). Opens on **All**, with counts per status; decided requests stay visible with who decided, when and why. Approve with the growing time and prime window, reject with a reason, or merge a spelling duplicate into an existing species (see 4.7). |
 | **Rules & Species** | Change the risk rule values (section 5) and the approved plant species (growing time, prime window). Only the administrator sets species rules. The page also shows how many species requests wait. |
-| **Listings** | See and moderate every Surplus Board listing. |
+| **Listings and plants** | Two views. *Surplus listings*: every Surplus Board listing (all statuses), with *Withdraw*. *Available plants*: every batch of every approved nursery with stage, stock, free quantity, price per plant and whether institutions see it. Search and filter by nursery, species, stage and status. |
+| **Sales** | Every sale recorded by every nursery, including sales synced from offline: totals (RWF, number of sales, plants sold) for today, this week, this month, this year or custom dates, the sales table, a breakdown by nursery and by species, and **Export CSV** (each export is written to the audit log). Totals are calculated on the server over all matching sales; a sale the nursery removes is no longer counted. |
 | **Audit log** | Who changed what and when. |
 | **Email problems** | Emails that failed or were skipped, with the exact reason and a *Retry* button. |
 
@@ -254,6 +255,8 @@ Lists of batches and species are kept on the phone, so they also show offline. S
 - Email codes are single-use, expire after 10 minutes and are stored only as a hash.
 - Every role sees only its own data; important actions are written to the audit log.
 - The public sees only nurseries that agreed to be listed, and only total impact figures.
+- The administrator can see every nursery's sales records and totals (to measure impact and support small
+  nurseries). Nurseries are told this on the registration form and in Settings; every CSV export is audited.
 - No secrets are in the repository; `.env` files and certificates are ignored by git.
 
 ## 9. Technology and architecture
@@ -329,20 +332,26 @@ frontend/e2e/    Playwright end-to-end tests
 > `seed-demo.js`, `seed-species.js`, the load test and `npm run migrate:undo` all **refuse to run**, with no way
 > around it. Migrations reach the live database only with `npm run migrate:live` (or `npm start` on Render).
 
-Local development and tests use a **local MySQL 8.4 in Docker**, never the live database.
+Local development and tests use a **local MySQL Server 8** installed on your computer, never the live database.
 
-**Requirements:** Node.js 20 or newer, Docker Desktop, Git.
+**Requirements:** Node.js 20 or newer, MySQL Server 8 (MySQL Community Server; on Windows it runs as the
+`MySQL80` service and starts with the computer), Git.
 
-1. **Start the database** (first time only):
+1. **Create the local databases** (first time only). Open a terminal and sign in to MySQL as root
+   (`mysql -u root -p`, with the root password you chose when installing MySQL), then run, choosing your own
+   local password in place of `<local-password>`:
 
    ```
-   docker run -d --name sgh-mysql --restart unless-stopped -p 3307:3306 -v sgh-mysql-data:/var/lib/mysql ^
-     -e MYSQL_ROOT_PASSWORD=local_root_only -e MYSQL_DATABASE=smart_green_hub_dev ^
-     -e MYSQL_USER=sgh_local -e MYSQL_PASSWORD=sgh_local_pw mysql:8.4 --max-allowed-packet=67108864
-   docker exec sgh-mysql mysql -uroot -plocal_root_only -e "CREATE DATABASE IF NOT EXISTS smart_green_hub_test; CREATE DATABASE IF NOT EXISTS smart_green_hub_e2e; GRANT ALL ON smart_green_hub_test.* TO 'sgh_local'@'%'; GRANT ALL ON smart_green_hub_e2e.* TO 'sgh_local'@'%';"
+   CREATE DATABASE IF NOT EXISTS smart_green_hub_dev;
+   CREATE DATABASE IF NOT EXISTS smart_green_hub_test;
+   CREATE DATABASE IF NOT EXISTS smart_green_hub_e2e;
+   CREATE USER IF NOT EXISTS 'sgh_local'@'localhost' IDENTIFIED BY '<local-password>';
+   GRANT ALL ON smart_green_hub_dev.* TO 'sgh_local'@'localhost';
+   GRANT ALL ON smart_green_hub_test.* TO 'sgh_local'@'localhost';
+   GRANT ALL ON smart_green_hub_e2e.* TO 'sgh_local'@'localhost';
    ```
 
-   Later: start Docker Desktop, then `docker start sgh-mysql`.
+   Later: nothing to do, as long as the `MySQL80` service is running (Windows: *Services* app).
 
 2. **Create the environment files** (none are committed; `backend/.env.example` lists every name):
    - `backend/.env`: real settings: the Aiven connection (`DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`,
@@ -351,8 +360,8 @@ Local development and tests use a **local MySQL 8.4 in Docker**, never the live 
    - **Order matters:** the API loads `backend/.env.local` first and `.env` only fills what is missing, so while
      `.env.local` exists, `npm run dev` uses the LOCAL database. Without `.env.local`, `npm run dev` uses the live
      Aiven database (real data); then start it with `npm run dev -- --no-db`.
-   - `backend/.env.local`: local overrides: `DB_HOST=127.0.0.1`, `DB_PORT=3307`, `DB_NAME=smart_green_hub_dev`,
-     `DB_USER=sgh_local`, `DB_PASSWORD=sgh_local_pw`, `DB_SSL=false`, `NODE_ENV=development`,
+   - `backend/.env.local`: local overrides: `DB_HOST=127.0.0.1`, `DB_PORT=3306`, `DB_NAME=smart_green_hub_dev`,
+     `DB_USER=sgh_local`, `DB_PASSWORD=` your local password from step 1, `DB_SSL=false`, `NODE_ENV=development`,
      `APP_URL=http://localhost:5173`, `CORS_ORIGIN=http://localhost:5173`. An empty line here never hides a value
      from `.env`.
    - `backend/.env.test`: only for `npm test`: the same local values with `DB_NAME=smart_green_hub_test`, a test
@@ -371,14 +380,14 @@ Local development and tests use a **local MySQL 8.4 in Docker**, never the live 
 
    This single command (`scripts/dev.js`, no extra packages):
    - installs the backend and frontend packages if they are missing;
-   - starts the database container and waits until MySQL is ready;
+   - checks that the local MySQL answers (on `DB_HOST` / `DB_PORT` from `backend/.env.local`);
    - applies new database migrations;
    - starts the **API** (http://localhost:5000) and the **app** (http://localhost:5173) together, with `[api]`
      and `[app]` in front of their messages.
 
    Open http://localhost:5173. **Ctrl+C stops both.** If one of them crashes, the other is stopped too, so you never
    end up with half the app running. If the API or the app is already running in another terminal, the command
-   says so and stops; close the other one first. Using a database that is not the local Docker one:
+   says so and stops; close the other one first. Using a database that is not the local one:
    `npm run dev -- --no-db`.
 
    Other commands from the root folder: `npm run setup` (install all packages), `npm test` (backend and browser
@@ -433,10 +442,10 @@ Local development and tests use a **local MySQL 8.4 in Docker**, never the live 
 | `cd frontend && npm run lint` | ESLint |
 | `cd backend && node scripts/load-test.js http://localhost:5000 50 10` | 50-user load test (NFR01), local API only |
 
-The tests need the local Docker MySQL. They **refuse** to run when the database is remote or `defaultdb`, and
+The tests need the local MySQL (section 10). They **refuse** to run when the database is remote or `defaultdb`, and
 they create their own `[TEST]` species in the local test databases only. The species-request flow is covered by
 `backend/tests/api/speciesRequests.test.js`, `backend/tests/unit/speciesNames.test.js` and
-`frontend/e2e/species-requests.spec.js`; Available plants by `backend/tests/api/availablePlants.test.js` and `frontend/e2e/available-plants.spec.js`; the Requests lists with both kinds of request (surplus offer and available plant) by `backend/tests/api/requestLists.test.js`. To run them safely, start the local Docker MySQL (section 10) so that
+`frontend/e2e/species-requests.spec.js`; Available plants by `backend/tests/api/availablePlants.test.js` and `frontend/e2e/available-plants.spec.js`; the Requests lists with both kinds of request (surplus offer and available plant) and their history by `backend/tests/api/requestLists.test.js`; the admin Sales page by `backend/tests/api/adminSales.test.js` and `backend/tests/unit/salesReport.test.js`; admin history (species requests, listings and plants) by `backend/tests/api/adminHistory.test.js`. To run them safely, use the local MySQL (section 10) so that
 `backend/.env.test` and `.env.e2e` point to `127.0.0.1` with `_test` / `_e2e` database names; never point them at
 Aiven. Results, including Lighthouse scores,
 are in `docs/TEST_REPORT.md`.
@@ -560,7 +569,8 @@ The root `package.json` and `scripts/dev.js` are for local development only.
   species in *Rules & Species*, or a nursery proposes one with *My species is not listed*.
 - **A batch shows "Waiting for species approval"**: its species was proposed by the nursery. The administrator
   decides it in *Species requests*; until then the batch has no dates and no alerts (by design).
-- **Local database not reachable?** Start Docker Desktop, then `docker start sgh-mysql`.
+- **Local database not reachable?** Start the `MySQL80` service (Windows: *Services* app) and check `DB_HOST` /
+  `DB_PORT` in `backend/.env.local`.
 - **`npm` says ENOENT / package.json not found**: you are in the wrong folder. Run `npm run dev` from the
   project root (`Smart-Green-Hub`).
 - **"Port 5000 (or 5173) is already in use"**: the API or the app still runs in another terminal; stop it with
