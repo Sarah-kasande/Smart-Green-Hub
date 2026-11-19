@@ -1,9 +1,9 @@
 # Smart Green Hub: test report
 
 Date of the runs: 27 October 2026 (shadcn/ui redesign); earlier rows from 20-22 October 2026. Environment: Windows 11, Node.js 24, MySQL 8.4.11 in Docker
-(same version as the Aiven production database), Microsoft Edge (headless) for browser tests.
+(the production database at the time; it is now Neon PostgreSQL, docs/DEVIATIONS.md W52), Microsoft Edge (headless) for browser tests.
 All tests use local test databases and fake accounts; none touch the production database
-(the test setup aborts if `DB_HOST` points to Aiven).
+(the test setup aborts if the database is remote or the live Neon database).
 
 ## 1. Summary
 
@@ -24,7 +24,7 @@ All tests use local test databases and fake accounts; none touch the production 
 | File | Tests | What is covered |
 |------|-------|-----------------|
 | `tests/unit/riskRules.test.js` | 37 | Every Table 5 rule and its boundaries: sales rate (incl. L = 0), days left (future, today, past), projected unsold (never negative), risk ratio (S = 0), levels at exactly 0.20 / 0.50 and just below, D = 0 with stock, S = 0, custom thresholds, suggested action at D = 29 / 28 / 8 / 7 / 0 and for overgrown batches, worked High / Medium / Low examples, rounding, DECIMAL values from MySQL; planting: 89 vs 90 days of history, no sales, no recent sales, formula example (30/month × 4 months × 1.10 − 32 = 100), never below 0, rounding up. |
-| `tests/unit/utils.test.js` | 12 | PDF / PNG / JPEG signatures; Windows programs and ZIP files refused; token generation and hashing; constant-time compare; email sender parsing; the Aiven guard. |
+| `tests/unit/utils.test.js` | 12 | PDF / PNG / JPEG signatures; Windows programs and ZIP files refused; token generation and hashing; constant-time compare; email sender parsing; the live-database guard. |
 | `tests/api/auth.test.js` | 20 | Registration (operator, institution, no self-assigned admin, duplicate email, weak password), bcrypt hashes only, hashed link tokens, email confirmation (single use), neutral login errors, HttpOnly + SameSite cookie, logout, CSRF protection, neutral "forgot password", 10-minute expiry, reset ends all sessions, language preference, audit log entries. |
 | `tests/api/admin.test.js` | 7 | Admin seeding from environment variables (created once, idempotent, nothing without variables), DEMO species, role checks (401 / 403), verification queue, reject needs a reason, reject → resubmit → approve, audit trail with reasons. |
 | `tests/api/uploads.test.js` | 9 | Real PNG accepted; fake PDF and mismatching types refused; over 10 MB refused; a 10 MB file stored and read back from MySQL; owner download with `no-store`; others get 404; admin access; admins cannot upload for themselves. |
@@ -121,7 +121,7 @@ Lighthouse 12 no longer has a separate "PWA" score; installability was checked t
 | Dependencies | Frontend: 0 known vulnerabilities. Backend: 2 moderate, both the same `uuid` issue inside Sequelize (missing bounds check when a caller passes its own buffer). Sequelize does not use uuid that way, and npm's only "fix" is downgrading Sequelize from version 6 to 3, so the risk is accepted and documented. |
 
 Open points: verify `TRUST_PROXY=2` on Render (the rate limiter must see the visitor's address, not
-Vercel's); daily database backups and a restore exercise before the pilot (NFR05, done in the Aiven console).
+Vercel's); daily database backups and a restore exercise before the pilot (NFR05, done in the Neon console).
 
 ## 6. Performance (NFR01)
 

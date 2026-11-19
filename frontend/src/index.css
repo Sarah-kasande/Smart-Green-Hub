@@ -23,7 +23,7 @@
 /* Dark mode is <html data-theme="dark"> (src/theme/ThemeProvider.jsx), also for shadcn's dark: classes */
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
-/* Design tokens from CLAUDE.md / design/. Use them as Tailwind classes,
+/* Design tokens from README section 7 / design/. Use them as Tailwind classes,
    e.g. bg-surface, text-ink, bg-leaf, text-leaf-text, bg-risk-high.
    Light mode values are here; dark mode overrides them further down. */
 @theme {

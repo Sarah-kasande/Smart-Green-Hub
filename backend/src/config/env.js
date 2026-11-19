@@ -2,7 +2,7 @@
 // On Render there are no files: the variables come from the dashboard.
 //
 // Order matters because dotenv never overwrites a value that is already set:
-//   - Tests (NODE_ENV=test) load ONLY .env.test, so they can never pick up the Aiven settings in .env.
+//   - Tests (NODE_ENV=test) load ONLY .env.test, so they can never pick up the live Neon settings in .env.
 //   - Local development loads .env.local first (points at the local MySQL), then .env fills anything missing.
 const path = require('path');
 const dotenv = require('dotenv');

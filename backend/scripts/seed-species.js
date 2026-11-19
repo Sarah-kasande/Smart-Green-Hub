@@ -5,7 +5,7 @@
 //   node scripts/seed-species.js                   (adds the plants to the local database)
 //   node scripts/seed-species.js --archive-demo    (also archives the "[DEMO - ...]" species)
 //
-// LOCAL databases only: it refuses the live database (Aiven "defaultdb" or any remote host), with no
+// LOCAL databases only: it refuses the live database (Neon "neondb" or any remote host), with no
 // way around it. On the live site the administrator adds the real species in Rules & Species.
 //
 // IMPORTANT: the day values below are ESTIMATES for a starting point, not research data.

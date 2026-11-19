@@ -1,5 +1,5 @@
 // Starts the API for the Playwright end-to-end tests (frontend/e2e).
-// Uses backend/.env.e2e ONLY, refuses the live database (Aiven "defaultdb" or any remote host),
+// Uses backend/.env.e2e ONLY, refuses the live database (Neon "neondb" or any remote host),
 // rebuilds the local e2e database from the migrations, adds the TEST species the tests need
 // (the server itself never creates species), empties the email file, then starts the normal server.
 const path = require('path');

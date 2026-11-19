@@ -1,4 +1,4 @@
-// Safety guard: tests must NEVER run against the live database (Aiven "defaultdb" or any remote host).
+// Safety guard: tests must NEVER run against the live database (Neon "neondb" or any remote host).
 // Called before any test touches a database. Throws, which stops the whole test run.
 const { dbTarget, describeTarget } = require('../src/utils/dbSafety');
 

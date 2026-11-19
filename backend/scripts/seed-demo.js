@@ -14,7 +14,7 @@
 // It uses the same services as the app, so stock, reservations, hand-overs, impact records and the
 // audit log follow the real rules. Only the dates of past events are moved back afterwards, so the
 // charts show several months. No email is sent: emails are marked "skipped".
-// It refuses the live database (Aiven "defaultdb" or any remote host) with no way around it, and it
+// It refuses the live database (Neon "neondb" or any remote host) with no way around it, and it
 // stops if the demo data already exists.
 require('../src/config/env');
 // No real emails for demo events (they would go to fake @example.test addresses)

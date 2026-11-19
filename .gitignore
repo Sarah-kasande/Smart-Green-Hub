@@ -4,3 +4,9 @@ dist
 .DS_Store
 ca.pem
 UI.md
+
+# Claude Code files (kept on this computer only, in any folder)
+**/CLAUDE.md
+**/CLAUDE.local.md
+**/.claude/
+.claudeignore

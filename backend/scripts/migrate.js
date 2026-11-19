@@ -7,7 +7,7 @@
 //   npm run migrate:live:status  show which migrations ran on the LIVE database (read-only)
 //   npm start                    (Render) apply new migrations, then start the API
 //
-// The live database is Aiven "defaultdb" or any remote host (src/utils/dbSafety.js). It is changed
+// The live database is Neon "neondb" or any remote host (src/utils/dbSafety.js). It is changed
 // only by "--live" (a command typed on purpose) or "--deploy" on the hosting platform itself.
 // Migrations only ever ADD tables and columns (and the default rule settings), so running them
 // again on an up-to-date database changes nothing. Undo is refused on the live database.
@@ -19,7 +19,7 @@ const command = ['status', 'undo'].includes(args[0]) ? args[0] : 'up';
 const live = args.includes('--live');
 const deploy = args.includes('--deploy');
 
-// "--live" on this computer reads ONLY backend/.env (the Aiven settings), never .env.local.
+// "--live" on this computer reads ONLY backend/.env (the live Neon settings), never .env.local.
 if (live && !process.env.ENV_FILE) process.env.ENV_FILE = '.env';
 require('../src/config/env');
 const { dbTarget, describeTarget } = require('../src/utils/dbSafety');

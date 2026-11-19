@@ -1,4 +1,4 @@
-// The sync status chip (CLAUDE.md): Online / Offline / "N waiting to sync" / "N problems".
+// The sync status chip: Online / Offline / "N waiting to sync" / "N problems".
 // For operators it links to the sync page where waiting and refused changes are listed.
 import { Link } from 'react-router-dom'
 import Icon from './Icon'

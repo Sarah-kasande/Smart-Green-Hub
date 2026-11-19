@@ -46,17 +46,17 @@ describe('test database guard', () => {
     process.env.DB_HOST = saved.host;
     process.env.DB_NAME = saved.name;
   });
-  test('aborts when DB_HOST is an Aiven host', () => {
-    process.env.DB_HOST = 'mysql-example.aivencloud.com';
+  test('aborts when DB_HOST is a Neon host', () => {
+    process.env.DB_HOST = 'ep-example-pooler.us-east-2.aws.neon.tech';
     expect(assertSafeTestDatabase).toThrow(/refuse/);
   });
   test('aborts when DB_HOST is any remote host', () => {
     process.env.DB_HOST = 'db.example.org';
     expect(assertSafeTestDatabase).toThrow(/remote host/);
   });
-  test('aborts when the database is defaultdb, even on this computer', () => {
-    process.env.DB_NAME = 'defaultdb';
-    expect(assertSafeTestDatabase).toThrow(/defaultdb/);
+  test('aborts when the database is neondb, even on this computer', () => {
+    process.env.DB_NAME = 'neondb';
+    expect(assertSafeTestDatabase).toThrow(/neondb/);
   });
   test('aborts when the database name does not end with _test', () => {
     process.env.DB_NAME = 'smart_green_hub_dev';

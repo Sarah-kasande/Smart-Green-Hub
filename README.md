@@ -408,16 +408,15 @@ frontend/e2e/    Playwright end-to-end tests
 ## 10. Running it on your computer
 
 > **The live database holds REAL data only.** The live database is **Neon PostgreSQL** (`neondb`), reached through
-> `DATABASE_URL` (it replaced Aiven MySQL in November 2026; docs/DEVIATIONS.md W52). Nothing fake ever goes into
-> it: no demo species, test users, test nurseries
-> or sample batches. It contains only (1) the tables created by the migrations, (2) the default risk rule
+> `DATABASE_URL` (docs/DEVIATIONS.md W52). Nothing fake ever goes into it: no demo species, test users, test
+> nurseries or sample batches. It contains only (1) the tables created by the migrations, (2) the default risk rule
 > (Table 5: lookback 28 days, Medium from 20 %, High from 50 %, safety margin 10 %, far 28 days, near 7 days) and
 > (3) the administrator created from `ADMIN_EMAIL` / `ADMIN_PASSWORD`. The administrator adds the real plant
 > species in *Rules & Species* (or approves the ones nurseries propose); until then *Planting plan* says
 > "No species yet" and *Add batch* offers only "My species is not listed".
 >
 > The code enforces this (`backend/src/utils/dbSafety.js`): a database counts as **live** when its host is not
-> this computer, or when its name is `defaultdb`. Against a live database, `npm test`, the Playwright tests,
+> this computer, or when its name is `neondb`. Against a live database, `npm test`, the Playwright tests,
 > `seed-demo.js`, `seed-species.js`, the load test and `npm run migrate:undo` all **refuse to run**, with no way
 > around it. Migrations reach the live database only with `npm run migrate:live` (or `npm start` on Render).
 
@@ -443,18 +442,18 @@ Local development and tests use a **local MySQL Server 8** installed on your com
    Later: nothing to do, as long as the `MySQL80` service is running (Windows: *Services* app).
 
 2. **Create the environment files** (none are committed; `backend/.env.example` lists every name):
-   - `backend/.env`: real settings: the Aiven connection (`DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`,
-     `DB_NAME=defaultdb`, `DB_CA_PATH=certs/aiven-ca.pem`), `JWT_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, email.
-     Download Aiven's CA certificate into `backend/certs/aiven-ca.pem` (the `certs/` folder is never committed).
+   - `backend/.env`: real settings: `DATABASE_URL` (the Neon connection string from the Neon console, *Connect*),
+     `JWT_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, email.
    - **Order matters:** the API loads `backend/.env.local` first and `.env` only fills what is missing, so while
-     `.env.local` exists, `npm run dev` uses the LOCAL database. Without `.env.local`, `npm run dev` uses the live
-     Aiven database (real data); then start it with `npm run dev -- --no-db`.
+     `.env.local` exists, `npm run dev` uses the LOCAL database (the `DATABASE_URL` from `.env` is ignored then).
+     Without `.env.local`, `npm run dev` uses the live Neon database (real data); then start it with
+     `npm run dev -- --no-db`.
    - `backend/.env.local`: local overrides: `DB_HOST=127.0.0.1`, `DB_PORT=3306`, `DB_NAME=smart_green_hub_dev`,
      `DB_USER=sgh_local`, `DB_PASSWORD=` your local password from step 1, `DB_SSL=false`, `NODE_ENV=development`,
      `APP_URL=http://localhost:5173`, `CORS_ORIGIN=http://localhost:5173`. An empty line here never hides a value
      from `.env`.
    - `backend/.env.test`: only for `npm test`: the same local values with `DB_NAME=smart_green_hub_test`, a test
-     `JWT_SECRET` and fake admin details. Tests refuse any remote host and `defaultdb`.
+     `JWT_SECRET` and fake admin details. Tests refuse any remote host and `neondb`.
    - `backend/.env.e2e`: only for Playwright: `PORT=5001`, `DB_NAME=smart_green_hub_e2e`, a fake admin
      (`e2e-admin@example.test` / `E2eAdmin123`), `APP_URL` and `CORS_ORIGIN` = `http://localhost:5174`,
      `EMAIL_OUTBOX_FILE=e2e-emails.jsonl`, plus the local database values.
@@ -531,12 +530,12 @@ Local development and tests use a **local MySQL Server 8** installed on your com
 | `cd frontend && npm run lint` | ESLint |
 | `cd backend && node scripts/load-test.js http://localhost:5000 50 10` | 50-user load test (NFR01), local API only |
 
-The tests need the local MySQL (section 10). They **refuse** to run when the database is remote or `defaultdb`, and
+The tests need the local MySQL (section 10). They **refuse** to run when the database is remote or `neondb`, and
 they create their own `[TEST]` species in the local test databases only. The species-request flow is covered by
 `backend/tests/api/speciesRequests.test.js`, `backend/tests/unit/speciesNames.test.js` and
 `frontend/e2e/species-requests.spec.js`; Available plants by `backend/tests/api/availablePlants.test.js` and `frontend/e2e/available-plants.spec.js`; the Requests lists with both kinds of request (surplus offer and available plant) and their history by `backend/tests/api/requestLists.test.js`; the admin Sales page by `backend/tests/api/adminSales.test.js` and `backend/tests/unit/salesReport.test.js`; admin history (species requests, listings and plants) by `backend/tests/api/adminHistory.test.js`; archive, unarchive, delete rules and permissions by `backend/tests/api/adminRecords.test.js`; the homepage (consent, data exposure, disappearing batches, featured position, rate limit) by `backend/tests/api/homepage.test.js`, `backend/tests/unit/homepage.test.js` and `frontend/e2e/admin-homepage.spec.js`; help and support (permissions, public form limits, status flow, notifications, offline sending) by `backend/tests/api/support.test.js`, `backend/tests/unit/support.test.js` and `frontend/e2e/support.spec.js`. To run them safely, use the local MySQL (section 10) so that
 `backend/.env.test` and `.env.e2e` point to `127.0.0.1` with `_test` / `_e2e` database names; never point them at
-Aiven. Results, including Lighthouse scores,
+Neon. Results, including Lighthouse scores,
 are in `docs/TEST_REPORT.md`.
 
 ## 12. Environment variables
@@ -559,14 +558,14 @@ are in `docs/TEST_REPORT.md`.
 | `CRON_SECRET` | random text of at least 16 characters; Vercel sends it to the nightly job |
 | `VITE_API_URL` | `/api` |
 
-`PORT` is not needed on Vercel. Never set `DB_CA_PATH`, `ENV_FILE` or `EMAIL_OUTBOX_FILE` there.
+`PORT` is not needed on Vercel. Never set `ENV_FILE` or `EMAIL_OUTBOX_FILE` there, and delete any old `DB_` variables.
 
 **Render (API service).** *Environment* tab of the service:
 
 | Name | Value |
 |------|-------|
 | `NODE_ENV` | `production` |
-| `DATABASE_URL` | the Neon connection string (the old `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_CA_CERT` are then ignored and can be deleted) |
+| `DATABASE_URL` | the Neon connection string (delete any old `DB_` variables) |
 | `JWT_SECRET` | long random text |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD` | first administrator |
 | `BREVO_API_KEY`, `MAIL_FROM` | email |
@@ -574,8 +573,7 @@ are in `docs/TEST_REPORT.md`.
 | `TRUST_PROXY` | `2` |
 | `OTP_SECRET` | optional |
 
-Render sets `PORT` and `RENDER=true` itself. **Never set `DB_CA_PATH` on Render** (the file does not exist
-there and the API would not start), nor `DB_SSL`, `ENV_FILE` or `EMAIL_OUTBOX_FILE`.
+Render sets `PORT` and `RENDER=true` itself. Never set `DB_SSL`, `ENV_FILE` or `EMAIL_OUTBOX_FILE` on Render.
 
 ## 13. Deployment
 
@@ -600,8 +598,8 @@ service bindings.
    `version` of the latest commit.
 4. In *Settings → Cron Jobs* you should see `/api/cron/nightly`. Vercel's schedule is in UTC: `0 0 * * *` is
    02:00 in Kigali. On the free (Hobby) plan a cron job runs once a day, sometime within that hour.
-5. Aiven must accept connections from Vercel: in the Aiven console, check *Allowed IP addresses*
-   (`0.0.0.0/0` if it was opened for Render).
+5. Neon accepts connections from anywhere by default; if *IP Allow* is turned on in the Neon console, allow
+   Vercel's addresses.
 6. When everything works, the old Render service and the old frontend-only Vercel project can be switched off.
 
 **Good to know:**
@@ -621,15 +619,15 @@ service bindings.
 - Free-plan note: Render sleeps when unused, so the first request can take up to about 50 seconds.
 
 **What `npm start` does on every start, by itself (all steps are safe to repeat):**
-1. `scripts/migrate.js up --deploy`: applies only migrations that have not run yet. On an empty `defaultdb`
+1. `scripts/migrate.js up --deploy`: applies only migrations that have not run yet. On an empty Neon database
    this creates all tables and the default risk rule; on an up-to-date database it changes nothing. It is
    allowed on the live database only because Render sets `RENDER=true`; the same command on your computer refuses.
 2. `src/server.js` starts the API and then checks: the default risk rule exists (created only if missing,
    never overwritten), and an administrator exists (created from `ADMIN_EMAIL` / `ADMIN_PASSWORD` only if there
    is none; the password is never printed). No species and no other data are created.
 
-**Moving to a new, empty Aiven database:** update the `DB_` variables in *Environment* (and remove
-`DB_CA_PATH` if it is there) → *Manual Deploy → Deploy latest commit* → open `/api/health` and check
+**Moving to a new, empty Neon database:** update `DATABASE_URL` in *Environment* → *Manual Deploy → Deploy
+latest commit* → open `/api/health` and check
 `"database":"connected"` → sign in with `ADMIN_EMAIL` / `ADMIN_PASSWORD` → add the real species in
 *Rules & Species*.
 
@@ -641,16 +639,16 @@ The root `package.json` and `scripts/dev.js` are for local development only.
   Vercel (one project) this cannot happen after a full deploy; redeploy the latest commit. With Render: *Manual
   Deploy → Deploy latest commit*. Locally: stop and run `npm run dev` again.
 - **Vercel deployment failed during the build of `backend`**: open the build log. "Build: running database
-  migrations" followed by an error means the database is not reachable (check the `DB_` variables and Aiven's
-  allowed IP addresses) or a migration failed.
+  migrations" followed by an error means the database is not reachable (check `DATABASE_URL`: a reset password must
+  be updated there too) or a migration failed.
 - **The nightly job does not run on Vercel**: check that `CRON_SECRET` is set, then open *Settings → Cron Jobs →
   View Logs*. A `401` answer means the secret is missing or different.
 - **An old screen after a deploy**: reload with Ctrl+Shift+R.
 - **Database up to date?** Live: `cd backend && npm run migrate:live:status`; local: `npm run migrate:status`
   (every line should say `up`).
-- **"The server took too long to answer" and `/api/health` does not answer**: the free Aiven service is
-  probably powered off after a period without use. Aiven console → the MySQL service → *Power on*, wait until
-  it shows *Running*.
+- **"The server took too long to answer" and `/api/health` does not answer**: Neon's free plan pauses the
+  database after a few minutes without use; the next request wakes it up within a few seconds, so try again.
+  If it keeps failing, check the project in the Neon console (storage limit, suspended project).
 - **"No species yet" on Add batch / Planting plan**: expected on a new database. The administrator adds the
   species in *Rules & Species*, or a nursery proposes one with *My species is not listed*.
 - **A batch shows "Waiting for species approval"**: its species was proposed by the nursery. The administrator
@@ -668,10 +666,8 @@ The root `package.json` and `scripts/dev.js` are for local development only.
 ## 15. Before the pilot, and future work
 
 **Before a real pilot:**
-- **The database moved to Neon PostgreSQL** (Aiven's free MySQL plan is retired on 21 December 2026). Neon's free
-  plan has 0.5 GB of storage and pauses when idle (the first request after a pause takes a moment). Uploaded
-  files are stored in the database, so watch the storage figure in the Neon console. Any data still on Aiven
-  must be copied before 21 December 2026 or it is lost.
+- **Neon storage:** the free plan has 0.5 GB and pauses when idle (the first request after a pause takes a
+  moment). Uploaded files are stored in the database, so watch the storage figure in the Neon console.
 - The administrator adds the real plant species with values from the needs assessment (Admin → Rules & Species).
 - Have a native speaker review `frontend/src/i18n/rw.js` and `backend/src/services/emailTemplates.js`
   (`TODO` marks).

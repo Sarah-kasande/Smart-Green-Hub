@@ -1,4 +1,4 @@
-// Small status labels. Each one shows an icon AND a word, never colour alone (CLAUDE.md design rules).
+// Small status labels. Each one shows an icon AND a word, never colour alone (README, section 7).
 import Icon from './Icon'
 import { Badge } from '@/components/shadcn/badge'
 import { useI18n } from '../../i18n/I18nProvider'

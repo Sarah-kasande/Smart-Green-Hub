@@ -1,14 +1,13 @@
 // Tells the LIVE database apart from a local, throwaway one, so tests and scripts that create or
 // delete rows can refuse to touch real data.
 //
-// The live database is Neon PostgreSQL (DATABASE_URL); before that it was Aiven MySQL "defaultdb".
-// A target counts as LIVE when the host is not this computer, or when the database is one of the
-// live names (even on this computer). Only localhost / 127.0.0.1 / ::1 with another name is local.
+// The live database is Neon PostgreSQL (DATABASE_URL, database "neondb").
+// A target counts as LIVE when the host is not this computer, or when the database is called "neondb"
+// (even on this computer). Only localhost / 127.0.0.1 / ::1 with another name is local.
 const { postgresUrl } = require('../config/database');
 
 const LOCAL_HOSTS = ['localhost', '127.0.0.1', '::1'];
-const LIVE_DATABASE_NAMES = ['defaultdb', 'neondb'];
-const LIVE_DATABASE_NAME = 'defaultdb'; // kept for older imports
+const LIVE_DATABASE_NAMES = ['neondb'];
 
 function dbTarget(env = process.env) {
   let host = (env.DB_HOST || '').trim().toLowerCase();
@@ -34,4 +33,4 @@ function describeTarget(target = dbTarget()) {
   return `database "${target.name || '(no name)'}" on ${where}`;
 }
 
-module.exports = { dbTarget, describeTarget, LOCAL_HOSTS, LIVE_DATABASE_NAME, LIVE_DATABASE_NAMES };
+module.exports = { dbTarget, describeTarget, LOCAL_HOSTS, LIVE_DATABASE_NAMES };

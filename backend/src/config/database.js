@@ -4,9 +4,9 @@
 //
 // Two kinds of database are supported:
 //   - PostgreSQL (Neon, the live database): DATABASE_URL=postgresql://user:password@host/db?sslmode=require
-//   - MySQL (a local MySQL for development and tests): DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
+//   - MySQL (a local MySQL on this computer, for development and tests): DB_HOST, DB_PORT, DB_NAME,
+//     DB_USER, DB_PASSWORD, DB_SSL=false
 // DATABASE_URL wins when both are set. The connection string is never printed or logged.
-const fs = require('fs');
 
 // The PostgreSQL connection string, if one is configured. DB_HOST holding a postgres:// URL is
 // accepted too, so a URL pasted into the wrong variable still works.
@@ -14,15 +14,6 @@ function postgresUrl(env = process.env) {
   const candidates = [env.DATABASE_URL, env.DB_HOST];
   const url = candidates.find((value) => /^postgres(ql)?:\/\//i.test((value || '').trim()));
   return url ? url.trim() : null;
-}
-
-// Aiven MySQL needed its CA certificate. DB_CA_CERT holds the certificate text, DB_CA_PATH a file.
-function loadCa() {
-  const raw = process.env.DB_CA_CERT || process.env.DB_CA_PATH;
-  if (!raw) return undefined;
-  const value = raw.trim();
-  if (value.includes('BEGIN CERTIFICATE')) return value.replace(/\\n/g, '\n');
-  return fs.readFileSync(value, 'utf8');
 }
 
 function postgresConfig(url) {
@@ -58,9 +49,8 @@ function postgresConfig(url) {
 }
 
 function mysqlConfig() {
-  // SSL is on unless DB_SSL=false. Only the local MySQL on your own computer turns it off.
+  // SSL is on unless DB_SSL=false (the local MySQL on your own computer turns it off).
   const useSsl = process.env.DB_SSL !== 'false';
-  const ca = useSsl ? loadCa() : undefined;
   return {
     database: process.env.DB_NAME,
     username: process.env.DB_USER,
@@ -74,7 +64,7 @@ function mysqlConfig() {
     logging: false,
     // Store and read all dates in UTC.
     timezone: '+00:00',
-    dialectOptions: useSsl ? { ssl: ca ? { ca, rejectUnauthorized: true } : { rejectUnauthorized: true } } : {},
+    dialectOptions: useSsl ? { ssl: { rejectUnauthorized: true } } : {},
   };
 }
 
