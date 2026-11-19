@@ -10,6 +10,7 @@ const { committedQuantity, availableQuantity } = require('./stockService');
 const { primeDaysFor, datesFor, suggestStage, stageAfterDates } = require('./batchDates');
 const speciesService = require('./speciesService');
 const { dispatchSoon } = require('./notificationService');
+const { lockOf } = require('../utils/sqlDialect');
 
 const ACTIVE_STAGES = ['seedling', 'growing', 'ready', 'overgrown'];
 
@@ -30,7 +31,7 @@ async function findOwnBatch(nursery, batchId, { transaction, lock } = {}) {
     where: { id: batchId, nursery_id: nursery.id },
     include: [{ model: PlantSpecies, as: 'species', paranoid: false }],
     transaction,
-    lock: lock ? transaction.LOCK.UPDATE : undefined,
+    lock: lock ? lockOf(transaction, Batch) : undefined,
   });
   if (!batch) throw new HttpError(404, 'NOT_FOUND', 'Batch not found');
   return batch;

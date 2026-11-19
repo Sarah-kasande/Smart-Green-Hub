@@ -352,7 +352,7 @@ Lists of batches and species are kept on the phone, so they also show offline. S
 |------|------------|-----------|
 | Frontend | React, Vite, Tailwind CSS v4, shadcn/ui, React Router, Axios, Dexie (IndexedDB), Leaflet + OpenStreetMap, vite-plugin-pwa (Workbox) | Vercel (service `frontend`) |
 | Backend | Node.js, Express, Sequelize, JWT, bcryptjs, helmet, Brevo (email) | Vercel (service `backend`); Render also supported |
-| Database | MySQL 8.4 with SSL | Aiven |
+| Database | PostgreSQL (Neon) with SSL; MySQL 8 still works for local development and tests | Neon |
 | Tests | Jest, Supertest, Playwright, Lighthouse | — |
 
 ```
@@ -360,7 +360,7 @@ Browser (React PWA, IndexedDB offline store, service worker)
    │  one domain: https://<project>.vercel.app
    ▼
 Vercel project (root vercel.json, two services)
-   ├─ /api/*      → service "backend"  : Express API as a Vercel Function ── Sequelize ── Aiven MySQL
+   ├─ /api/*      → service "backend"  : Express API as a Vercel Function ── Sequelize ── Neon PostgreSQL
    │                  ├─ risk engine + planting planner (backend/src/services/riskRules.js)
    │                  ├─ emails through the Brevo HTTP API, sent right after each action
    │                  └─ /api/cron/nightly, called by Vercel Cron at 02:00 Kigali time:
@@ -407,8 +407,9 @@ frontend/e2e/    Playwright end-to-end tests
 
 ## 10. Running it on your computer
 
-> **The live database holds REAL data only.** The live database is Aiven MySQL on the free plan, which allows
-> exactly one database, `defaultdb`. Nothing fake ever goes into it: no demo species, test users, test nurseries
+> **The live database holds REAL data only.** The live database is **Neon PostgreSQL** (`neondb`), reached through
+> `DATABASE_URL` (it replaced Aiven MySQL in November 2026; docs/DEVIATIONS.md W52). Nothing fake ever goes into
+> it: no demo species, test users, test nurseries
 > or sample batches. It contains only (1) the tables created by the migrations, (2) the default risk rule
 > (Table 5: lookback 28 days, Medium from 20 %, High from 50 %, safety margin 10 %, far 28 days, near 7 days) and
 > (3) the administrator created from `ADMIN_EMAIL` / `ADMIN_PASSWORD`. The administrator adds the real plant
@@ -546,8 +547,7 @@ are in `docs/TEST_REPORT.md`.
 | Name | Value |
 |------|-------|
 | `NODE_ENV` | `production` |
-| `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` | Aiven connection |
-| `DB_CA_CERT` | Aiven CA certificate text |
+| `DATABASE_URL` | the Neon connection string (Neon console → *Connect*, pooled connection), `postgresql://…?sslmode=require` |
 | `JWT_SECRET` | long random text |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD` | first administrator |
 | `BREVO_API_KEY` | Brevo key allowed to send transactional email |
@@ -566,9 +566,7 @@ are in `docs/TEST_REPORT.md`.
 | Name | Value |
 |------|-------|
 | `NODE_ENV` | `production` |
-| `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD` | the Aiven service's connection details |
-| `DB_NAME` | `defaultdb` (the only database on Aiven's free plan) |
-| `DB_CA_CERT` | the full text of Aiven's CA certificate, from `-----BEGIN CERTIFICATE-----` to `-----END CERTIFICATE-----` |
+| `DATABASE_URL` | the Neon connection string (the old `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_CA_CERT` are then ignored and can be deleted) |
 | `JWT_SECRET` | long random text |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD` | first administrator |
 | `BREVO_API_KEY`, `MAIL_FROM` | email |
@@ -670,13 +668,14 @@ The root `package.json` and `scripts/dev.js` are for local development only.
 ## 15. Before the pilot, and future work
 
 **Before a real pilot:**
-- **Aiven is retiring its free MySQL plan:** on 21 December 2026 free MySQL services are powered off and their
-  data and backups deleted. Upgrade the service to the Developer plan (USD 5 per month, always on; Aiven keeps
-  the data and connection details) before entering real pilot data, or export the data in time.
+- **The database moved to Neon PostgreSQL** (Aiven's free MySQL plan is retired on 21 December 2026). Neon's free
+  plan has 0.5 GB of storage and pauses when idle (the first request after a pause takes a moment). Uploaded
+  files are stored in the database, so watch the storage figure in the Neon console. Any data still on Aiven
+  must be copied before 21 December 2026 or it is lost.
 - The administrator adds the real plant species with values from the needs assessment (Admin → Rules & Species).
 - Have a native speaker review `frontend/src/i18n/rw.js` and `backend/src/services/emailTemplates.js`
   (`TODO` marks).
-- Turn on daily backups in Aiven and test one restore (NFR05).
+- Check Neon's point-in-time restore window for your plan and test one restore to a branch (NFR05).
 - Confirm with the Rwanda Forestry Authority how forest-law provisions apply to nursery stock (proposal 3.2.3).
 - Improve loading speed on low-end phones (currently 3.0–3.9 s to show the main content; target under 3 s),
   for example by pre-rendering the landing page.

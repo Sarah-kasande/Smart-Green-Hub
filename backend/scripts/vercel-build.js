@@ -7,14 +7,17 @@
 //   - With the settings, a failed migration stops the deployment, so the old version keeps running.
 const { spawnSync } = require('child_process');
 
-const REQUIRED = ['DB_HOST', 'DB_PORT', 'DB_NAME', 'DB_USER', 'DB_PASSWORD', 'DB_CA_CERT'];
+// Neon PostgreSQL needs only DATABASE_URL. The older MySQL settings are still accepted.
+const { postgresUrl } = require('../src/config/database');
+const MYSQL_SETTINGS = ['DB_HOST', 'DB_PORT', 'DB_NAME', 'DB_USER', 'DB_PASSWORD', 'DB_CA_CERT'];
 
 if (process.env.VERCEL_ENV !== 'production') {
   console.log(`Build: skipping database migrations (VERCEL_ENV=${process.env.VERCEL_ENV || 'not set'})`);
   process.exit(0);
 }
 
-const missing = REQUIRED.filter((name) => !process.env[name]);
+const configured = postgresUrl() || MYSQL_SETTINGS.every((name) => process.env[name]);
+const missing = configured ? [] : ['DATABASE_URL'];
 if (missing.length > 0) {
   console.warn(
     `Build: WARNING - database migrations skipped, these environment variables are missing: ${missing.join(', ')}.\n` +
@@ -30,9 +33,9 @@ const result = spawnSync('node', ['scripts/migrate.js', 'up', '--deploy'], { std
 if (result.status !== 0) {
   console.error(
     'Build: database migrations FAILED (message above). Common causes:\n' +
-      '       - "ETIMEDOUT" / "connect": Aiven does not allow Vercel\'s address (Aiven console -> Allowed IP addresses)\n' +
-      '       - "Access denied": DB_USER or DB_PASSWORD is wrong\n' +
-      '       - "certificate" / "secure connection": DB_CA_CERT is missing or not the full certificate text'
+      '       - "password authentication failed": the password in DATABASE_URL is old (Neon -> Roles -> reset it, then update DATABASE_URL)\n' +
+      '       - "ENOTFOUND" / "ETIMEDOUT": DATABASE_URL is incomplete, or the Neon project is suspended\n' +
+      '       - "Access denied" / "certificate": only with the old MySQL settings (DB_USER, DB_PASSWORD, DB_CA_CERT)'
   );
   process.exit(1);
 }

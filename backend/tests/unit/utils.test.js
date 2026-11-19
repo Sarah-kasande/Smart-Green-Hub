@@ -63,3 +63,27 @@ describe('test database guard', () => {
     expect(assertSafeTestDatabase).toThrow(/_test/);
   });
 });
+
+// Neon PostgreSQL (DATABASE_URL) is the live database: every script and test must treat it as live.
+describe('live database detection with DATABASE_URL', () => {
+  const { dbTarget } = require('../../src/utils/dbSafety');
+  const { postgresUrl } = require('../../src/config/database');
+
+  test('a Neon URL is live and wins over the MySQL settings', () => {
+    const env = { DATABASE_URL: 'postgresql://user:secret@ep-example-pooler.us-east-2.aws.neon.tech/neondb?sslmode=require', DB_HOST: '127.0.0.1', DB_NAME: 'smart_green_hub_test' };
+    expect(dbTarget(env)).toMatchObject({ host: 'ep-example-pooler.us-east-2.aws.neon.tech', name: 'neondb', live: true, local: false });
+  });
+
+  test('"neondb" counts as live even on this computer', () => {
+    expect(dbTarget({ DATABASE_URL: 'postgresql://u:p@localhost:5432/neondb' }).live).toBe(true);
+  });
+
+  test('a local PostgreSQL test database is local', () => {
+    expect(dbTarget({ DATABASE_URL: 'postgres://u:p@127.0.0.1:5432/smart_green_hub_test?sslmode=disable' })).toMatchObject({ local: true, live: false });
+  });
+
+  test('a postgres URL pasted into DB_HOST is still recognised', () => {
+    expect(postgresUrl({ DB_HOST: 'postgresql://u:p@host.example/db' })).toBe('postgresql://u:p@host.example/db');
+    expect(postgresUrl({ DB_HOST: 'mysql.example.org' })).toBeNull();
+  });
+});

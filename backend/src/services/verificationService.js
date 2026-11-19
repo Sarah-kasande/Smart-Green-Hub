@@ -4,6 +4,7 @@ const { sequelize, User, Nursery, Institution, UploadedFile } = require('../mode
 const HttpError = require('../utils/httpError');
 const audit = require('./auditService');
 const { notify, dispatchSoon } = require('./notificationService');
+const { lockOf } = require('../utils/sqlDialect');
 
 const MODELS = { nursery: Nursery, institution: Institution };
 
@@ -75,7 +76,7 @@ async function decide({ adminId, type, id, decision, reason }) {
   let row;
   await sequelize.transaction(async (transaction) => {
     // Row lock: two administrators clicking at the same time cannot both decide.
-    row = await MODELS[type].findByPk(id, { include: [ownerInclude[type]], transaction, lock: transaction.LOCK.UPDATE });
+    row = await MODELS[type].findByPk(id, { include: [ownerInclude[type]], transaction, lock: lockOf(transaction, MODELS[type]) });
     if (!row) throw new HttpError(404, 'NOT_FOUND', 'Not found');
     if (row.verification_status !== 'pending') {
       throw new HttpError(409, 'ALREADY_DECIDED', 'This item has already been decided');

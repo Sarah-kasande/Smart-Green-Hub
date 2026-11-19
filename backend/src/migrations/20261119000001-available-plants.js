@@ -58,8 +58,11 @@ module.exports = {
       if (Number(direct) > 0) throw new Error('Cannot undo: some requests are for available plants (batch_id is set).');
       // The foreign key on batch_id uses the unique index (batch_id, institution_id), and MySQL refuses
       // to drop an index a foreign key needs. So: foreign key first, then the index, then the column.
+      const postgres = queryInterface.sequelize.getDialect() === 'postgres';
       const [keys] = await queryInterface.sequelize.query(
-        "SELECT CONSTRAINT_NAME AS name FROM information_schema.KEY_COLUMN_USAGE WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'surplus_requests' AND COLUMN_NAME = 'batch_id' AND REFERENCED_TABLE_NAME IS NOT NULL"
+        postgres
+          ? "SELECT tc.constraint_name AS name FROM information_schema.table_constraints tc JOIN information_schema.key_column_usage k ON k.constraint_name = tc.constraint_name AND k.table_schema = tc.table_schema WHERE tc.table_schema = current_schema() AND tc.table_name = 'surplus_requests' AND tc.constraint_type = 'FOREIGN KEY' AND k.column_name = 'batch_id'"
+          : "SELECT CONSTRAINT_NAME AS name FROM information_schema.KEY_COLUMN_USAGE WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'surplus_requests' AND COLUMN_NAME = 'batch_id' AND REFERENCED_TABLE_NAME IS NOT NULL"
       );
       for (const { name } of keys) await queryInterface.removeConstraint('surplus_requests', name);
     }

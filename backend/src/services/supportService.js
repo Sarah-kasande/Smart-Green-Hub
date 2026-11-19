@@ -21,6 +21,7 @@ const { notify, dispatchSoon } = require('./notificationService');
 const { findOwnOrganisation } = require('./verificationService');
 const { SUPPORT_REOPEN_DAYS } = require('../utils/constants');
 const { DAY_MS } = require('../utils/dates');
+const { likeOp } = require('../utils/sqlDialect');
 
 const helpPath = (role) => (role === 'institution' ? '/institution/help' : '/operator/help');
 
@@ -238,7 +239,7 @@ async function adminList({ status, category, role, q } = {}) {
   if (role) where.requester_role = role;
   if (q && q.trim()) {
     const like = `%${q.trim().replace(/[\\%_]/g, '\\$&')}%`;
-    where[Op.or] = [{ subject: { [Op.like]: like } }, { requester_name: { [Op.like]: like } }, { requester_email: { [Op.like]: like } }, { organisation_name: { [Op.like]: like } }];
+    where[Op.or] = [{ subject: { [likeOp()]: like } }, { requester_name: { [likeOp()]: like } }, { requester_email: { [likeOp()]: like } }, { organisation_name: { [likeOp()]: like } }];
   }
   const tickets = await SupportTicket.findAll({ where, order: [['created_at', 'DESC'], ['id', 'DESC']], limit: 500 });
   const counts = { open: 0, in_progress: 0, resolved: 0 };

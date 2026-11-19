@@ -51,6 +51,7 @@ const { releaseForArchive } = require('./surplusService');
 const { committedForBatches } = require('./stockService');
 const { publishBlockReason } = require('./homepageService');
 const inventory = require('./inventoryService');
+const { likeOp, lockOf } = require('../utils/sqlDialect');
 
 const userAttributes = ['id', 'full_name', 'email', 'phone', 'preferred_language'];
 
@@ -133,7 +134,7 @@ async function findNursery(id, transaction, lock = false) {
     paranoid: false,
     include: [{ model: User, as: 'owner', attributes: userAttributes, paranoid: false }],
     transaction,
-    lock: lock ? transaction.LOCK.UPDATE : undefined,
+    lock: lock ? lockOf(transaction, Nursery) : undefined,
   });
   if (!nursery) throw new HttpError(404, 'NOT_FOUND', 'Nursery not found');
   return nursery;
@@ -162,7 +163,7 @@ async function listNurseries({ status = 'active', q, district } = {}) {
   const options = statusOptions(status);
   const where = { ...options.where };
   if (district) where.district = district;
-  if (q && q.trim()) where[Op.or] = [{ name: { [Op.like]: like(q) } }, { sector: { [Op.like]: like(q) } }, { '$owner.full_name$': { [Op.like]: like(q) } }, { '$owner.email$': { [Op.like]: like(q) } }];
+  if (q && q.trim()) where[Op.or] = [{ name: { [likeOp()]: like(q) } }, { sector: { [likeOp()]: like(q) } }, { '$owner.full_name$': { [likeOp()]: like(q) } }, { '$owner.email$': { [likeOp()]: like(q) } }];
   const rows = await Nursery.findAll({
     where,
     paranoid: options.paranoid,
@@ -276,7 +277,7 @@ async function findInstitution(id, transaction, lock = false) {
     paranoid: false,
     include: [{ model: User, as: 'user', attributes: userAttributes, paranoid: false }],
     transaction,
-    lock: lock ? transaction.LOCK.UPDATE : undefined,
+    lock: lock ? lockOf(transaction, Institution) : undefined,
   });
   if (!institution) throw new HttpError(404, 'NOT_FOUND', 'Institution not found');
   return institution;
@@ -296,7 +297,7 @@ async function listInstitutions({ status = 'active', q, district, orgType } = {}
   const where = { ...options.where };
   if (district) where.district = district;
   if (orgType) where.org_type = orgType;
-  if (q && q.trim()) where[Op.or] = [{ org_name: { [Op.like]: like(q) } }, { sector: { [Op.like]: like(q) } }, { '$user.full_name$': { [Op.like]: like(q) } }, { '$user.email$': { [Op.like]: like(q) } }];
+  if (q && q.trim()) where[Op.or] = [{ org_name: { [likeOp()]: like(q) } }, { sector: { [likeOp()]: like(q) } }, { '$user.full_name$': { [likeOp()]: like(q) } }, { '$user.email$': { [likeOp()]: like(q) } }];
   const rows = await Institution.findAll({
     where,
     paranoid: options.paranoid,
@@ -420,7 +421,7 @@ function batchJson(b, free, extra = {}) {
 }
 
 async function findBatch(id, transaction, lock = false) {
-  const batch = await Batch.findByPk(id, { paranoid: false, include: batchIncludes(), transaction, lock: lock ? transaction.LOCK.UPDATE : undefined });
+  const batch = await Batch.findByPk(id, { paranoid: false, include: batchIncludes(), transaction, lock: lock ? lockOf(transaction, Batch) : undefined });
   if (!batch) throw new HttpError(404, 'NOT_FOUND', 'Batch not found');
   return batch;
 }
@@ -444,7 +445,7 @@ async function listBatches({ status = 'active', q, nurseryId, speciesId, stage, 
   if (stage && stage !== 'all') where.stage = stage;
   if (published === 'yes' || published === 'shown') where.published_at = { [Op.ne]: null };
   if (published === 'no') where.published_at = null;
-  if (q && q.trim()) where[Op.or] = [{ '$species.common_name$': { [Op.like]: like(q) } }, { '$nursery.name$': { [Op.like]: like(q) } }];
+  if (q && q.trim()) where[Op.or] = [{ '$species.common_name$': { [likeOp()]: like(q) } }, { '$nursery.name$': { [likeOp()]: like(q) } }];
   const rows = await Batch.findAll({ where, paranoid: options.paranoid, include: batchIncludes(), order: [['id', 'DESC']], limit: 1000 });
   const committed = await committedForBatches(rows.map((b) => b.id));
   let items = rows.map((b) => batchJson(b, Math.max(0, b.quantity_current - committed.get(b.id))));

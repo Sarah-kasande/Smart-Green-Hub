@@ -9,6 +9,7 @@
 //   plants_total       both together
 const { QueryTypes } = require('sequelize');
 const { sequelize } = require('../models');
+const { kigaliMonth } = require('../utils/sqlDialect');
 
 // A request is for a listing (listing_id) or straight for a batch (batch_id), so the batch and
 // nursery are found through whichever is set.
@@ -57,7 +58,7 @@ async function summary({ nurseryId = null, institutionId = null } = {}) {
   );
   // Months are calculated in Kigali time (UTC+2)
   const monthly = await sequelize.query(
-    `SELECT DATE_FORMAT(DATE_ADD(i.recorded_at, INTERVAL 2 HOUR), '%Y-%m') AS month,
+    `SELECT ${kigaliMonth('i.recorded_at')} AS month,
             SUM(i.quantity_delivered) AS plants, SUM(${SURPLUS}) AS surplus, SUM(${SUPPLY}) AS supplied, COUNT(*) AS handovers
        ${FROM} ${where} GROUP BY month ORDER BY month`,
     { replacements, type: QueryTypes.SELECT }

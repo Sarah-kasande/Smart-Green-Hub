@@ -15,13 +15,21 @@ if (process.env.ENV_FILE) {
 } else if (process.env.NODE_ENV === 'test') {
   dotenv.config({ path: path.join(backendRoot, '.env.test'), quiet: true });
 } else {
-  dotenv.config({ path: path.join(backendRoot, '.env.local'), quiet: true });
+  // DATABASE_URL in .env points at the LIVE Neon database. When .env.local exists (local development),
+  // it decides the database: the URL from .env is dropped unless .env.local sets DATABASE_URL itself
+  // (or it was already set before any file was read, as on the hosting platform).
+  const presetUrl = process.env.DATABASE_URL;
+  const fs = require('fs');
+  const localFile = path.join(backendRoot, '.env.local');
+  const localValues = fs.existsSync(localFile) ? dotenv.parse(fs.readFileSync(localFile)) : null;
+  dotenv.config({ path: localFile, quiet: true });
   // An EMPTY line in .env.local (e.g. 'BREVO_API_KEY=') must not hide the real value in .env:
   // dotenv never overwrites a variable that exists, even an empty one, so empty ones are removed first.
   for (const [name, value] of Object.entries(process.env)) {
     if (value === '') delete process.env[name];
   }
   dotenv.config({ path: path.join(backendRoot, '.env'), quiet: true });
+  if (localValues && !localValues.DATABASE_URL && !presetUrl) delete process.env.DATABASE_URL;
 }
 
 const isProduction = process.env.NODE_ENV === 'production';

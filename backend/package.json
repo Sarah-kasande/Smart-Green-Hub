@@ -33,6 +33,8 @@
     "morgan": "^1.12.1",
     "mysql2": "^3.24.5",
     "node-cron": "^4.6.0",
+    "pg": "^8.23.1",
+    "pg-hstore": "^2.3.4",
     "sequelize": "^6.37.8",
     "sequelize-cli": "^6.6.5"
   },

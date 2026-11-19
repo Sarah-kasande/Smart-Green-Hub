@@ -28,6 +28,7 @@ const { notify, dispatchSoon } = require('./notificationService');
 const { committedQuantity, availableQuantity } = require('./stockService');
 const availablePlants = require('./availablePlantsService');
 const { findOwnBatch } = require('./inventoryService');
+const { lockOf } = require('../utils/sqlDialect');
 
 const OPEN_REQUEST = ['pending', 'approved'];
 
@@ -167,7 +168,7 @@ async function withdrawListing({ nursery = null, user, listingId, reason }) {
   await sequelize.transaction(async (transaction) => {
     const where = { id: listingId };
     if (nursery) where.nursery_id = nursery.id;
-    const listing = await SurplusListing.findOne({ where, include: listingInclude(), transaction, lock: transaction.LOCK.UPDATE });
+    const listing = await SurplusListing.findOne({ where, include: listingInclude(), transaction, lock: lockOf(transaction, SurplusListing) });
     if (!listing) throw new HttpError(404, 'NOT_FOUND', 'Listing not found');
     if (!['active', 'reserved'].includes(listing.status)) throw new HttpError(409, 'LISTING_CLOSED', 'This listing is already closed');
     await cancelOpenRequests(listing, reason || 'Listing withdrawn', user.id, transaction);
@@ -193,7 +194,7 @@ async function releaseForArchive({ nurseryId = null, batchId = null, institution
     const listingWhere = { status: { [Op.in]: ['active', 'reserved'] } };
     if (nurseryId) listingWhere.nursery_id = nurseryId;
     if (batchId) listingWhere.batch_id = batchId;
-    const listings = await SurplusListing.findAll({ where: listingWhere, include: listingInclude(), transaction, lock: transaction.LOCK.UPDATE });
+    const listings = await SurplusListing.findAll({ where: listingWhere, include: listingInclude(), transaction, lock: lockOf(transaction, SurplusListing) });
     for (const listing of listings) {
       requestsCancelled += await cancelOpenRequests(listing, reason, actor.id, transaction, 'cancelled');
       await listing.update({ status: 'withdrawn' }, { transaction });
@@ -386,7 +387,7 @@ function requestJson(request, viewer) {
 //   remaining how many plants can still be requested
 //   refresh   called after a change (updates the listing status; nothing to do for a batch)
 async function lockListingItem(listingId, transaction) {
-  const listing = await SurplusListing.findByPk(listingId, { include: listingInclude(), transaction, lock: transaction.LOCK.UPDATE });
+  const listing = await SurplusListing.findByPk(listingId, { include: listingInclude(), transaction, lock: lockOf(transaction, SurplusListing) });
   if (!listing || listing.nursery?.verification_status !== 'approved') throw new HttpError(404, 'NOT_FOUND', 'Listing not found');
   return {
     key: { listing_id: listing.id },
@@ -401,7 +402,7 @@ async function lockListingItem(listingId, transaction) {
 }
 
 async function lockBatchItem(batchId, transaction) {
-  const batch = await Batch.findByPk(batchId, { include: [speciesInclude(), nurseryInclude()], transaction, lock: transaction.LOCK.UPDATE });
+  const batch = await Batch.findByPk(batchId, { include: [speciesInclude(), nurseryInclude()], transaction, lock: lockOf(transaction, Batch) });
   if (!batch || batch.nursery?.verification_status !== 'approved') throw new HttpError(404, 'NOT_FOUND', 'Not found');
   return {
     key: { batch_id: batch.id },
@@ -471,13 +472,13 @@ async function requestPlants(institution, user, target, { quantity, purpose, pre
 }
 
 async function findRequestForNursery(nursery, requestId, transaction) {
-  const request = await SurplusRequest.findByPk(requestId, { include: requestInclude(), transaction, lock: transaction ? transaction.LOCK.UPDATE : undefined });
+  const request = await SurplusRequest.findByPk(requestId, { include: requestInclude(), transaction, lock: transaction ? lockOf(transaction, SurplusRequest) : undefined });
   if (!request || requestNursery(request)?.id !== nursery.id) throw new HttpError(404, 'NOT_FOUND', 'Request not found');
   return request;
 }
 
 async function findRequestForInstitution(institution, requestId, transaction) {
-  const request = await SurplusRequest.findByPk(requestId, { include: requestInclude(), transaction, lock: transaction ? transaction.LOCK.UPDATE : undefined });
+  const request = await SurplusRequest.findByPk(requestId, { include: requestInclude(), transaction, lock: transaction ? lockOf(transaction, SurplusRequest) : undefined });
   if (!request || request.institution_id !== institution.id) throw new HttpError(404, 'NOT_FOUND', 'Request not found');
   return request;
 }

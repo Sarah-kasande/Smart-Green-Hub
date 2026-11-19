@@ -1,17 +1,31 @@
 // Tells the LIVE database apart from a local, throwaway one, so tests and scripts that create or
 // delete rows can refuse to touch real data.
 //
-// The live database is Aiven's free plan, which allows exactly one database: "defaultdb".
-// A target counts as LIVE when the host is not this computer, or when the database is "defaultdb"
-// (even on this computer). Only localhost / 127.0.0.1 / ::1 with another database name is local.
+// The live database is Neon PostgreSQL (DATABASE_URL); before that it was Aiven MySQL "defaultdb".
+// A target counts as LIVE when the host is not this computer, or when the database is one of the
+// live names (even on this computer). Only localhost / 127.0.0.1 / ::1 with another name is local.
+const { postgresUrl } = require('../config/database');
+
 const LOCAL_HOSTS = ['localhost', '127.0.0.1', '::1'];
-const LIVE_DATABASE_NAME = 'defaultdb';
+const LIVE_DATABASE_NAMES = ['defaultdb', 'neondb'];
+const LIVE_DATABASE_NAME = 'defaultdb'; // kept for older imports
 
 function dbTarget(env = process.env) {
-  const host = (env.DB_HOST || '').trim().toLowerCase();
-  const name = (env.DB_NAME || '').trim();
+  let host = (env.DB_HOST || '').trim().toLowerCase();
+  let name = (env.DB_NAME || '').trim();
+  const url = postgresUrl(env);
+  if (url) {
+    try {
+      const parsed = new URL(url);
+      host = parsed.hostname.toLowerCase();
+      name = decodeURIComponent(parsed.pathname.replace(/^\//, ''));
+    } catch {
+      host = 'unparseable';
+    }
+  }
   const localHost = LOCAL_HOSTS.includes(host);
-  return { host, name, local: localHost && name !== LIVE_DATABASE_NAME, live: !localHost || name === LIVE_DATABASE_NAME };
+  const liveName = LIVE_DATABASE_NAMES.includes(name);
+  return { host, name, local: localHost && !liveName, live: !localHost || liveName };
 }
 
 // Safe to print: never shows a remote host name (or anything else from the connection settings).
@@ -20,4 +34,4 @@ function describeTarget(target = dbTarget()) {
   return `database "${target.name || '(no name)'}" on ${where}`;
 }
 
-module.exports = { dbTarget, describeTarget, LOCAL_HOSTS, LIVE_DATABASE_NAME };
+module.exports = { dbTarget, describeTarget, LOCAL_HOSTS, LIVE_DATABASE_NAME, LIVE_DATABASE_NAMES };

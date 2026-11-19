@@ -18,6 +18,7 @@ const { Batch, Nursery, PlantSpecies } = require('../models');
 const { HOMEPAGE_STAGES } = require('../utils/constants');
 const { todayKigali, daysBetween } = require('../utils/dates');
 const { committedForBatches } = require('./stockService');
+const { quote } = require('../utils/sqlDialect');
 
 // Why a batch cannot be published (null = it can). The batch must be loaded with species and nursery
 // (paranoid: false, so an archived nursery is seen and named as the reason).
@@ -55,7 +56,7 @@ function publicCard(batch, free, today = todayKigali()) {
 
 // Featured first (1, 2, 3 ...), then the rest, newest published first
 const FEATURED_ORDER = [
-  [literal('`Batch`.`featured_rank` IS NULL'), 'ASC'],
+  [literal(`${quote('Batch')}.${quote('featured_rank')} IS NULL`), 'ASC'],
   ['featured_rank', 'ASC'],
   ['published_at', 'DESC'],
   ['id', 'DESC'],

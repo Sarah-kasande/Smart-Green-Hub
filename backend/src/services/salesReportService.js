@@ -12,6 +12,7 @@
 const { QueryTypes } = require('sequelize');
 const { sequelize } = require('../models');
 const { todayKigali, addDays, kigaliDayStart } = require('../utils/dates');
+const { likeSql } = require('../utils/sqlDialect');
 
 const PERIODS = ['today', 'week', 'month', 'year', 'custom', 'all'];
 const ROW_LIMIT = 500; // rows shown on the page; the CSV export has every row
@@ -61,7 +62,8 @@ function buildFilter({ period, from, to, nurseryId, speciesId, search } = {}) {
   if (search && search.trim()) {
     // % and _ typed by the user are searched for literally
     replacements.search = `%${search.trim().replace(/[\\%_]/g, '\\$&')}%`;
-    conditions.push('(n.name LIKE :search OR p.common_name LIKE :search OR p.kinyarwanda_name LIKE :search OR s.customer_note LIKE :search)');
+    const like = likeSql();
+    conditions.push(`(n.name ${like} :search OR p.common_name ${like} :search OR p.kinyarwanda_name ${like} :search OR s.customer_note ${like} :search)`);
   }
   return { range, replacements, where: `WHERE ${conditions.join(' AND ')}` };
 }

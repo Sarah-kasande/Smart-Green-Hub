@@ -14,6 +14,8 @@ const { id, fk, timestamps } = require('../utils/migrationHelpers');
 //
 // Tickets are never deleted (also when the account is archived). Safe on a database with data: only new
 // tables and one more ENUM value, no rows inserted. Every step checks first, so it can be repeated.
+const { changeEnumColumn } = require('../utils/migrationHelpers');
+
 const PURPOSES_BEFORE = ['verification_document', 'batch_photo'];
 const PURPOSES_AFTER = [...PURPOSES_BEFORE, 'support_screenshot'];
 
@@ -61,8 +63,10 @@ module.exports = {
     }
 
     const files = await queryInterface.describeTable('uploaded_files');
-    if (!String(files.purpose.type).includes('support_screenshot')) {
-      await queryInterface.changeColumn('uploaded_files', 'purpose', { type: Sequelize.ENUM(...PURPOSES_AFTER), allowNull: false });
+    // MySQL shows the ENUM values in the type text; PostgreSQL lists them in "special"
+    const purposeValues = `${files.purpose.type} ${(files.purpose.special || []).join(' ')}`;
+    if (!purposeValues.includes('support_screenshot')) {
+      await changeEnumColumn(queryInterface, Sequelize, 'uploaded_files', 'purpose', PURPOSES_AFTER);
     }
   },
 
@@ -77,6 +81,6 @@ module.exports = {
     if (Number(files) > 0) throw new Error('Cannot undo: support screenshots exist.');
     if (tables.includes('support_messages')) await queryInterface.dropTable('support_messages');
     if (tables.includes('support_tickets')) await queryInterface.dropTable('support_tickets');
-    await queryInterface.changeColumn('uploaded_files', 'purpose', { type: Sequelize.ENUM(...PURPOSES_BEFORE), allowNull: false });
+    await changeEnumColumn(queryInterface, Sequelize, 'uploaded_files', 'purpose', PURPOSES_BEFORE);
   },
 };
