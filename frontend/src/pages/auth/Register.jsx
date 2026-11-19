@@ -157,6 +157,13 @@ export default function Register() {
           )}
         </fieldset>
 
+        {/* Information given when personal data is collected (Law N° 058/2021, Article 42) */}
+        <p className="text-sm text-ink-soft">
+          {t('privacyPolicy.registerNote')}{' '}
+          <Link to="/privacy" target="_blank" className="font-semibold text-teal-text underline">
+            {t('privacyPolicy.readPolicy')}
+          </Link>
+        </p>
         <Button type="submit" full icon="check" disabled={busy}>
           {busy ? t('common.loading') : t('auth.createAccount')}
         </Button>

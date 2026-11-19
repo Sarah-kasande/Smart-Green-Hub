@@ -1184,6 +1184,58 @@ const en = {
     send: "Send message",
     sent: "Thank you. The administrator will answer you by email.",
   },
+  privacyPolicy: {
+    title: "Privacy Policy",
+    updated: "Last updated: 19 November 2026",
+    intro: "This page explains what Smart Green Hub keeps about you, why, who can see it, and what you can ask for. It follows Rwanda's Law N° 058/2021 relating to the protection of personal data and privacy.",
+    footer: "Privacy Policy",
+    registerNote: "How we use your data:",
+    readPolicy: "read the Privacy Policy",
+    who: {
+      title: "Who is responsible",
+      points: "Smart Green Hub is run by its administrator, Sarah Kasande, a software engineering student at African Leadership University (ALU) in Kigali, as a capstone project.\nTo contact the administrator, use Help in the app or the contact form on the home page.",
+    },
+    collect: {
+      title: "What we keep",
+      points: "Account: full name, email address, phone number (optional) and preferred language. Your password is stored only as a scrambled code (a bcrypt hash), never as text.\nNursery: name, district, sector, address or landmark (optional), map pin (optional) and verification documents.\nInstitution: name, type, district, sector, phone number (optional) and verification documents.\nWhat you record: batches and their photos, sales, expenses, stock changes, surplus listings, requests and hand-overs.\nHelp requests and their screenshots. The public contact form keeps your name, email address and message.\nA record of important actions (who did what, and when), to keep the service safe.",
+    },
+    why: {
+      title: "Why we keep it",
+      points: "To run your account, and to check that each nursery and institution is real before approval.\nTo calculate risk alerts and planting suggestions from your own records.\nTo connect surplus plants with institutions and confirm hand-overs.\nTo measure impact. The public page shows totals only, never one nursery's sales.\nTo answer your help requests and keep the service secure.\nResearch for the capstone pilot uses your data only with your separate consent, and reports never name you.",
+    },
+    see: {
+      title: "Who can see it",
+      points: "You see your own records. Other nurseries and institutions cannot open them.\nThe administrator sees what is needed to verify accounts and give support, including nurseries' sales records and totals. Nurseries are told this when they register.\nAn institution sees a nursery's contact name and phone number only after the nursery approves its request.\nThe public sees a nursery in the directory only if it chose \"Show my nursery in the public directory\" (name, location, contact), and its plants on the home page only if it allowed that in Settings (species, quantity, price, end of the prime window, nursery name and district).\nCompanies that run the app for us: Vercel and Render (app servers), Aiven (database), Brevo (sending emails) and OpenStreetMap (map pictures loaded by your browser). We never sell your data and show no advertising.",
+    },
+    where: {
+      title: "Where it is stored",
+      points: "Your data is stored on these companies' servers, which are outside Rwanda.\nRwanda's data protection law (Articles 29 and 50) requires registration with the supervisory authority before personal data is stored outside Rwanda. This will be confirmed before the pilot uses real personal records.",
+    },
+    keep: {
+      title: "How long we keep it",
+      points: "Your data is kept while your account is active.\nResearch data from the pilot is kept without names in the researcher's ALU Google Drive, open only to the researcher and her supervisor, for one year after the study ends, and then deleted.\nWhen the administrator archives an account, nobody can sign in to it and it disappears from public pages, but its records stay.\nWhen an account is deleted, its name, email address, phone number, documents and notifications are removed. An account linked to other people's records (for example a hand-over) can only be archived, so their history stays correct.",
+    },
+    rights: {
+      title: "Your choices and rights",
+      points: "Change your details, and switch the public directory, the home page and \"Available plants\" on or off, at any time in Settings. Switching off is as easy as switching on.\nAsk for a copy of your data, a correction, deletion, a pause in processing, or an end to a use you object to: open Help and choose the category \"Account\". The law gives 30 days to answer.\nIf you are not satisfied, you can complain to Rwanda's supervisory authority for data protection, the National Cyber Security Authority (NCSA).",
+    },
+    alerts: {
+      title: "Risk alerts are advice",
+      points: "Risk alerts and planting suggestions come from simple rules that are explained in the app, so you can check them by hand.\nThey are advice only. The app never sells, discounts, donates or lists your plants on its own: you decide.",
+    },
+    security: {
+      title: "How we protect it",
+      points: "Passwords are hashed, sign-in uses a protected cookie, every request is checked against your role, repeated attempts are slowed down, and connections use HTTPS.\nThe administrator's important actions are written to an audit log.\nIf a data breach happens, the supervisory authority is told within 48 hours, and you are told if it puts you at high risk.",
+    },
+    storage: {
+      title: "Cookies and your phone",
+      points: "One cookie keeps you signed in for up to 7 days, and a second one protects your forms. There are no tracking or advertising cookies.\nYour phone keeps your language and display choices, and records made offline until they are sent. Signing out clears the offline copy.",
+    },
+    changes: {
+      title: "Changes to this policy",
+      points: "The date at the top shows the latest version. Important changes will also be announced in the app.",
+    },
+  },
   notFound: { title: 'Page not found', text: 'The page you are looking for does not exist.', home: 'Go to the home page' },
 }
 

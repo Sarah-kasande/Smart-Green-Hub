@@ -1184,6 +1184,58 @@ const rw = {
     send: "Ohereza ubutumwa", // TODO: Kinyarwanda to review
     sent: "Murakoze. Umuyobozi azagusubiza kuri imeri.", // TODO: Kinyarwanda to review
   },
+  privacyPolicy: {
+    title: "Politiki y'ibanga",  // TODO: Kinyarwanda to check
+    updated: "Byavuguruwe bwa nyuma: 19 Ugushyingo 2026",  // TODO: Kinyarwanda to check
+    intro: "Iyi paji isobanura amakuru Smart Green Hub ibika ku bijyanye nawe, impamvu, abashobora kuyabona, n'ibyo ushobora gusaba. Ikurikiza Itegeko N° 058/2021 ryo mu Rwanda rirengera amakuru bwite n'ubuzima bwite.",  // TODO: Kinyarwanda to check
+    footer: "Politiki y'ibanga",  // TODO: Kinyarwanda to check
+    registerNote: "Uko dukoresha amakuru yawe:",  // TODO: Kinyarwanda to check
+    readPolicy: "soma Politiki y'ibanga",  // TODO: Kinyarwanda to check
+    who: {
+      title: "Ushinzwe amakuru",  // TODO: Kinyarwanda to check
+      points: "Smart Green Hub icungwa n'umuyobozi wayo, Sarah Kasande, umunyeshuri wiga ubuhanga bwa porogaramu muri African Leadership University (ALU) i Kigali, nk'umushinga wo gusoza amasomo.\nKugira ngo uvugane n'umuyobozi, koresha Ubufasha muri porogaramu cyangwa ifishi yo kutwandikira iri ku ipaji ibanza.",  // TODO: Kinyarwanda to check
+    },
+    collect: {
+      title: "Ibyo tubika",  // TODO: Kinyarwanda to check
+      points: "Konti: amazina yose, imeyili, nimero ya telefoni (si ngombwa) n'ururimi ukunda. Ijambobanga ryawe ribikwa ari kode ihishe (bcrypt) gusa, ntiribikwa uko riri.\nPepiniyeri: izina, akarere, umurenge, aderesi cyangwa ikimenyetso (si ngombwa), aho iri ku ikarita (si ngombwa) n'inyandiko zo kwemeza.\nIkigo: izina, ubwoko, akarere, umurenge, nimero ya telefoni (si ngombwa) n'inyandiko zo kwemeza.\nIbyo wandika: ibyiciro by'ingemwe n'amafoto yabyo, ibyagurishijwe, ibyakoreshejwe, impinduka mu bubiko, ingemwe zisagutse, ubusabe n'ihererekanya.\nUbusabe bw'ubufasha n'amafoto yabwo. Ifishi yo kutwandikira ibika izina ryawe, imeyili n'ubutumwa.\nUrutonde rw'ibikorwa by'ingenzi (uwakoze iki, ryari), kugira ngo serivisi itekane.",  // TODO: Kinyarwanda to check
+    },
+    why: {
+      title: "Impamvu tubibika",  // TODO: Kinyarwanda to check
+      points: "Gukoresha konti yawe no kugenzura ko buri pepiniyeri n'ikigo bibaho koko mbere yo kubyemeza.\nKubara imiburo y'ibyago n'inama zo gutera bivuye mu makuru yawe bwite.\nGuhuza ingemwe zisagutse n'ibigo no kwemeza ihererekanya.\nGupima umusaruro. Ipaji rusange yerekana igiteranyo gusa, ntiyerekana ibyo pepiniyeri imwe yagurishije.\nGusubiza ubusabe bwawe bw'ubufasha no kurinda umutekano wa serivisi.\nUbushakashatsi bw'igerageza bukoresha amakuru yawe ari uko wabyemeye ukwabyo, kandi raporo ntizigaragaza izina ryawe.",  // TODO: Kinyarwanda to check
+    },
+    see: {
+      title: "Abashobora kubibona",  // TODO: Kinyarwanda to check
+      points: "Ubona amakuru yawe bwite. Izindi pepiniyeri n'ibindi bigo ntibishobora kuyafungura.\nUmuyobozi abona ibikenewe mu kwemeza konti no gutanga ubufasha, harimo ibyo pepiniyeri zagurishije n'igiteranyo cyabyo. Pepiniyeri zibimenyeshwa igihe ziyandikisha.\nIkigo kibona izina na telefoni by'uhagarariye pepiniyeri ari uko pepiniyeri imaze kwemera ubusabe bwacyo.\nRubanda rubona pepiniyeri mu rutonde ari uko yahisemo \"Garagaza pepiniyeri yanjye mu rutonde rusange\" (izina, aho iri, uko ivugishwa), n'ingemwe zayo ku ipaji ibanza ari uko yabyemeye muri Igenamiterere (ubwoko, umubare, igiciro, iherezo ry'igihe cyiza, izina rya pepiniyeri n'akarere).\nIbigo bidukoreshereza porogaramu: Vercel na Render (seriveri), Aiven (ububiko bw'amakuru), Brevo (kohereza imeyili) na OpenStreetMap (amashusho y'ikarita ashakwa na mushakisha yawe). Ntitugurisha amakuru yawe kandi nta matangazo yamamaza.",  // TODO: Kinyarwanda to check
+    },
+    where: {
+      title: "Aho abikwa",  // TODO: Kinyarwanda to check
+      points: "Amakuru yawe abikwa kuri seriveri z'ibyo bigo, ziri hanze y'u Rwanda.\nItegeko ryo mu Rwanda rirengera amakuru bwite (Ingingo ya 29 n'iya 50) risaba kwiyandikisha ku rwego rugenzura mbere yo kubika amakuru bwite hanze y'u Rwanda. Ibi bizemezwa mbere y'uko igerageza rikoresha amakuru nyayo y'abantu.",  // TODO: Kinyarwanda to check
+    },
+    keep: {
+      title: "Igihe tuyabika",  // TODO: Kinyarwanda to check
+      points: "Amakuru yawe abikwa igihe cyose konti yawe ikora.\nAmakuru y'ubushakashatsi bw'igerageza abikwa nta mazina muri Google Drive ya ALU y'umushakashatsi, abonwa n'umushakashatsi n'umwarimu umuyobora gusa, mu gihe cy'umwaka umwe nyuma y'ubushakashatsi, hanyuma agasibwa.\nIyo umuyobozi abitse konti mu bubiko, nta muntu ushobora kuyinjiramo kandi ivanwa ku mapaji rusange, ariko amakuru yayo agumaho.\nIyo konti isibwe, izina, imeyili, nimero ya telefoni, inyandiko n'amatangazo byayo bivanwaho. Konti ifitanye isano n'amakuru y'abandi (urugero ihererekanya) ishobora kubikwa mu bubiko gusa, kugira ngo amateka yabo akomeze kuba ukuri.",  // TODO: Kinyarwanda to check
+    },
+    rights: {
+      title: "Amahitamo yawe n'uburenganzira bwawe",  // TODO: Kinyarwanda to check
+      points: "Hindura amakuru yawe, kandi ufungure cyangwa ufunge urutonde rusange, ipaji ibanza n'\"Ingemwe zihari\" igihe icyo ari cyo cyose muri Igenamiterere. Gufunga biroroshye nko gufungura.\nSaba kopi y'amakuru yawe, kuyakosora, kuyasiba, guhagarika by'agateganyo kuyakoresha, cyangwa guhagarika ikoreshwa utemera: fungura Ubufasha uhitemo icyiciro \"Konti\". Itegeko riha iminsi 30 yo gusubiza.\nNiba utanyuzwe, ushobora gutanga ikirego ku rwego rugenzura irengerwa ry'amakuru bwite mu Rwanda, Ikigo cy'Igihugu gishinzwe Umutekano w'Ikoranabuhanga (NCSA).",  // TODO: Kinyarwanda to check
+    },
+    alerts: {
+      title: "Imiburo y'ibyago ni inama",  // TODO: Kinyarwanda to check
+      points: "Imiburo y'ibyago n'inama zo gutera biva ku mategeko yoroshye asobanurwa muri porogaramu, bityo ushobora kubyibarira.\nNi inama gusa. Porogaramu ntigurisha, ntigabanya igiciro, ntitanga kandi ntishyira ahagaragara ingemwe zawe ku bwayo: ni wowe ufata icyemezo.",  // TODO: Kinyarwanda to check
+    },
+    security: {
+      title: "Uko tuyarinda",  // TODO: Kinyarwanda to check
+      points: "Amagambobanga arahishwa, kwinjira bikoresha kuki irinzwe, buri busabe bugenzurwa hakurikijwe uruhare rwawe, kugerageza kenshi biratindishwa, kandi itumanaho rikoresha HTTPS.\nIbikorwa by'ingenzi by'umuyobozi byandikwa mu gitabo cy'igenzura.\nAmakuru nasohoka mu buryo butemewe, urwego rugenzura ruzabimenyeshwa mu masaha 48, nawe ubimenyeshwe niba bigushyira mu kaga gakomeye.",  // TODO: Kinyarwanda to check
+    },
+    storage: {
+      title: "Kuki na telefoni yawe",  // TODO: Kinyarwanda to check
+      points: "Kuki imwe ituma uguma winjiye kugeza ku minsi 7, indi ikarinda amafishi yawe. Nta kuki zigukurikirana cyangwa z'amatangazo zihari.\nTelefoni yawe ibika ururimi n'uburyo bwo kugaragaza wahisemo, n'ibyanditswe nta murandasi kugeza byoherejwe. Gusohoka bisiba kopi yabitswe kuri telefoni.",  // TODO: Kinyarwanda to check
+    },
+    changes: {
+      title: "Impinduka kuri iyi politiki",  // TODO: Kinyarwanda to check
+      points: "Itariki iri hejuru yerekana verisiyo iheruka. Impinduka z'ingenzi zizanatangazwa muri porogaramu.",  // TODO: Kinyarwanda to check
+    },
+  },
   notFound: { title: 'Ipaji ntibonetse', text: 'Ipaji ushaka ntibaho.', home: 'Jya ahabanza' },
 }
 

@@ -1,6 +1,7 @@
 // Settings for every role: profile and language (FR18), appearance (light / dark mode),
 // and for nurseries and institutions the organisation details, map pin and documents.
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import api, { errorCode, fieldErrors } from '../../api/client'
 import { useAuth } from '../../auth/AuthContext'
 import { useI18n } from '../../i18n/I18nProvider'
@@ -260,6 +261,12 @@ export default function Settings() {
           </TabsContent>
         )}
       </Tabs>
+      <p className="text-sm text-ink-soft">
+        {t('privacyPolicy.registerNote')}{' '}
+        <Link to="/privacy" className="font-semibold text-teal-text underline">
+          {t('privacyPolicy.readPolicy')}
+        </Link>
+      </p>
     </div>
   )
 }

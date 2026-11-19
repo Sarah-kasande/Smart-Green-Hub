@@ -95,6 +95,11 @@ function Footer() {
               </Link>
             </li>
             <li>
+              <Link to="/privacy" className="inline-flex min-h-10 items-center hover:text-teal-text">
+                {t('privacyPolicy.footer')}
+              </Link>
+            </li>
+            <li>
               <Link to="/register?role=operator" className="inline-flex min-h-10 items-center hover:text-teal-text">
                 {t('landing.ctaNursery')}
               </Link>

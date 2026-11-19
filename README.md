@@ -342,6 +342,9 @@ Lists of batches and species are kept on the phone, so they also show offline. S
 - The administrator can see every nursery's sales records and totals (to measure impact and support small
   nurseries). Nurseries are told this on the registration form and in Settings; every CSV export is audited.
 - No secrets are in the repository; `.env` files and certificates are ignored by git.
+- A **Privacy Policy** page (`/privacy`, English and Kinyarwanda) explains what is kept, why, who sees it, where it
+  is stored, how long, and how to ask for a copy, correction or deletion (Rwanda Law N° 058/2021, Article 42). It is
+  linked from the registration form, the footer and Settings. Keep it in step with the code when either changes.
 
 ## 9. Technology and architecture
 

@@ -13,6 +13,7 @@ if (/^\/(operator|institution|admin)/.test(window.location.pathname)) loadAppLay
 import RequireRole from './auth/RequireRole'
 import { UpdateOnNavigate } from './pwa'
 const Landing = lazy(() => import('./pages/public/Landing'))
+const Privacy = lazy(() => import('./pages/public/Privacy'))
 const Login = lazy(() => import('./pages/auth/Login'))
 const Register = lazy(() => import('./pages/auth/Register'))
 const VerifyEmail = lazy(() => import('./pages/auth/VerifyEmail'))
@@ -62,6 +63,7 @@ export default function App() {
         <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/privacy" element={<Privacy />} />
       </Route>
 
       {/* Nursery operators */}
