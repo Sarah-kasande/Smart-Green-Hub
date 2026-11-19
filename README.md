@@ -10,6 +10,8 @@ It is a **decision-support and surplus-prevention system, not an online shop**: 
 payment, retail product search or delivery tracking.
 
 ALU BSc Software Engineering capstone project.
+
+
 Link to the Demo: https://drive.google.com/file/d/1aEGkOR0qwfKxIRA8WfbiV072qqosOMpU/view?usp=sharing
 
 | | |
