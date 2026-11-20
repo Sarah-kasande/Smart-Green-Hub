@@ -478,9 +478,11 @@ const rw = {
     why: 'Kuki uru rwego?',
     explain: {
       stock: 'Ingemwe zihari (S): {s}',
-      rate: "Umuvuduko w'igurisha (r): {r} ku munsi, uva ku byo wagurishije by'ubu bwoko mu byumweru bishize",
+      // TODO: native-speaker review (rate and sellingDays updated after the supervisor review)
+      rate: "Umuvuduko w'igurisha (r): {r} ku munsi, umugabane w'iki cyiciro ku byo wagurishije by'ubu bwoko mu byumweru bishize (bigabanywa n'ibindi byiciro byawe byeze by'ubu bwoko, bikurikije umubare)",
       days: "Iminsi isigaye y'igihe cyiza (D): {d}",
-      unsold: 'Zishobora kutagurishwa (U) = S - r × D = {s} - {r} × {d} = {u} (ntijya munsi ya 0)',
+      sellingDays: "Iminsi zishobora kugurishwamo (iki cyiciro ntikireze, ni yo mpamvu habarwa iminsi uhereye igihe kizera gusa): {ds}",
+      unsold: 'Zishobora kutagurishwa (U) = S - r × iminsi zishobora kugurishwamo = {s} - {r} × {d} = {u} (ntijya munsi ya 0)',
       ratio: "Igipimo cy'ibyago (R) = U ÷ S = {u} ÷ {s} = {p}%",
       levels: 'Hejuru: 50% cyangwa birenga, cyangwa igihe cyiza cyarangiye. Hagati: 20% kugeza 49%. Hasi: munsi ya 20%.',
     },

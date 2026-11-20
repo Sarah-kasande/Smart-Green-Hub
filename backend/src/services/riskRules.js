@@ -1,10 +1,15 @@
 // The surplus-risk rules from Table 5 / Figure 9, as plain functions with no database access,
 // so every rule can be unit-tested and explained line by line. No machine learning.
 //
-//   Sales rate      r = units of the species sold by this nursery in the last L days / L
-//   Days left       D = prime-window end date - today   (0 if the date has passed)
-//   Projected unsold U = max(0, S - r x D)              (S = current stock of the batch)
-//   Risk ratio      R = U / S
+//   Species rate    r_s = units of the species sold by this nursery in the last L days / L
+//   Batch rate      r   = r_s x S / P   (the batch's share of the species' sales, docs/DEVIATIONS.md W53)
+//                         P = stock of this batch + stock of the nursery's other batches of the species
+//                         that can be sold now (stage ready or overgrown)
+//   Days left       D   = prime-window end date - today   (0 if the date has passed)
+//   Selling days    Ds  = days from the later of today and the ready date to the prime-window end
+//                         (equals D once the batch is ready; a batch cannot be sold before it is ready)
+//   Projected unsold U  = max(0, S - r x Ds)             (S = current stock of the batch)
+//   Risk ratio      R   = U / S
 //   Level           High if (D = 0 and S > 0) or R >= high ratio (0.50)
 //                   Medium if medium ratio (0.20) <= R < high ratio
 //                   otherwise Low
@@ -20,6 +25,25 @@ function salesRate(unitsSold, lookbackDays) {
 
 function daysLeft(primeEndDate, today) {
   return Math.max(0, daysBetween(today, primeEndDate));
+}
+
+// Stages in which a batch can already be sold.
+const SELLABLE_STAGES = ['ready', 'overgrown'];
+
+// Days in which the batch can actually be sold before its prime window ends. A batch that is not
+// ready yet sells nothing until its ready date, so those days are not counted.
+function sellingDays({ primeEndDate, readyDate, stage, today }) {
+  const D = daysLeft(primeEndDate, today);
+  if (SELLABLE_STAGES.includes(stage) || !readyDate) return D;
+  const waitDays = Math.max(0, daysBetween(today, readyDate));
+  return Math.max(0, D - waitDays);
+}
+
+// The batch's share of the species' sales rate, in proportion to its stock among the batches of the
+// species that compete for the same buyers (pooledStock includes this batch).
+function batchSalesRate(speciesRate, stock, pooledStock) {
+  if (!pooledStock || pooledStock <= 0 || pooledStock <= stock) return speciesRate;
+  return (speciesRate * stock) / pooledStock;
 }
 
 function projectedUnsold(stock, rate, days) {
@@ -46,16 +70,24 @@ function suggestedAction({ days, stage, farDays, nearDays }) {
 }
 
 // Runs all rules for one batch.
-//   settings: { sales_lookback_days, medium_risk_ratio, high_risk_ratio, far_days, near_days }
-function evaluateBatch({ stock, unitsSold, primeEndDate, today, stage, settings }) {
+//   unitsSold:   units of the species sold by the nursery in the lookback period
+//   readyDate:   the batch's expected ready date (only used while the batch is not ready yet)
+//   pooledStock: stock of this batch plus the nursery's other sellable batches of the species
+//                (defaults to this batch's stock, i.e. the batch gets the whole species rate)
+//   settings:    { sales_lookback_days, medium_risk_ratio, high_risk_ratio, far_days, near_days }
+function evaluateBatch({ stock, unitsSold, primeEndDate, readyDate = null, pooledStock = stock, today, stage, settings }) {
   const lookback = Number(settings.sales_lookback_days);
-  const r = salesRate(unitsSold, lookback);
+  const speciesRate = salesRate(unitsSold, lookback);
+  const r = batchSalesRate(speciesRate, stock, pooledStock);
   const D = daysLeft(primeEndDate, today);
-  const U = projectedUnsold(stock, r, D);
+  const Ds = sellingDays({ primeEndDate, readyDate, stage, today });
+  const U = projectedUnsold(stock, r, Ds);
   const R = riskRatio(U, stock);
   return {
+    species_sales_rate: speciesRate,
     sales_rate: r,
     days_left: D,
+    selling_days: Ds,
     projected_unsold: Math.ceil(U), // whole plants; rounded up so a remaining fraction is not hidden
     risk_ratio: R,
     level: riskLevel({ stock, days: D, ratio: R, mediumRatio: Number(settings.medium_risk_ratio), highRatio: Number(settings.high_risk_ratio) }),
@@ -86,6 +118,9 @@ function plantingQuantity({ unitsLast3Months, daysToReady, safetyMargin, pipelin
 module.exports = {
   salesRate,
   daysLeft,
+  SELLABLE_STAGES,
+  sellingDays,
+  batchSalesRate,
   projectedUnsold,
   riskRatio,
   riskLevel,

@@ -480,9 +480,10 @@ const en = {
     why: 'Why this level?',
     explain: {
       stock: 'Plants in stock (S): {s}',
-      rate: 'Sales rate (r): {r} per day, from your sales of this species in the last weeks',
+      rate: "Sales rate (r): {r} per day, this batch's share of your sales of this species in the last weeks (shared with your other ready batches of it, by stock)",
       days: 'Days left in the prime window (D): {d}',
-      unsold: 'May stay unsold (U) = S - r × D = {s} - {r} × {d} = {u} (never below 0)',
+      sellingDays: 'Days it can be sold (the batch is not ready yet, so only the days from its ready date count): {ds}',
+      unsold: 'May stay unsold (U) = S - r × days it can be sold = {s} - {r} × {d} = {u} (never below 0)',
       ratio: 'Share at risk (R) = U ÷ S = {u} ÷ {s} = {p}%',
       levels: 'High: 50% or more, or the prime window has ended. Medium: 20% to 49%. Low: under 20%.',
     },

@@ -19,6 +19,18 @@ import { formatDateTime, formatNumber } from '../../utils/format'
 
 const FILTERS = ['open', 'acknowledged', 'resolved', 'dismissed', 'all']
 
+// Selling days (Ds) as the risk engine counts them: a batch that is not ready yet cannot sell before
+// its ready date, so only the days from that date to the end of the prime window count
+// (backend/src/services/riskRules.js sellingDays).
+function sellingDays(alert) {
+  const D = Number(alert.days_to_prime_end) || 0
+  const batch = alert.batch
+  if (!batch?.expected_ready_date || ['ready', 'overgrown'].includes(batch.stage)) return D
+  const checked = new Date(alert.generated_at).toLocaleDateString('en-CA', { timeZone: 'Africa/Kigali' })
+  const wait = Math.round((Date.parse(batch.expected_ready_date) - Date.parse(checked)) / 86400000)
+  return Math.max(0, D - Math.max(0, wait))
+}
+
 function AlertCard({ alert, onChanged }) {
   const { t } = useI18n()
   const [busy, setBusy] = useState(false)
@@ -27,6 +39,7 @@ function AlertCard({ alert, onChanged }) {
   const stock = batch?.quantity_current ?? 0
   const rate = Number(alert.sales_rate)
   const ratioPercent = Math.round(Number(alert.risk_ratio) * 100)
+  const ds = sellingDays(alert)
 
   async function change(status) {
     setBusy(true)
@@ -75,7 +88,8 @@ function AlertCard({ alert, onChanged }) {
           <li>{t('alerts.explain.stock', { s: formatNumber(stock) })}</li>
           <li>{t('alerts.explain.rate', { r: formatNumber(rate, 2) })}</li>
           <li>{t('alerts.explain.days', { d: alert.days_to_prime_end })}</li>
-          <li>{t('alerts.explain.unsold', { s: formatNumber(stock), r: formatNumber(rate, 2), d: alert.days_to_prime_end, u: formatNumber(alert.projected_unsold) })}</li>
+          {ds !== Number(alert.days_to_prime_end) && <li>{t('alerts.explain.sellingDays', { ds })}</li>}
+          <li>{t('alerts.explain.unsold', { s: formatNumber(stock), r: formatNumber(rate, 2), d: ds, u: formatNumber(alert.projected_unsold) })}</li>
           <li>{t('alerts.explain.ratio', { u: formatNumber(alert.projected_unsold), s: formatNumber(stock), p: ratioPercent })}</li>
           <li>{t('alerts.explain.levels')}</li>
         </ul>

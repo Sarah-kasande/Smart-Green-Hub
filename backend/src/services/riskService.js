@@ -5,7 +5,7 @@ const { Op, QueryTypes } = require('sequelize');
 const { sequelize, Batch, PlantSpecies, Nursery, RiskAlert } = require('../models');
 const HttpError = require('../utils/httpError');
 const { todayKigali, addDays, kigaliDayStart } = require('../utils/dates');
-const { evaluateBatch } = require('./riskRules');
+const { evaluateBatch, SELLABLE_STAGES } = require('./riskRules');
 const { defaultRule } = require('./ruleService');
 const audit = require('./auditService');
 const { notify, dispatchSoon } = require('./notificationService');
@@ -16,8 +16,8 @@ const ACTIVE_STAGES = ['seedling', 'growing', 'ready', 'overgrown'];
 const DISMISS_QUIET_DAYS = 7;
 
 // Units of one species sold by one nursery in the last `lookback` days (today included).
-// NOTE (limitation, docs/DEVIATIONS.md F2): the rate is per nursery and species, so two batches
-// of the same species are each evaluated with the same rate.
+// The species rate is then shared between the batches of that species (riskRules.batchSalesRate,
+// docs/DEVIATIONS.md W53), so two batches no longer each count on the full rate.
 async function unitsSold(nurseryId, speciesId, lookback, today) {
   const from = kigaliDayStart(addDays(today, -(lookback - 1)));
   const to = kigaliDayStart(addDays(today, 1));
@@ -50,15 +50,26 @@ async function runEvaluation({ nurseryId = null, today = todayKigali(), actorId 
 
   const summary = { evaluated: 0, low: 0, medium: 0, high: 0, created: 0, updated: 0, quiet: 0 };
   const rateCache = {};
+  // Stock that can be sold now, per nursery and species: the batches that share the species' buyers
+  const sellableStock = {};
+  for (const b of batches) {
+    if (!SELLABLE_STAGES.includes(b.stage)) continue;
+    const key = `${b.nursery_id}:${b.species_id}`;
+    sellableStock[key] = (sellableStock[key] || 0) + Math.max(0, b.quantity_current);
+  }
 
   for (const batch of batches) {
     const key = `${batch.nursery_id}:${batch.species_id}`;
     if (rateCache[key] === undefined) rateCache[key] = await unitsSold(batch.nursery_id, batch.species_id, settings.sales_lookback_days, today);
 
+    const stock = batch.quantity_current;
+    const othersSellable = (sellableStock[key] || 0) - (SELLABLE_STAGES.includes(batch.stage) ? Math.max(0, stock) : 0);
     const result = evaluateBatch({
-      stock: batch.quantity_current,
+      stock,
       unitsSold: rateCache[key],
       primeEndDate: batch.prime_end_date,
+      readyDate: batch.expected_ready_date,
+      pooledStock: Math.max(0, stock) + othersSellable,
       today,
       stage: batch.stage,
       settings,

@@ -81,6 +81,41 @@ describe('evaluateBatch: worked examples', () => {
   });
 });
 
+describe('selling days and the batch share of sales (supervisor review, docs/DEVIATIONS.md W53)', () => {
+  test('a ready batch can sell every day left: Ds = D', () => {
+    expect(r.sellingDays({ primeEndDate: '2026-11-19', readyDate: '2026-10-01', stage: 'ready', today: TODAY })).toBe(30);
+  });
+  test('a batch that is not ready yet: only the days from its ready date count', () => {
+    // ready in 10 days, prime window ends in 30 days -> 20 selling days
+    expect(r.sellingDays({ primeEndDate: '2026-11-19', readyDate: '2026-10-30', stage: 'growing', today: TODAY })).toBe(20);
+  });
+  test('a ready date after the end of the prime window gives 0 selling days', () => {
+    expect(r.sellingDays({ primeEndDate: '2026-11-19', readyDate: '2026-12-01', stage: 'seedling', today: TODAY })).toBe(0);
+  });
+  test('an overdue ready date (batch still marked growing) counts from today', () => {
+    expect(r.sellingDays({ primeEndDate: '2026-11-19', readyDate: '2026-10-01', stage: 'growing', today: TODAY })).toBe(30);
+  });
+  test('one batch of the species gets the whole species rate', () => {
+    expect(r.batchSalesRate(3, 100, 100)).toBe(3);
+  });
+  test('two ready batches of 100 and 300 plants share the rate 1 : 3', () => {
+    expect(r.batchSalesRate(4, 100, 400)).toBe(1);
+    expect(r.batchSalesRate(4, 300, 400)).toBe(3);
+  });
+  test('two batches no longer each count on the full rate (risk was under-estimated before)', () => {
+    // species sells 2 a day; two ready batches of 100, 30 days left
+    const alone = r.evaluateBatch({ stock: 100, unitsSold: 56, primeEndDate: '2026-11-19', today: TODAY, stage: 'ready', settings: SETTINGS });
+    const shared = r.evaluateBatch({ stock: 100, unitsSold: 56, pooledStock: 200, primeEndDate: '2026-11-19', today: TODAY, stage: 'ready', settings: SETTINGS });
+    expect(alone).toMatchObject({ sales_rate: 2, projected_unsold: 40, level: 'medium' }); // 100 - 2 x 30
+    expect(shared).toMatchObject({ species_sales_rate: 2, sales_rate: 1, projected_unsold: 70, level: 'high' }); // 100 - 1 x 30
+  });
+  test('a growing batch is projected only over its selling days', () => {
+    // 200 plants, 2 sold per day, ready in 10 days, prime window ends in 30 days
+    const result = r.evaluateBatch({ stock: 200, unitsSold: 56, primeEndDate: '2026-11-19', readyDate: '2026-10-30', today: TODAY, stage: 'growing', settings: SETTINGS });
+    expect(result).toMatchObject({ days_left: 30, selling_days: 20, projected_unsold: 160, level: 'high', action: 'reduce_or_discount' }); // 200 - 2 x 20
+  });
+});
+
 describe('planting recommendation', () => {
   test('enough history: first sale 90+ days ago and sales in the last 3 months', () => {
     expect(r.hasEnoughHistory({ firstSaleDate: '2026-07-22', unitsLast3Months: 10, today: TODAY })).toBe(true); // exactly 90 days
